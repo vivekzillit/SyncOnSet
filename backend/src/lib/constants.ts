@@ -30,6 +30,10 @@ export const TAILOR_ROLES: Role[] = [...OPS_ROLES, "TAILOR"];
 export const CONTINUITY_ROLES: Role[] = [...OPS_ROLES, "CONTINUITY"];
 
 export const PROJECT_STATUSES = ["PREP", "SHOOTING", "WRAP", "ARCHIVED"] as const;
+export const PROJECT_TYPES = ["FEATURE", "EPISODIC"] as const;
+export const BUDGET_BANDS = ["UNDER_2M", "2_5M", "5_10M", "10_20M", "20_80M", "80M_PLUS"] as const;
+export const BUDGET_BAND_LABELS: Record<(typeof BUDGET_BANDS)[number], string> = { UNDER_2M: "Under 2M", "2_5M": "2 - 5M", "5_10M": "5 - 10M", "10_20M": "10 - 20M", "20_80M": "20 - 80M", "80M_PLUS": "80+M" };
+export const GENDERS = ["FEMALE", "MALE", "NON_BINARY", "OTHER"] as const;
 export const CHARACTER_TYPES = ["LEAD", "SUPPORTING", "DAY_PLAYER", "BACKGROUND"] as const;
 export const SCENE_STATUSES = ["PLANNED", "SCHEDULED", "SHOOTING", "SHOT", "OMITTED"] as const;
 export const INT_EXT = ["INT", "EXT", "INT/EXT"] as const;
@@ -128,6 +132,10 @@ export const META = {
   managerRoles: MANAGER_ROLES,
   opsRoles: OPS_ROLES,
   projectStatuses: PROJECT_STATUSES,
+  projectTypes: PROJECT_TYPES,
+  budgetBands: BUDGET_BANDS,
+  budgetBandLabels: BUDGET_BAND_LABELS,
+  genders: GENDERS,
   characterTypes: CHARACTER_TYPES,
   sceneStatuses: SCENE_STATUSES,
   intExt: INT_EXT,

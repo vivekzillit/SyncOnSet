@@ -30,6 +30,9 @@ import Team from "@/pages/Team";
 import ProjectSettings from "@/pages/ProjectSettings";
 import More from "@/pages/More";
 import Sides from "@/pages/Sides";
+import Actors from "@/pages/Actors";
+import Gallery from "@/pages/Gallery";
+import ProductionWizard from "@/pages/ProductionWizard";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { user, loading } = useAuth();
@@ -44,6 +47,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/projects" element={<RequireAuth><Projects /></RequireAuth>} />
+      <Route path="/projects/new" element={<RequireAuth><ProductionWizard /></RequireAuth>} />
       <Route path="/p/:projectId" element={<RequireAuth><ProjectShell /></RequireAuth>}>
         <Route index element={<Dashboard />} />
         <Route path="scan" element={<Scan />} />
@@ -52,6 +56,8 @@ export default function App() {
         <Route path="sides" element={<Sides />} />
         <Route path="characters" element={<Characters />} />
         <Route path="characters/:id" element={<CharacterDetail />} />
+        <Route path="actors" element={<Actors />} />
+        <Route path="gallery" element={<Gallery />} />
         <Route path="changes/:id" element={<ChangeDetail />} />
         <Route path="costumes" element={<Costumes />} />
         <Route path="costumes/:id" element={<CostumeDetail />} />

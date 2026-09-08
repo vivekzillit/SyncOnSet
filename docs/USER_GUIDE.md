@@ -9,7 +9,7 @@ Live app: https://costumes-and-set.onrender.com · Demo password for every demo 
 
 ## 0. Get in
 
-1. Open the app and **sign in**. On a phone, add it to the home screen (Safari: Share → Add to Home Screen; Chrome: menu → Install app) so it opens full-screen with the bottom navigation **Home · Scenes · Costumes · Scan · Sink · More**.
+1. Open the app and **sign in**. On a desktop the production's tabs run across the top, SyncOnSet-style: **Costumes** (the department), **Dashboard**, **Scenes**, **Characters ▾** (Characters, Actors), **Costumes ▾** (Costumes, QR Labels, Vendors & Rentals), **On Set ▾** (Scan, Sink, Fittings, Alterations, Damage, Missing, Continuity), **Reports ▾**, **Gallery**, with a search box that finds scenes, characters and costumes by number or name. On a phone, add it to the home screen (Safari: Share → Add to Home Screen; Chrome: menu → Install app) so it opens full-screen with the bottom navigation **Home · Scenes · Costumes · Scan · Sink · More**.
 2. **Change your password** straight away: on desktop click the key icon next to your name at the bottom of the sidebar; on a phone go to **More → Change password**.
 3. Pick your production on the **Projects** screen. Everything after this happens inside one production.
 
@@ -26,7 +26,8 @@ Who does what:
 
 ## 1. Set up the production (managers)
 
-1. **Projects → New project**: title, a short code (used on labels and reports), status (Prep), current location, currency.
+1. **Projects → Create a Production**. A short wizard asks what you are working on (feature or episodic), the title, the studio, the total budget band and estimated shoot dates, and the primary shooting location. It then asks **Have a file to break down?**: name the draft (for example "White" or "Blue"), drop in the screenplay or press **Try our demo script**, or **Skip** to enter the breakdown by hand later.
+   - **Character Confirmation** follows the upload, exactly as in SyncOnSet: every speaking role found in the script is listed with a **Char #** box. Give a character its number; give two rows the same number to merge them (misspellings, "COP" and "POLICEMAN"); **Delete** anything that is not a character; **Delete All** and **Skip** are there if you want to start clean. **Continue** imports the scenes and characters and opens the Scenes list.
 2. **Project settings** (sidebar): start and end dates, notes. Update **Shooting day** and **Current location** each shoot day; both show on the dashboard and reports.
 3. **Team & roles**:
    - **New user** creates an account with a temporary password and adds it to this production (Admin and Production Manager only).
@@ -40,15 +41,14 @@ Who does what:
    - **Scenes**: each scene is marked **New**, **Updated** (the text changed since the last upload) or **Unchanged**. Untick any scene you do not want. Give the upload a **Revision name** such as "Blue 2026-09-08"; it is stamped on new and updated scenes only, so unchanged scenes keep any edits you made by hand.
    - **Characters**: speaking roles are read from the capitals in the script. Confirm them before importing: give new characters a **cast number**, **merge** misspellings or duplicates into the right character, and **ignore** anything that is not a character (a sound effect, a sign, a crowd). Non-speaking roles are added to scenes afterwards with **+ Character** on the scene.
    - Nothing is ever deleted by an upload: revised drafts add scenes and characters, update sluglines, and mark omitted scenes. If the writers renumbered scenes, fix the numbers in the app before uploading, or the changes will land on the wrong scenes.
-   - Tick **Also extract costume cues with AI after import** (when the server has an AI key) and the app reads every imported scene for wardrobe facts: garments and accessories mentioned, condition (wet, torn, bloodied), costume changes, continuity links and things to prepare for (fights, rain, food). You can also run this later from **Scenes → AI cues**, for all scenes or just today's.
+   - Tick **Also extract costume cues after import** and the app reads every imported scene for wardrobe facts with its built-in script reader: garments and accessories mentioned (including Indian wear such as kurta, saree, sherwani, dupatta, bangles), colours and fabrics, condition (wet, torn, bloodied, muddy), costume changes, continuity links (later, continuous, flashback, same clothes) and things to prepare for (fights, rain, food, blood, water). No AI or internet is needed. You can also run it later from **Scenes → Script cues**, for all scenes or just today's. If the server has an Anthropic key, the same button uses AI for deeper reading instead.
    - Cues appear on each scene under **Costume cues from script** as suggestions with the supporting line from the script. **Accept** the ones the department agrees with, **Dismiss** the rest, or **Accept all**. Accepting never creates changes or costumes by itself; it is a checklist for building the looks. **Re-extract** on a scene refreshes the suggestions and keeps your decisions.
 2. **Scenes → Import breakdown** is the manual alternative: paste one scene per line as `number | name | location | INT/EXT | DAY/NIGHT | script day | characters (comma separated)`.
 3. Or **Scenes → + Scene** for single scenes. Set the **Shoot date** as soon as the schedule is out: the dashboard, the Scan screen and the continuity book all key off it.
-4. **Sides**. **Scenes → Sides** (or the Sides link in the menu) prints the script pages for a shoot day from the uploaded text: a cover with the scene list, story days, page counts and cast numbers, then each scene laid out as a screenplay, watermarked with your name and the date. Pick the date at the top and **Print**. A single scene's sides open from **Sides** on the scene page.
 5. **Characters & Actors**:
    - **Actors** tab → **+ Actor**: name, contact, agency and **measurements** (height, chest, waist, hips, inseam, shoe…). These show on every fitting for that actor, so shoppers and tailors never have to ask.
    - **Characters** tab → **+ Character**: name, type (Lead, Supporting, Day player, Background), age, the actor playing them, and a description of the look.
-6. Open a scene and use **+ Character** to add anyone the script upload missed, such as non-speaking roles. The change (look) can be assigned later.
+5. Open a scene and use **+ Character** to add anyone the script upload missed, such as non-speaking roles. The change (look) can be assigned later.
 
 ## 3. Build the wardrobe
 
@@ -104,6 +104,7 @@ A change is one numbered outfit for one character, made of pieces from the inven
 1. **Budget & Expenses**: totals by category, character and scene. **+ Expense** for anything not booked automatically. Purchases, rental returns and completed repairs post their own expense lines.
 2. **Reports → Inventory / assets**: every piece with source, vendor, cost, status and location; **CSV** for the accountant or insurer.
 3. **Notifications** (bell): cleaning completed, replacements, alterations, damage, missing, rentals due. **Mark all read** when caught up.
+4. **Gallery**: every photo in the production in one grid, filterable by what it shows (costume, look, character, fitting, continuity take, cleaning, damage), by character or scene, and by search. Click a photo to see it large and jump to its record.
 
 ## 8. Wrap
 
@@ -117,7 +118,7 @@ A change is one numbered outfit for one character, made of pieces from the inven
 
 - Demo accounts: change the admin password on first use, then reset or remove the other demo users from **Team & roles** once the real team is in.
 - On Render, set `SEED_DEMO=false` after real data is entered so a redeploy never re-seeds the demo.
-- To turn on AI costume cues, set `ANTHROPIC_API_KEY` on the server (Render → Environment). Without it the buttons explain that AI is not configured; everything else works. The model is `claude-opus-5` by default (`ANTHROPIC_MODEL` overrides it); a feature-length script costs a few cents to read.
+- Costume cues work out of the box with the built-in script reader. Optionally set `ANTHROPIC_API_KEY` on the server (Render → Environment) to have AI read scenes instead; the model is `claude-opus-5` by default (`ANTHROPIC_MODEL` overrides it) and a feature-length script costs a few cents.
 - The current Render service is on the Free plan: the database and photos reset on every deploy and the app sleeps after 15 minutes idle. Before real use, upgrade to Starter with a persistent disk, or move to PostgreSQL. Steps are in [DEPLOY.md](DEPLOY.md).
 
 ## Status glossary

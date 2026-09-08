@@ -282,3 +282,27 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   body { background: #fff; }
   .card { box-shadow: none; }
 }
+
+/* Top-tab shell (SyncOnSet-style) */
+.shell-top { min-height: 100%; display: flex; flex-direction: column; }
+.topnav { position: sticky; top: 0; z-index: 25; background: var(--surface); border-bottom: 1px solid var(--border); }
+.topnav-row1 { display: flex; align-items: center; gap: 12px; padding: 8px 20px; min-height: 56px; }
+.topnav-row2 { display: flex; align-items: stretch; gap: 2px; padding: 0 12px; background: var(--surface-2); border-top: 1px solid var(--border); overflow-x: auto; }
+.dept-chip { display: inline-flex; align-items: center; gap: 8px; margin: 6px 10px 6px 0; padding: 6px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-weight: 600; font-size: 14px; white-space: nowrap; }
+.tab { position: relative; display: inline-flex; align-items: center; }
+.tab > a, .tab > button, a.tab { display: inline-flex; align-items: center; gap: 6px; padding: 12px 16px; font-weight: 600; font-size: 14px; color: var(--text-2); background: none; border: none; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+a.tab:hover, .tab > button:hover { color: var(--text); }
+a.tab.active, .tab.active > button { color: var(--text); border-bottom-color: var(--accent); background: var(--surface); }
+.tab .count { font-size: 11px; background: var(--accent); color: var(--accent-ink); padding: 1px 7px; border-radius: 999px; font-weight: 700; }
+.tab .count.danger, .tab-menu .count.danger { background: var(--danger); color: #fff; }
+.tab-menu { position: absolute; top: calc(100% - 2px); left: 0; z-index: 40; min-width: 220px; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.tab-menu a, .tab-menu button { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--text); background: none; border: none; cursor: pointer; text-align: left; width: 100%; }
+.tab-menu a:hover, .tab-menu button:hover { background: var(--surface-2); }
+.tab-menu a.active { background: var(--surface-2); font-weight: 600; }
+.tab-menu .count { margin-left: auto; font-size: 11px; background: var(--accent); color: var(--accent-ink); padding: 1px 7px; border-radius: 999px; font-weight: 700; }
+.content-top { margin: 0 auto; max-width: 1240px; width: 100%; }
+.gsearch { position: relative; }
+.gsearch-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40; padding: 6px; max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.gsearch-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: none; border: none; cursor: pointer; text-align: left; width: 100%; font-size: 14px; }
+.gsearch-item:hover { background: var(--surface-2); }
+@media (max-width: 900px) { .topnav-row1 { padding: 8px 14px; } }

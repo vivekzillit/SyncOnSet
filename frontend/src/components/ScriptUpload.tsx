@@ -6,7 +6,7 @@ import { useProject } from "@/state/project";
 import { humanize } from "@/lib/format";
 import { Badge, ErrorBox, Input, Modal, useToast } from "./ui";
 import { useAuth } from "@/state/auth";
-import { CueProgress, useCueExtraction } from "./AiCues";
+import { CueProgress, engineLabel, useCueExtraction } from "./AiCues";
 import type { Scene } from "@/api/types";
 
 interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; synopsis: string | null; status?: string; characters: string[]; dialogueLines: number; text?: string; pages?: string | null; lines?: number; exists: boolean; change: "new" | "updated" | "unchanged"; previousRevision?: string | null }
@@ -60,7 +60,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
       qc.invalidateQueries();
       toast.push(`${r.created} new, ${r.updated} updated, ${r.unchanged} unchanged scene${r.scenes === 1 ? "" : "s"}; ${r.charactersCreated} new character${r.charactersCreated === 1 ? "" : "s"}`, "ok");
       onImported?.();
-      if (withAi && meta?.aiEnabled && result) {
+      if (withAi && result) {
         const numbers = new Set(result.scenes.filter((s) => !excluded.has(s.number)).map((s) => s.number));
         const all = await api<Scene[]>(p(projectId, "/scenes"));
         const ids = all.filter((s) => numbers.has(s.number) && s.hasScript).map((s) => s.id);
@@ -87,7 +87,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
 
   return (
     <Modal open={open} onClose={() => { reset(); onClose(); }} title="Upload script" wide
-      footer={phase === "cues" ? <button className="btn btn-primary" disabled={progress.running} onClick={() => { reset(); onClose(); }}>{progress.running ? "Working…" : "Done"}</button> : <><button className="btn" onClick={() => { reset(); onClose(); }}>Cancel</button>{result && <button className="btn btn-primary" disabled={!included.length || importM.isPending} onClick={() => importM.mutate()}>{importM.isPending ? "Importing…" : `Import ${included.length} scene${included.length === 1 ? "" : "s"}${withAi && meta?.aiEnabled ? " + AI cues" : ""}`}</button>}</>}>
+      footer={phase === "cues" ? <button className="btn btn-primary" disabled={progress.running} onClick={() => { reset(); onClose(); }}>{progress.running ? "Working…" : "Done"}</button> : <><button className="btn" onClick={() => { reset(); onClose(); }}>Cancel</button>{result && <button className="btn btn-primary" disabled={!included.length || importM.isPending} onClick={() => importM.mutate()}>{importM.isPending ? "Importing…" : `Import ${included.length} scene${included.length === 1 ? "" : "s"}${withAi ? " + cues" : ""}`}</button>}</>}>
       {phase === "cues" ? (
         <div className="col gap-2">
           <div className="notice ok">Scenes imported. Now reading each scene for costume cues…</div>
@@ -179,7 +179,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
               </div>
             </div>
           )}
-          {meta?.aiEnabled && <label className="check"><input type="checkbox" checked={withAi} onChange={(e) => setWithAi(e.target.checked)} /> Also extract costume cues with AI after import ({meta.aiModel}; a few cents per script)</label>}
+          <label className="check"><input type="checkbox" checked={withAi} onChange={(e) => setWithAi(e.target.checked)} /> Also extract costume cues after import <span className="subtle">({engineLabel(meta)}{meta?.aiEnabled ? "; a few cents per script" : ""})</span></label>
           <ErrorBox error={importM.error} />
         </div>
       )}

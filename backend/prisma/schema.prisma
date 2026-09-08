@@ -33,6 +33,11 @@ model Project {
   name            String
   code            String    @unique
   status          String    @default("PREP") // PREP | SHOOTING | WRAP | ARCHIVED
+  type            String    @default("FEATURE") // FEATURE | EPISODIC
+  studio          String?
+  budgetBand      String?   // UNDER_2M | 2_5M | 5_10M | 10_20M | 20_80M | 80M_PLUS
+  country         String?
+  city            String?
   shootingDay     Int       @default(0)
   currentLocation String?
   currency        String    @default("INR")
@@ -77,14 +82,21 @@ model ProjectMember {
 }
 
 model Actor {
-  id           String  @id @default(cuid())
-  projectId    String
-  name         String
-  phone        String?
-  email        String?
-  agency       String?
-  measurements String? // JSON: { chest, waist, hips, inseam, shoe, height, ... }
-  notes        String?
+  id             String    @id @default(cuid())
+  projectId      String
+  name           String    // full name (first + last)
+  gender         String?
+  age            Int?
+  phone          String?
+  phone2         String?
+  email          String?
+  email2         String?
+  agency         String?
+  startWorkDate  DateTime?
+  nextFittingAt  DateTime? // next costume fitting (as entered on the actor record)
+  fittingComment String?
+  measurements   String?   // JSON: { chest, waist, hips, inseam, shoe, height, ... }
+  notes          String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

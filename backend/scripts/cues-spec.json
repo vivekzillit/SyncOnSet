@@ -1,0 +1,4325 @@
+{
+ "cases": [
+  {
+   "text": "INT. RESTAURANT - NIGHT\nPRIYA (30), red dress, statement earrings, waits at a corner table. She checks her watch.\nRAJ (32) arrives in a crisp white shirt, sleeves rolled, top button open.\nPRIYA:\n  You're late.\nRAJ:\n  (sitting)\n  Traffic.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Waiter"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "red dress"
+    },
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "earrings"
+    },
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "watch"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "white shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "rolled"
+    }
+   ],
+   "mustNotContain": [
+    "Traffic",
+    "late",
+    "corner table"
+   ]
+  },
+  {
+   "text": "EXT. STREET - NIGHT\nRain hammers down. Raj runs across the road, his shirt now soaked through. Priya's dupatta drags in the mud.\nRAJ:\n  Get in!",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "rain"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "soaked"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "mud"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "dupatta"
+    }
+   ],
+   "mustNotContain": [
+    "Get in",
+    "road"
+   ]
+  },
+  {
+   "text": "INT. RAJ'S FLAT - CONTINUOUS\nRaj peels off the wet shirt and pulls on a grey hoodie. He kicks off his shoes.\nLATER\nHe emerges in a navy blazer, hair combed.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "continuous"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "wet"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "grey hoodie"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "shoes"
+    },
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "later"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "navy blazer"
+    }
+   ],
+   "mustNotContain": [
+    "flat"
+   ]
+  },
+  {
+   "text": "INT. NEWSROOM - DAY\nThe editor's patience is wearing thin. Boots on the ground, he tells them, that's what this story needs. Raj watches him go, then pockets his phone. Priya purses her lips and ties up the loose ends of the story.\nEDITOR:\n  Keep your shirt on, Raj.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Editor"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "wearing",
+    "boots",
+    "shirt",
+    "purse",
+    "pocket",
+    "tie"
+   ]
+  },
+  {
+   "text": "INT. BEDROOM - MORNING\nPriya rummages through the wardrobe.\nPRIYA:\n  Where's my red dress? The one with the sequins?\nRAJ:\n  (pulling on his jacket)\n  Laundry.\nPRIYA:\n  You gave the waiter your jacket last night.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Waiter"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "jacket"
+    }
+   ],
+   "mustNotContain": [
+    "red dress",
+    "sequin",
+    "Laundry",
+    "wardrobe"
+   ]
+  },
+  {
+   "text": "EXT. CAPE TOWN HARBOUR - DAY\nBANG. A car backfires. CRASH! Crates tumble off a truck. Inspector Pandey, in full uniform, steps out of the jeep. He adjusts his cap and checks the boot of the car.",
+   "characters": [
+    "Inspector Pandey",
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Inspector Pandey",
+     "kind": "GARMENT",
+     "textContains": "uniform"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "ACCESSORY",
+     "textContains": "cap"
+    }
+   ],
+   "mustNotContain": [
+    "Cape",
+    "Bang",
+    "Crash",
+    "boot",
+    "jeep"
+   ]
+  },
+  {
+   "text": "INT. HOSPITAL CORRIDOR - NIGHT\nRaj slumps on a bench. Priya sits beside him. She wraps her cardigan tighter. His shirt is still blood-stained from the fight.\nA NURSE hurries past.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Nurse"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "cardigan"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "blood"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "still"
+    }
+   ],
+   "mustNotContain": [
+    "bench",
+    "Nurse hurries",
+    "Fight/violence"
+   ]
+  },
+  {
+   "text": "EXT. POLICE STATION - DAY\nTWENTY CONSTABLES in khaki line up in the rain. Inspector Pandey inspects them, umbrella in hand. Behind them, a crowd of protesters waves placards.",
+   "characters": [
+    "Inspector Pandey"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "constables"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "khaki"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "rain"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "ACCESSORY",
+     "textContains": "umbrella"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "protesters"
+    }
+   ],
+   "mustNotContain": [
+    "placard"
+   ]
+  },
+  {
+   "text": "INT. RESTAURANT - LATER\nSame table, same people. Raj is still in the white shirt, now with a coffee stain on the cuff. Priya has changed into a yellow kurta.\nRAJ:\n  Sorry about that.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "later"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "white shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "coffee"
+    },
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "yellow kurta"
+    }
+   ],
+   "mustNotContain": [
+    "Sorry",
+    "table"
+   ]
+  },
+  {
+   "text": "INT. BATHROOM - MORNING\nRaj steps out of the shower in a towel, barefoot. Priya, in a bathrobe, eats cereal on the edge of the tub and spills milk down her front.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "towel"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "barefoot"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "modesty"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "bathrobe"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "milk"
+    }
+   ],
+   "mustNotContain": [
+    "cereal",
+    "tub"
+   ]
+  },
+  {
+   "text": "INT. BAR - NIGHT\nRaj raises his glass. Two glasses of whisky sit between them. Priya twists the ring on her finger, then pushes her glasses up her nose. Raj loosens his tie. A phone rings. He checks his watch.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "ring"
+    },
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "glasses"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "tie"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "loosen"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "watch"
+    }
+   ],
+   "mustNotContain": [
+    "whisky",
+    "phone",
+    "glass of",
+    "glasses of",
+    "Two glasses"
+   ]
+  },
+  {
+   "text": "INT. RAJ'S HOUSE - DAY\nRaj's Mother, in a cream silk saree, fusses over the puja thali. Raj's kurta is crumpled from the train. She straightens his collar.",
+   "characters": [
+    "Raj",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj's Mother",
+     "kind": "GARMENT",
+     "textContains": "cream silk saree"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "kurta"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "crumpled"
+    }
+   ],
+   "mustNotContain": [
+    "thali",
+    "puja",
+    "train"
+   ]
+  },
+  {
+   "text": "INT. TAILOR'S SHOP - DAY\nRows of sherwanis hang on the wall. A framed photo shows a younger Raj in army uniform. Raj imagines himself in a tuxedo and laughs. His shoulders are like a coat hanger. He tries on an ivory sherwani. It fits like a glove.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "ivory sherwani"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "uniform"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "tailor"
+    }
+   ],
+   "mustNotContain": [
+    "coat hanger",
+    "glove",
+    "tuxedo",
+    "rows of"
+   ]
+  },
+  {
+   "text": "EXT. ROOFTOP - DUSK\nWearing matching black hoodies, Raj and Priya sprint across the gravel. Raj's stunt double takes the fall onto the tin roof. A gunshot. Blood blooms on Priya's sleeve.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "black hoodie"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "black hoodie"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "stunt double"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "blood"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "gunshot"
+    }
+   ],
+   "mustNotContain": [
+    "gravel",
+    "tin roof"
+   ]
+  },
+  {
+   "text": "INT. WEDDING HALL - NIGHT\nPandey, out of uniform in a plain kurta, scans the guests. Raj, dressed as a waiter in a white shirt and black waistcoat, carries a tray. THE BARAAT arrives, fifty guests in sherwanis and lehengas.",
+   "characters": [
+    "Inspector Pandey",
+    "Raj",
+    "Waiter"
+   ],
+   "expected": [
+    {
+     "character": "Inspector Pandey",
+     "kind": "GARMENT",
+     "textContains": "kurta"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "CHANGE",
+     "textContains": "uniform"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "waiter"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "waistcoat"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "guests"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "wedding"
+    }
+   ],
+   "mustNotContain": [
+    "tray",
+    "Baraat arrives",
+    "Waiter:"
+   ]
+  },
+  {
+   "text": "INT. OFFICE - DAY\nInspector Pandey looks worse for wear. He tightens his belt, literally, another notch, and straightens his badge. Behind him a poster of a man in a cape.\nPANDEY:\n  (loosening his collar)\n  Get me Raj.",
+   "characters": [
+    "Inspector Pandey",
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Inspector Pandey",
+     "kind": "ACCESSORY",
+     "textContains": "belt"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "ACCESSORY",
+     "textContains": "badge"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "CONDITION",
+     "textContains": "collar"
+    }
+   ],
+   "mustNotContain": [
+    "worse for wear",
+    "Get me",
+    "poster",
+    "cape"
+   ]
+  },
+  {
+   "text": "EXT. WEDDING MANDAP - DAY\nMEERA (25) in a red banarasi lehenga, heavy gold jewellery, mehendi up to her elbows, sits by the fire. Around her, two hundred guests in wedding finery. VIKRAM wears an ivory sherwani and a safa.\nPANDIT:\n  Kanyadaan ke liye taiyaar ho jaaiye.",
+   "characters": [
+    "Meera",
+    "Vikram",
+    "Pandit"
+   ],
+   "expected": [
+    {
+     "character": "Meera",
+     "kind": "GARMENT",
+     "textContains": "banarasi lehenga"
+    },
+    {
+     "character": "Meera",
+     "kind": "ACCESSORY",
+     "textContains": "jewellery"
+    },
+    {
+     "character": "Meera",
+     "kind": "ACCESSORY",
+     "textContains": "mehendi"
+    },
+    {
+     "character": "Vikram",
+     "kind": "GARMENT",
+     "textContains": "sherwani"
+    },
+    {
+     "character": "Vikram",
+     "kind": "ACCESSORY",
+     "textContains": "safa"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "guests"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "wedding"
+    }
+   ],
+   "mustNotContain": [
+    "Kanyadaan",
+    "Pandit: lehenga"
+   ]
+  },
+  {
+   "text": "EXT. ALLEY - NIGHT\nRain hammers down. ARJUN drags DEV out of the car. They fight in the mud. Dev's white shirt is soaked and torn. Blood runs from Arjun's nose onto his collar.\nDEV:\n  Enough!",
+   "characters": [
+    "Arjun",
+    "Dev"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "rain"
+    },
+    {
+     "character": "Dev",
+     "kind": "GARMENT",
+     "textContains": "white shirt"
+    },
+    {
+     "character": "Dev",
+     "kind": "CONDITION",
+     "textContains": "torn"
+    },
+    {
+     "character": "Dev",
+     "kind": "CONDITION",
+     "textContains": "soaked"
+    },
+    {
+     "character": "Arjun",
+     "kind": "CONDITION",
+     "textContains": "blood"
+    },
+    {
+     "character": "Dev",
+     "kind": "NOTE",
+     "textContains": "fight"
+    },
+    {
+     "character": "Arjun",
+     "kind": "NOTE",
+     "textContains": "fight"
+    }
+   ],
+   "mustNotContain": [
+    "Enough"
+   ]
+  },
+  {
+   "text": "EXT. VILLAGE ROAD - DAY\nSUPER: TEN YEARS LATER\nAn older KARAN, grey at the temples, walks with a cane. His khadi kurta is faded and patched.\nKARAN:\n  Nothing changes here.",
+   "characters": [
+    "Karan"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "ten years later"
+    },
+    {
+     "character": "Karan",
+     "kind": "GARMENT",
+     "textContains": "khadi kurta"
+    },
+    {
+     "character": "Karan",
+     "kind": "CONDITION",
+     "textContains": "faded"
+    },
+    {
+     "character": "Karan",
+     "kind": "ACCESSORY",
+     "textContains": "cane"
+    },
+    {
+     "character": "Karan",
+     "kind": "NOTE",
+     "textContains": "older"
+    }
+   ],
+   "mustNotContain": [
+    "grey kurta",
+    "changes here",
+    "Nothing"
+   ]
+  },
+  {
+   "text": "INT. PRIYA'S BEDROOM - NIGHT\nPriya peels off the wet saree and changes into a cotton nightie. She unhooks her mangalsutra and sets it on the dresser.\nPRIYA:\n  (to herself)\n  Never again.",
+   "characters": [
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "nightie"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "wet saree"
+    },
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "mangalsutra"
+    }
+   ],
+   "mustNotContain": [
+    "dresser",
+    "herself"
+   ]
+  },
+  {
+   "text": "EXT. RIVER GHAT - DAWN\nAyesha wades into the river fully clothed, her yellow salwar kameez billowing. She dips under. MOTHER watches from the steps, clutching a shawl.\nMOTHER:\n  Come out. You'll catch cold.",
+   "characters": [
+    "Ayesha",
+    "Mother"
+   ],
+   "expected": [
+    {
+     "character": "Ayesha",
+     "kind": "GARMENT",
+     "textContains": "yellow salwar kameez"
+    },
+    {
+     "character": "Ayesha",
+     "kind": "NOTE",
+     "textContains": "water"
+    },
+    {
+     "character": "Mother",
+     "kind": "GARMENT",
+     "textContains": "shawl"
+    }
+   ],
+   "mustNotContain": [
+    "catch cold",
+    "Cold weather",
+    "Mother: salwar"
+   ]
+  },
+  {
+   "text": "EXT. HAVELI COURTYARD - DAY\nHoli. Gulal flies everywhere. Fifty villagers in white kurtas dance to the dhol. Rohan, drenched in pink colour, grabs Nisha and pulls her into the crowd.\nNISHA:\n  My dupatta! Rohan!",
+   "characters": [
+    "Rohan",
+    "Nisha"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "holi"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "villagers"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "dance"
+    },
+    {
+     "character": "Rohan",
+     "kind": "CONDITION",
+     "textContains": "drenched"
+    },
+    {
+     "character": "Rohan",
+     "kind": "NOTE",
+     "textContains": "colour"
+    }
+   ],
+   "mustNotContain": [
+    "dupatta",
+    "dhol"
+   ]
+  },
+  {
+   "text": "INT. HOSPITAL CORRIDOR - NIGHT (FLASHBACK)\nYounger DEV, still in the blood-stained shirt from the alley, paces. A NURSE in scrubs hurries past.\nDEV:\n  Where is he?",
+   "characters": [
+    "Dev",
+    "Arjun"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "flashback"
+    },
+    {
+     "character": "Dev",
+     "kind": "CONTINUITY",
+     "textContains": "blood-stained shirt"
+    },
+    {
+     "character": "Dev",
+     "kind": "CONDITION",
+     "textContains": "blood-stained"
+    },
+    {
+     "character": null,
+     "kind": "GARMENT",
+     "textContains": "scrubs"
+    }
+   ],
+   "mustNotContain": [
+    "Arjun: scrubs",
+    "Dev: scrubs",
+    "Where is"
+   ]
+  },
+  {
+   "text": "INT. DHABA - NIGHT\nKabir tears into a plate of butter chicken. Sameer knocks over a glass of whisky; it pours across Kabir's lap.\nKABIR:\n  These are new jeans, you idiot.\nSAMEER:\n  (laughing)\n  Relax.",
+   "characters": [
+    "Kabir",
+    "Sameer"
+   ],
+   "expected": [
+    {
+     "character": "Kabir",
+     "kind": "NOTE",
+     "textContains": "whisky"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "food"
+    },
+    {
+     "character": "Kabir",
+     "kind": "GARMENT",
+     "textContains": "jeans"
+    }
+   ],
+   "mustNotContain": [
+    "torn",
+    "ripped",
+    "rain",
+    "laughing",
+    "idiot"
+   ]
+  },
+  {
+   "text": "INT. TAILOR SHOP - DAY\nBolts of silk everywhere. MASTERJI measures Raj for a bandhgala. Raj's mother holds up three swatches: maroon, bottle green, ivory.\nRAJ'S MOTHER:\n  The maroon. For the sangeet.\nRAJ:\n  Whatever you say, Ma.",
+   "characters": [
+    "Raj",
+    "Raj's Mother",
+    "Masterji"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "bandhgala"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "tailor"
+    }
+   ],
+   "mustNotContain": [
+    "silk shirt",
+    "Masterji: bandhgala",
+    "Raj: maroon",
+    "Raj's Mother: bandhgala",
+    "sangeet"
+   ]
+  },
+  {
+   "text": "INT. CLINIC - DAY\nSix months pregnant, LEELA lowers herself onto the bed. Her arm is in a sling. She slips off her bangles one by one.\nDOCTOR:\n  Any pain?",
+   "characters": [
+    "Leela",
+    "Doctor"
+   ],
+   "expected": [
+    {
+     "character": "Leela",
+     "kind": "NOTE",
+     "textContains": "pregnant"
+    },
+    {
+     "character": "Leela",
+     "kind": "NOTE",
+     "textContains": "sling"
+    },
+    {
+     "character": "Leela",
+     "kind": "CHANGE",
+     "textContains": "bangles"
+    }
+   ],
+   "mustNotContain": [
+    "nightwear",
+    "Doctor: bangles",
+    "pain"
+   ]
+  },
+  {
+   "text": "INT. BEDROOM - MORNING\nSameer wakes, showers, and throws on yesterday's crumpled shirt.\nSAMEER:\n  Late. Late, late.",
+   "characters": [
+    "Sameer"
+   ],
+   "expected": [
+    {
+     "character": "Sameer",
+     "kind": "CONDITION",
+     "textContains": "crumpled"
+    },
+    {
+     "character": "Sameer",
+     "kind": "CONTINUITY",
+     "textContains": "yesterday"
+    },
+    {
+     "character": "Sameer",
+     "kind": "CHANGE",
+     "textContains": "shirt"
+    },
+    {
+     "character": "Sameer",
+     "kind": "NOTE",
+     "textContains": "shower"
+    }
+   ],
+   "mustNotContain": [
+    "later",
+    "Time jump"
+   ]
+  },
+  {
+   "text": "INT. GARDEN CAFE - DAY\nROSE (28), mint green sundress, straw hat, waves at VIOLET, who arrives in a violet saree with a silver clutch.\nROSE:\n  You came!",
+   "characters": [
+    "Rose",
+    "Violet"
+   ],
+   "expected": [
+    {
+     "character": "Rose",
+     "kind": "GARMENT",
+     "textContains": "mint green sundress"
+    },
+    {
+     "character": "Rose",
+     "kind": "ACCESSORY",
+     "textContains": "straw hat"
+    },
+    {
+     "character": "Violet",
+     "kind": "GARMENT",
+     "textContains": "saree"
+    },
+    {
+     "character": "Violet",
+     "kind": "ACCESSORY",
+     "textContains": "silver clutch"
+    }
+   ],
+   "mustNotContain": [
+    "Rose saree",
+    "Violet sundress",
+    "Violet hat",
+    "You came"
+   ]
+  },
+  {
+   "text": "EXT. BEACH - DAY\nInspector Pandey walks along the sand in his khaki uniform and aviator sunglasses. His boots sink into the wet sand.\nINSPECTOR PANDEY:\n  Nobody swims here after dark.",
+   "characters": [
+    "Inspector Pandey"
+   ],
+   "expected": [
+    {
+     "character": "Inspector Pandey",
+     "kind": "GARMENT",
+     "textContains": "khaki uniform"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "ACCESSORY",
+     "textContains": "sunglasses"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "ACCESSORY",
+     "textContains": "boots"
+    }
+   ],
+   "mustNotContain": [
+    "wet",
+    "sand",
+    "swim"
+   ]
+  },
+  {
+   "text": "INT. GARAGE - DAY\nRaj watches the door. He ties the rope to the hook, caps the petrol can and rings the bell twice. A coat of paint peels off the wall. He tops up the oil.\nRAJ:\n  Anyone home?",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "watch",
+    "tie",
+    "cap",
+    "ring",
+    "coat",
+    "top",
+    "oil"
+   ]
+  },
+  {
+   "text": "INT. RESTAURANT - LATER\nPriya is still in the red dress from Scene 4, now with a shawl over her shoulders. Raj has changed into a black blazer.",
+   "characters": [
+    "Priya",
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "later"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONTINUITY",
+     "textContains": "red dress"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "shawl"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "black blazer"
+    }
+   ],
+   "mustNotContain": [
+    "shoulders"
+   ]
+  },
+  {
+   "text": "INT. KITCHEN - NIGHT\nRaj's Mother stirs the dal. Raj leans in the doorway.\nRAJ'S MOTHER:\n  Take off that wet jacket before you sit down. And I saw a beautiful blue sari at the market yesterday.\nRAJ:\n  Later, Ma. I'll change later.",
+   "characters": [
+    "Raj",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "jacket"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "wet"
+    }
+   ],
+   "mustNotContain": [
+    "sari",
+    "market",
+    "dal",
+    "later",
+    "doorway",
+    "food"
+   ]
+  },
+  {
+   "text": "EXT. POLICE STATION - DAY\nTwo hundred protesters surge against a line of policemen in riot gear. Inspector Pandey is thrown to the ground. His STUNT DOUBLE takes the fall through the glass door.\nINSPECTOR PANDEY:\n  Hold the line!",
+   "characters": [
+    "Inspector Pandey"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "protesters"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "riot gear"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "NOTE",
+     "textContains": "stunt double"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "NOTE",
+     "textContains": "fight"
+    }
+   ],
+   "mustNotContain": [
+    "hold the line",
+    "glass"
+   ]
+  },
+  {
+   "text": "INT. PALACE HALL - DAY\nThe Maharaja of Rajgarh receives guests. RAJESH, the steward, in a black sherwani, bows. Raj waits at the back in jeans and a faded denim jacket.\nRAJ:\n  I don't belong here.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "jeans"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "denim jacket"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "faded"
+    },
+    {
+     "character": null,
+     "kind": "GARMENT",
+     "textContains": "sherwani"
+    }
+   ],
+   "mustNotContain": [
+    "maharaja",
+    "rajgarh",
+    "belong",
+    "Raj: black sherwani"
+   ]
+  },
+  {
+   "text": "INT. OFFICE - DAY\nRaj, sleeves rolled to the elbow, top button undone, twists the wedding ring on his finger. The phone rings. He loosens his tie and kicks off his loafers under the desk.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "sleeves rolled"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "button undone"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "wedding ring"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "tie loosened"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "loafers"
+    }
+   ],
+   "mustNotContain": [
+    "phone",
+    "desk",
+    "elbow"
+   ]
+  },
+  {
+   "text": "INT. BAR - NIGHT\nA drunk shoves Raj. Raj punches him; the drunk's nose bleeds onto Raj's white shirt. Priya, at the bar, spills red wine down her cream blouse.\nPRIYA:\n  Perfect.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "fight"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "white shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "blood"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "cream blouse"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "stain"
+    }
+   ],
+   "mustNotContain": [
+    "perfect",
+    "nose",
+    "drunk"
+   ]
+  },
+  {
+   "text": "INT. SHIRT FACTORY - FLOOR - DAY (FLASHBACK, 1985)\nRows of women at sewing machines. Young Priya, twelve, in a school uniform two sizes too big, threads a needle. A supervisor in a boiler suit shouts.",
+   "characters": [
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "flashback"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "1985"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "school uniform"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "too big"
+    },
+    {
+     "character": null,
+     "kind": "GARMENT",
+     "textContains": "boiler suit"
+    }
+   ],
+   "mustNotContain": [
+    "shirt factory",
+    "factory",
+    "needle",
+    "machines"
+   ]
+  },
+  {
+   "text": "EXT. WEDDING VENUE - NIGHT\nRaj and Priya, both in matching gold outfits, slip past the guards. Inspector Pandey follows, dressed as a waiter. Fifty wedding guests dance around the baraat.\nRAJ:\n  Nobody looked twice.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "gold outfit"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "gold outfit"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "GARMENT",
+     "textContains": "waiter"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "guests"
+    }
+   ],
+   "mustNotContain": [
+    "twice",
+    "nobody"
+   ]
+  },
+  {
+   "text": "INT. CAR - NIGHT\nPriya drives, her knuckles white on the wheel. Raj sits in the passenger seat. She pulls her cardigan tighter.\nRAJ:\n  (tugging off his gloves)\n  Heater's broken again.\nPRIYA:\n  Put your gloves back on.",
+   "characters": [
+    "Priya",
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "cardigan"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "gloves"
+    }
+   ],
+   "mustNotContain": [
+    "heater",
+    "wheel",
+    "seat",
+    "knuckles"
+   ]
+  },
+  {
+   "text": "INT. HOSPITAL - DAY\nThe nurse dresses the wound. Raj changes the subject. Loose change rattles in his pocket. The red light above the door blinks; Priya, in a hospital gown, watches the ceiling.\nPRIYA:\n  Do I look like a ghost?",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "hospital gown"
+    }
+   ],
+   "mustNotContain": [
+    "wound",
+    "subject",
+    "loose",
+    "red light",
+    "pocket",
+    "nurse",
+    "watch",
+    "ghost"
+   ]
+  },
+  {
+   "text": "INT. TRAIN COMPARTMENT - NIGHT\nPriya adjusts her red sari. The red sari catches on the berth. She smooths the red sari again and again, then stares out at the rain streaking the window while the train rocks through the night and the other passengers sleep under thin railway blankets that smell of dust and diesel.",
+   "characters": [
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "red sari"
+    }
+   ],
+   "mustNotContain": [
+    "blanket",
+    "train",
+    "dust",
+    "rain",
+    "diesel",
+    "passengers"
+   ]
+  },
+  {
+   "text": "INT. STAIRWELL - DAY\nRaj enters the flat. Raj waits on the platform. Raj opens the boot and lifts out a box. Raj pops the hood. Raj pulls the shades down. Raj signs the slip and hands it over. Raj reads the specs. Raj kneels before the cross. Raj rides the clutch. Priya arrives with the cast. Priya reaches for the top shelf. Inspector Pandey meets with the top brass. Raj grabs the kit from the glovebox.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "flat",
+    "platform",
+    "boot",
+    "hood",
+    "shades",
+    "slip",
+    "specs",
+    "cross",
+    "clutch",
+    "cast",
+    "top",
+    "kit"
+   ]
+  },
+  {
+   "text": "INT. FLAT - NIGHT\nRaj is still in the flat.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "flat",
+    "still"
+   ]
+  },
+  {
+   "text": "INT. GYM - NIGHT\nRaj steps into the ring. Raj climbs into the boot. Raj gets into the top bunk. Raj removes the top from the jar. Raj takes off the cap and drinks. Raj pulls on the chain.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "ring",
+    "boot",
+    "top",
+    "cap",
+    "chain",
+    "changed into",
+    "takes off",
+    "puts on",
+    "physical action"
+   ]
+  },
+  {
+   "text": "INT. CAFE - DAY\nRaj walks in with Payal. Raj arrives in Payal's car. Raj is still in love with Payal.",
+   "characters": [
+    "Raj",
+    "Payal"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "payal",
+    "still"
+   ]
+  },
+  {
+   "text": "INT. CAFE - DAY\nRaj waits with Nath.",
+   "characters": [
+    "Raj",
+    "Sunil Nath"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "nath"
+   ]
+  },
+  {
+   "text": "INT. CAFE - DAY\nPriya dances with Rakhi. Raj arrives with Chunni. Raj slips into Kit's car. Raj slips into Kara's flat.",
+   "characters": [
+    "Priya",
+    "Rakhi",
+    "Raj",
+    "Chunni",
+    "Kit",
+    "Kara"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "rakhi",
+    "chunni",
+    "kit",
+    "kara",
+    "flat",
+    "changed into"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nRaj turns on his heel and leaves. Raj gives the table a coat of varnish. Raj calls a wrap on the day. Raj's face is a mask of indifference. The deal is in the bag. The match ends in a tie. Inspector Pandey explains the chain of command. Raj reaches the top and looks back. Raj peers through a veil of mist. Raj works for the Crown. Raj squeezes a wedge of lemon into the glass. Raj addresses the cast.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "heel",
+    "coat",
+    "wrap",
+    "mask",
+    "bag",
+    "tie",
+    "chain",
+    "top",
+    "veil",
+    "crown",
+    "wedge",
+    "cast"
+   ]
+  },
+  {
+   "text": "EXT. VILLAGE - NIGHT\nRaj enters the Boot Inn. Raj waits at the Crown for Priya.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "boot",
+    "crown"
+   ]
+  },
+  {
+   "text": "INT. BAR - NIGHT\nPriya collects the empty glasses. Raj fills the glasses. CLINK. Raj raises the glasses.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "glasses"
+   ]
+  },
+  {
+   "text": "INT. HOTEL RECEPTION - DAY\nRaj rings the bell. Raj walks to the reception desk. Priya checks her phone. No reception. Raj has a prior engagement. Raj vacuums the red carpet.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "event",
+    "reception",
+    "engagement",
+    "carpet"
+   ]
+  },
+  {
+   "text": "EXT. WEDDING CAKE BAKERY - DAY\nRaj waits.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "event",
+    "wedding"
+   ]
+  },
+  {
+   "text": "INT. GALA THEATRE - NIGHT\nRaj waits.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "event",
+    "gala"
+   ]
+  },
+  {
+   "text": "EXT. STORM DRAIN - DAY\nRaj climbs out.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "rain/water",
+    "storm",
+    "physical action"
+   ]
+  },
+  {
+   "text": "INT. MR SNOW'S OFFICE - DAY\nRaj waits.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "rain/water",
+    "snow"
+   ]
+  },
+  {
+   "text": "INT. MONSOON PALACE RESTAURANT - NIGHT\nRaj waits.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "rain/water",
+    "monsoon"
+   ]
+  },
+  {
+   "text": "EXT. STREET - NIGHT - HEAVY RAIN\nRaj waits under the awning.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "rain"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. ATTIC - DAY\nRaj enters. The walls are covered in dust. Raj looks at the car. It is spattered with mud. Priya stares out. The windows are streaked with rain. Raj looks down. Blood on the back seat. Raj frowns at a coffee stain on the front page.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "covered in dust",
+    "spattered in",
+    "streaked in",
+    "blood on back",
+    "stain on front"
+   ]
+  },
+  {
+   "text": "INT. CAR - DAY\nRaj shoots Priya a look. Raj spreads butter with a knife. Raj is wound up about the meeting. Priya's heart beats faster. Raj reads the bullet points aloud. Raj bites the bullet and calls her. A tear rolls down Priya's cheek. Raj's heart leaps. Raj is burning with rage. Raj eats his words. Raj dances around the question. The meeting dragged on for hours. Priya punches numbers into the keypad. Raj hits send. Raj stabs at the lift button. Raj admires the garden, a riot of colour. Raj waves it off, a storm in a teacup. A blast of cold air hits Raj. Raj fights back tears. Raj kicks himself. Raj shoves past Priya. Raj climbs the corporate ladder fast. The smoke alarm chirps. Raj watches a motorcycle roar past. Priya climbs the stairs.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "fight",
+    "blood",
+    "physical",
+    "fire",
+    "food",
+    "dance",
+    "rain"
+   ]
+  },
+  {
+   "text": "EXT. ALLEY - NIGHT\nA drunk shoves Raj. Raj punches him. Raj climbs the fence and jumps off the wall.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "fight"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "physical action"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. OFFICE - DAY\nRAJ:\n  This is my top priority.\nINSPECTOR PANDEY:\n  This is my watch. Nothing happens on my watch.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "top",
+    "watch"
+   ]
+  },
+  {
+   "text": "INT. BAR - NIGHT\nRaj owes money to the mob. Police in white vans block the road. An angry mob of villagers surrounds the jeep.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "mob of villagers"
+    }
+   ],
+   "mustNotContain": [
+    "uniforms",
+    "white"
+   ]
+  },
+  {
+   "text": "INT. BEDROOM - NIGHT\nRaj drops the ring and it rolls under the bed.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "ring"
+    }
+   ],
+   "mustNotContain": [
+    "takes off"
+   ]
+  },
+  {
+   "text": "EXT. STREET - NIGHT\nRaj is soaked to the skin. Priya is drenched. Raj is soaking wet. Priya is dishevelled. Raj, dripping wet, glares. Priya is wet through.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "soaked to the skin"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "drenched"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "soaking wet"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "dishevelled"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "dripping wet"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "wet through"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "rain/water"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "rain/water"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. STREET - NIGHT\nIt is raining hard. Raj and Priya run for cover, soaked.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "rain"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "soaked"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "soaked"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. ALLEY - NIGHT\nRaj tears his sleeve on the fence. Raj's kurta tears. Priya rips her skirt on a nail. Inspector Pandey's sleeve is torn. Inspector Pandey's shirt rips at the shoulder. Priya's heel snaps.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "sleeve torn"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "kurta torn"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "skirt ripped"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "CONDITION",
+     "textContains": "sleeve torn"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "CONDITION",
+     "textContains": "shirt ripped at shoulder"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "broken heel"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "damage"
+    }
+   ],
+   "mustNotContain": [
+    "heel snaps"
+   ]
+  },
+  {
+   "text": "INT. CAR - NIGHT\nPriya is in the same clothes as the night before. Raj, same clothes as Sc. 12, drives. Raj in the same clothes. Raj hasn't changed since the party.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CONTINUITY",
+     "textContains": "same clothes"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "sc. 12"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "hasn't changed"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. ROOM - DAY\nPriya, still in her wedding lehenga, sits. Raj, in running shoes and an evening jacket, waits.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CONTINUITY",
+     "textContains": "wedding lehenga"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "wedding lehenga"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "running shoes"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "evening jacket"
+    }
+   ],
+   "mustNotContain": [
+    "event"
+   ]
+  },
+  {
+   "text": "INT. ROOM - DAY\nRaj waits.\nFLASHBACK:\nA younger Raj runs through a field.\nFLASHBACK TO:\nRaj as a boy.\nBACK TO PRESENT.\nRaj, older now, sighs.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "flashback"
+    },
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "back to present"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "younger"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "older"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. OFFICE - DAY\nRAJ (35), an architect in a navy blazer, waits. INSPECTOR PANDEY (50), a heavyset man in khaki, enters.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "navy blazer"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "GARMENT",
+     "textContains": "khaki"
+    }
+   ],
+   "mustNotContain": [
+    "raj: khaki"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nRaj is dressed in black. Priya, dressed in white from head to toe, enters. Both are in black.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "dressed in black"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "white"
+    },
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "in black"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. ROOM - DAY\nRaj's Mother ties a pagdi on Raj's head. Priya fastens a watch on Raj's wrist. Raj drapes his jacket over Priya's shoulders. Priya wears Raj's shirt.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "pagdi"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "watch"
+    },
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "jacket"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "jacket"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "shirt"
+    }
+   ],
+   "mustNotContain": [
+    "watch fastened"
+   ]
+  },
+  {
+   "text": "INT. CAFE - DAY\nPRIYA:\n  You're wearing the same shirt as yesterday.\nPRIYA:\n  Same shirt again? You look like a mess.\nRAJ:\n  I haven't been home.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "same shirt"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. ROAD - DAY\nRaj, sweating through his shirt, runs. Sweat stains his kurta. Sweat pours down his face. Priya emerges from the water, saree clinging to her. Raj crawls out of the river. Priya wrings out her dupatta.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "sweat-soaked shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "sweat-stained kurta"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "sweat"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "wet saree"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "wet dupatta"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "water immersion"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "water immersion"
+    }
+   ],
+   "mustNotContain": [
+    "water saree"
+   ]
+  },
+  {
+   "text": "INT. KITCHEN - DAY\nPriya's dupatta catches fire. Priya's sleeve catches fire. The dupatta burns.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "burnt"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "fire"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. HOUSE - NIGHT\nPRIYA:\n  (soaked, shivering)\n  Give me a towel.\nRAJ:\n  (wet, muddy)\n  Hi.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "soaked"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "wet"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "muddy"
+    }
+   ],
+   "mustNotContain": [
+    "towel"
+   ]
+  },
+  {
+   "text": "INT. HOUSE - DAY\nPriya pulls her pallu over her head as Raj's Mother enters. Raj's Mother, in a widow's white saree, sits.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "pallu over head"
+    },
+    {
+     "character": "Raj's Mother",
+     "kind": "GARMENT",
+     "textContains": "widow's white saree"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. ROOM - DAY\nRaj changes his shirt. Priya changes clothes. Raj gets changed. Raj strips to his vest.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "changes shirt"
+    },
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "changes clothes"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "gets changed"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "strips to vest"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "modesty"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. ROOM - DAY\nPriya wears the same saree as in Scene 4. Raj is dressed as before. Priya wears the outfit from the wedding.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CONTINUITY",
+     "textContains": "scene 4"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "dressed as before"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONTINUITY",
+     "textContains": "from the wedding"
+    }
+   ],
+   "mustNotContain": [
+    "dressed as:",
+    "event"
+   ]
+  },
+  {
+   "text": "INT. COURTYARD - DAY\nThe women smear haldi on Raj's face and kurta. Priya, gulal-smeared, laughs.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "haldi-stained kurta"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "holi"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "gulal-smeared"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "holi"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. TEMPLE - DAWN\nRaj is bare-chested, a janeu across his torso, in a white dhoti.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "janeu"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "white dhoti"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "bare-chested"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. POOL - NIGHT\nRaj is pushed into the pool. Raj shoves Priya into the water.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "pushed into pool"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "water immersion"
+    }
+   ],
+   "mustNotContain": [
+    "(is)"
+   ]
+  },
+  {
+   "text": "INT. CANTEEN - DAY\nA food fight breaks out.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "NOTE",
+     "textContains": "food/drink (food fight)"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. ROOM - DAY\nPriya's mangalsutra is missing. Raj is hatless. Raj's hands are bloody.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "no mangalsutra"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "no hat"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "blood on hands"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. FLAT - DAY\nRaj wears a kurta and Priya wears a saree.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "kurta"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "saree"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. FLAT - DAY\nRaj wears a kurta while Priya wears a green saree. Raj wears a kurta; Priya wears a saree and a shawl.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "kurta"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "green saree"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "shawl"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. FLAT - DAY\nRAJ (40) in a tweed jacket and PRIYA (35) in a red saree enter. Raj, 30, in a kurta, and Priya, 28, in a saree, enter.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "tweed jacket"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "red saree"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "kurta"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "saree"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. BEDROOM - MORNING\nPriya wears Raj's shirt. Priya, wearing Raj's oversized hoodie, opens the door. Vikram, in Raj's old jacket, waits. Priya, in Raj's shirt and nothing else, makes tea. Raj puts on Priya's coat and leaves.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "shirt (raj's)"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "hoodie"
+    },
+    {
+     "character": "Vikram",
+     "kind": "GARMENT",
+     "textContains": "jacket"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "coat"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. TRAILER - DAY\nMeena, the dresser, hands Raj a pressed white kurta. He steps into the kurta.",
+   "characters": [
+    "Raj",
+    "Meena"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "pressed white kurta"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "kurta"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. TRAILER - DAY\nPriya, in a red saree, hands Raj a blue shirt.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "red saree"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "blue shirt"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. GHAT - NIGHT\nRaj drapes a shawl over Priya. Raj drapes his coat over Priya's shoulders.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "shawl"
+    },
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "coat"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "shawl"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. FLAT - DAY\nPriya's mother hands her the shawl. Priya wraps the shawl around her shoulders.",
+   "characters": [
+    "Priya",
+    "Priya's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "shawl"
+    },
+    {
+     "character": "Priya's Mother",
+     "kind": "NOTE",
+     "textContains": "hands over shawl"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. FLAT - DAY\nPriya hands him the tie. He knots the tie.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "tie"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. FLAT - DAY\nRaj and Priya stand close.\nPRIYA:\n  (straightening his tie)\n  There.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "tie"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. FLAT - DAY\nPriya hands Raj's shirt to him. He pulls on the shirt.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "puts on shirt"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. FLAT - NIGHT\nRaj, Priya and Vikram sit in their pyjamas.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "pyjamas"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "pyjamas"
+    },
+    {
+     "character": "Vikram",
+     "kind": "GARMENT",
+     "textContains": "pyjamas"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. ROAD - DAY\nRaj wears a torn, muddy shirt. Later he wears a torn, muddy, blood-stained, faded, oversized, borrowed, sweat-soaked, wrinkled cotton shirt.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "torn muddy shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "torn shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "muddy shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "blood-stained shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "sweat-soaked shirt"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. HALL - NIGHT\nPriya wears a red evening gown. Raj wears a blue power suit. Priya, in a silk cocktail dress, twirls. Priya, in a crimson ball gown, descends.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "red evening gown"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "blue power suit"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "silk cocktail dress"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "crimson ball gown"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. SHOP - DAY\nRaj glances at a watch in the shop window. Priya holds up a red saree for Raj to see. Raj's jacket lies on the chair.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "not worn"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "not worn"
+    }
+   ],
+   "mustNotContain": [
+    "watch"
+   ]
+  },
+  {
+   "text": "INT. RESTAURANT - NIGHT\nA waiter in a white jacket serves Raj.",
+   "characters": [
+    "Raj",
+    "Waiter"
+   ],
+   "expected": [
+    {
+     "character": "Waiter",
+     "kind": "GARMENT",
+     "textContains": "white jacket"
+    }
+   ],
+   "mustNotContain": [
+    "waiter:"
+   ]
+  },
+  {
+   "text": "INT. BAR - NIGHT\nA BOUNCER (40), black t-shirt, blocks Raj.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "GARMENT",
+     "textContains": "bouncer: black t-shirt"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. STREET - NIGHT\nRaj pulls his hood up. He turns his collar up.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "hood up"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "collar up"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. SCHOOL - DAY (FLASHBACK)\nA younger Raj, in school uniform, runs down the corridor.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "younger look"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "school uniform"
+    }
+   ],
+   "mustNotContain": [
+    "ageing make-up"
+   ]
+  },
+  {
+   "text": "EXT. ALLEY - NIGHT\nRaj shields Priya. Blood runs down his sleeve.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "blood"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "blood on sleeve"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. HALL - NIGHT\nA waiter wears a very long deeply embroidered heavily starched immaculately pressed brilliantly white finely tailored double breasted beautifully cut formal dinner jacket.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "GARMENT",
+     "textContains": "dinner jacket"
+    },
+    {
+     "character": null,
+     "kind": "GARMENT",
+     "textContains": "white"
+    }
+   ],
+   "mustNotContain": [
+    "food"
+   ]
+  },
+  {
+   "text": "INT. FLAT - DAY\nPriya folds Raj's blue shirt and tucks it into the suitcase.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "blue shirt"
+    }
+   ],
+   "mustNotContain": [
+    "suitcase"
+   ]
+  },
+  {
+   "text": "INT. FLAT - DAY\nRaj wears a grey hoodie. He zips the grey hoodie up to his chin. The grey hoodie is torn.",
+   "characters": [
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "grey hoodie"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "torn"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. HALLWAY - DAY\nRaj and Priya stand by the door.\nPRIYA:\n  Put the coat on the hook, please.\nRAJ:\n  Take the cap off the bottle for me.\nPRIYA:\n  Put your watch on the table and listen.\nRAJ:\n  Don't lose your shirt on this deal.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "puts on",
+    "takes off",
+    "coat",
+    "watch",
+    "shirt"
+   ]
+  },
+  {
+   "text": "INT. STUDY - NIGHT\nRaj tells Priya the naked truth. Vikram can see it with the naked eye.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "naked",
+    "modesty"
+   ]
+  },
+  {
+   "text": "INT. LOBBY - DAY\nPriya wears nude heels. Priya wears nude lipstick.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "nude heels"
+    }
+   ],
+   "mustNotContain": [
+    "modesty",
+    "lipstick"
+   ]
+  },
+  {
+   "text": "INT. STUDY - NIGHT\nRaj writes in red. Vikram pays in gold. Priya trades in silk. Raj deals in leather.\nThe house is in the red.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "dressed in",
+    "red",
+    "gold",
+    "silk",
+    "leather"
+   ]
+  },
+  {
+   "text": "INT. OFFICE - DAY\nThe plan is unchanged. The price is the same as before. The schedule gets changed at the last minute.\nRaj, Priya and Vikram argue.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "same clothes",
+    "unchanged",
+    "changed"
+   ]
+  },
+  {
+   "text": "INT. ROOM - DAY\nRaj is unchanged. Priya's outfit is the same as before.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "same clothes"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONTINUITY",
+     "textContains": "same clothes"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. STUDY - NIGHT\nThere is a pregnant pause. Raj orders a double for Priya. Vikram drives the older Mercedes.\nThe idea is pregnant with meaning.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "pregnant",
+    "double",
+    "older",
+    "ageing"
+   ]
+  },
+  {
+   "text": "INT. STUDY - NIGHT\nPriya's desk is covered in dust. Raj's car is covered in mud. Vikram's phone is smeared with grease.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "dust",
+    "mud",
+    "grease",
+    "covered",
+    "smeared"
+   ]
+  },
+  {
+   "text": "INT. BAR - NIGHT\nRaj orders a double for Priya. Raj sees double for a moment.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "double"
+   ]
+  },
+  {
+   "text": "INT. OFFICE - DAY\nRaj plans the wedding for next year. Diwali is next month. The funeral was last spring.\nPriya says the reception at the hotel was awful.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "event",
+    "wedding",
+    "diwali",
+    "funeral",
+    "reception"
+   ]
+  },
+  {
+   "text": "INT. CAFE - DAY\nRaj and Priya sit.\nPRIYA:\n  You bought it at the same dress shop as me.\nRAJ:\n  It needs the same coat of paint as the hallway.\nPRIYA:\n  We took the same ring road home.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "same",
+    "dress",
+    "coat",
+    "ring"
+   ]
+  },
+  {
+   "text": "INT. OFFICE - DAY\nRaj sweats the details. Vikram tackles the paperwork. Priya wrestles with her conscience.\nThe news hits Raj hard. Raj explodes with anger. Vikram chases a lead. Raj puts up a fight over the budget.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "sweat",
+    "fight",
+    "fire",
+    "physical",
+    "chase"
+   ]
+  },
+  {
+   "text": "INT. NEWSROOM - DAY\nA hail of criticism follows. Raj needs some elbow grease. The company bleeds money.\nGuilt eats at Priya. The candle flame dances. The final sprint of the campaign begins. Snow White plays on the TV.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "rain",
+    "hail",
+    "grease",
+    "mud",
+    "blood",
+    "food",
+    "dance",
+    "sprint",
+    "physical",
+    "snow"
+   ]
+  },
+  {
+   "text": "INT. LIVING ROOM - NIGHT\nVikram showers Priya with compliments. Raj eats his words and leaves.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "shower",
+    "food",
+    "eats"
+   ]
+  },
+  {
+   "text": "INT. COURT - DAY\nVikram files a suit against the landlord.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "suit"
+   ]
+  },
+  {
+   "text": "INT. LIVING ROOM - NIGHT\nPriya keeps her cards close to her vest. Vikram tightens his belt financially.\nPriya throws in the towel. Vikram is an empty suit.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "vest",
+    "belt",
+    "towel",
+    "suit"
+   ]
+  },
+  {
+   "text": "INT. GARAGE - DAY\nRaj reads the book's dust jacket. Priya replaces the brake shoes on the car.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "jacket",
+    "shoes"
+   ]
+  },
+  {
+   "text": "INT. OFFICE - DAY\nRaj opens the crowd-funding page.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "crowd",
+    "background"
+   ]
+  },
+  {
+   "text": "EXT. DRIVEWAY - DAY\nRaj props the car hood up and peers at the engine. Priya turns the dog's collar up to read the tag.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "collar",
+    "hood"
+   ]
+  },
+  {
+   "text": "INT. RAJ'S FLAT - LAUNDRY ROOM - NIGHT\nRaj loads the machine. Priya reads.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Vikram",
+    "Raj's Mother"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "location",
+    "laundry"
+   ]
+  },
+  {
+   "text": "INT. HAVELI - DAY\nPriya's mehndi is fresh. Priya carries a cloth jhola.\nMeera ties her ghungroos. Vikram pulls on a pheran.\nRaj's Mother, in a black burkha, waits. Raj adjusts his skull cap and bandi.\nMeera wears a red chunri and jootis. Priya's choora and kaleere jingle.\nPriya, in a grey pinafore, sits at the front.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram",
+    "Meera",
+    "Raj's Mother"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "mehndi"
+    },
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "jhola"
+    },
+    {
+     "character": "Meera",
+     "kind": "ACCESSORY",
+     "textContains": "ghungroos"
+    },
+    {
+     "character": "Vikram",
+     "kind": "CHANGE",
+     "textContains": "puts on pheran"
+    },
+    {
+     "character": "Raj's Mother",
+     "kind": "GARMENT",
+     "textContains": "black burkha"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "skull cap"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "bandi"
+    },
+    {
+     "character": "Meera",
+     "kind": "GARMENT",
+     "textContains": "red chunri"
+    },
+    {
+     "character": "Meera",
+     "kind": "ACCESSORY",
+     "textContains": "jootis"
+    },
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "choora"
+    },
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "kaleere"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "grey pinafore"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. ROOM - DAY\nRaj wears a signet ring. Priya wears a halter top. Raj wears a skinny tie. Vikram wears a surgical mask. Raj checks his digital watch. Raj wears a Nehru cap. Raj wears a peaked cap.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "signet ring"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "halter top"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "skinny tie"
+    },
+    {
+     "character": "Vikram",
+     "kind": "ACCESSORY",
+     "textContains": "surgical mask"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "digital watch"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "nehru cap"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "peaked cap"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. CAFE - DAY\nPRIYA, 30s, sharp bob, black blazer, heels, sits.\nVIKRAM (40), crumpled linen suit, no tie, enters.\nINSPECTOR PANDEY (50), khaki uniform, cap under his arm, enters.\nRaj wears no tie. Priya, in heels, sits.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram",
+    "Inspector Pandey"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "heels"
+    },
+    {
+     "character": "Vikram",
+     "kind": "ACCESSORY",
+     "textContains": "no tie"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "ACCESSORY",
+     "textContains": "cap (carried under arm)"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "no tie"
+    }
+   ],
+   "mustNotContain": [
+    "bob"
+   ]
+  },
+  {
+   "text": "EXT. SCHOOL - DAY (FLASHBACK)\nA YOUNGER RAJ (12) runs across the ground.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "flashback"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "younger"
+    }
+   ],
+   "mustNotContain": [
+    "ageing make-up"
+   ]
+  },
+  {
+   "text": "INT. OFFICE - DAY\nRaj bursts in, sweaty and dishevelled.\nPriya is soaked and filthy.\nVikram enters looking bedraggled.\nMeera, still damp from the pool, shivers. Raj, still dishevelled, enters.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "sweaty"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "dishevelled"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "soaked"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "filthy"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "mud/dirt"
+    },
+    {
+     "character": "Vikram",
+     "kind": "CONDITION",
+     "textContains": "bedraggled"
+    },
+    {
+     "character": "Meera",
+     "kind": "CONDITION",
+     "textContains": "damp"
+    },
+    {
+     "character": "Meera",
+     "kind": "NOTE",
+     "textContains": "rain/water"
+    }
+   ],
+   "mustNotContain": [
+    "pool"
+   ]
+  },
+  {
+   "text": "INT. FLAT - NIGHT\nPriya, in a different saree from the morning, sits on the bed.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "different saree from the morning"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "saree"
+    }
+   ],
+   "mustNotContain": [
+    "carry-over"
+   ]
+  },
+  {
+   "text": "INT. FLAT - NIGHT\nPriya wears a different dress. Raj is in another shirt. Raj wears another kurta.\nVikram, now dressed in a suit, waits. Vikram now wears a suit.\nRaj pulls a sweater over his head. Raj pulls a sweater on.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "different dress"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "another shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "another kurta"
+    },
+    {
+     "character": "Vikram",
+     "kind": "CHANGE",
+     "textContains": "now in suit"
+    },
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "puts on sweater"
+    }
+   ],
+   "mustNotContain": [
+    "head"
+   ]
+  },
+  {
+   "text": "INT. HALL - NIGHT\nRaj is dressed as he was at the wedding.\nRaj, dressed exactly as in the previous scene, enters.\nRaj wears what he wore at the funeral.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "same clothes as the wedding"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "same as previous scene"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONTINUITY",
+     "textContains": "same clothes as the funeral"
+    }
+   ],
+   "mustNotContain": [
+    "event",
+    "dressed as:"
+   ]
+  },
+  {
+   "text": "INT. BAR - NIGHT\nPriya throws her drink in Raj's face. Priya throws wine at Raj.\nA cake is smashed into Raj's face.\nRaj empties a bucket over Priya's head. Meera throws a bucket of water over Vikram. Meera drenches Vikram with a hose.\nThe rain soaks Raj to the skin.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "spill (drink)"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "drink thrown"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "wine thrown"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "food (cake)"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "rain/water"
+    },
+    {
+     "character": "Vikram",
+     "kind": "NOTE",
+     "textContains": "rain/water"
+    },
+    {
+     "character": "Vikram",
+     "kind": "CONDITION",
+     "textContains": "soaked"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "soaked to the skin"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "rain/water"
+    }
+   ],
+   "mustNotContain": [
+    "Priya | CONDITION | drink"
+   ]
+  },
+  {
+   "text": "INT. HALL - NIGHT\nRAJ (35) and PRIYA (30), both in white, enter.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "dressed in white"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "dressed in white"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. ROOF - DAY\nA stunt double takes the fall for Vikram. Raj's double does the jump.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram"
+   ],
+   "expected": [
+    {
+     "character": "Vikram",
+     "kind": "NOTE",
+     "textContains": "stunt double"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "stunt double"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. COURTYARD - DAY\nPriya's white salwar is pink with gulal. Priya's saree is ruined. Priya's clothes are ruined.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "gulal-stained white salwar"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "holi/colour"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "saree ruined"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "damage"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "clothes ruined"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. GYM - DAY\nRaj strips to the waist. Raj, shirt off, flexes. Raj has his shirt off.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "shirtless"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "modesty"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | GARMENT | Shirt"
+   ]
+  },
+  {
+   "text": "INT. HOUSE - DAY\nTWO WEEKS LATER\nRaj enters.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "CONTINUITY",
+     "textContains": "two weeks later - fresh day change"
+    }
+   ],
+   "mustNotContain": [
+    "hold costume"
+   ]
+  },
+  {
+   "text": "INT. STAGE - NIGHT\nRaj tears his shirt off. Raj sweats through his sherwani.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CHANGE",
+     "textContains": "takes off shirt"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "sweat-soaked sherwani"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "sweat"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. FLAT - NIGHT\nRAJ:\n  Take off that wet shirt before you catch a cold.\nPRIYA:\n  Fine.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "takes off wet shirt"
+    },
+    {
+     "character": "Priya",
+     "kind": "CONDITION",
+     "textContains": "wet shirt"
+    }
+   ],
+   "mustNotContain": [
+    "cold"
+   ]
+  },
+  {
+   "text": "INT. BAR - NIGHT\nVikram vomits on his shoes. Vikram vomits down his shirt.",
+   "characters": [
+    "Raj",
+    "Vikram"
+   ],
+   "expected": [
+    {
+     "character": "Vikram",
+     "kind": "CONDITION",
+     "textContains": "vomit-stained shoes"
+    },
+    {
+     "character": "Vikram",
+     "kind": "CONDITION",
+     "textContains": "vomit-stained shirt"
+    },
+    {
+     "character": "Vikram",
+     "kind": "NOTE",
+     "textContains": "spill (vomit)"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. HALL - DAY\nPriya is wearing his old sweatshirt.\nPriya sits with Vikram. She adjusts her dupatta.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "dupatta"
+    },
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "sweatshirt"
+    }
+   ],
+   "mustNotContain": [
+    "Vikram | GARMENT"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nRaj carries her bag up the stairs.\nRaj sits with Vikram. He loosens his tie.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Vikram"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "tie"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "tie loosened"
+    }
+   ],
+   "mustNotContain": [
+    "Vikram | ACCESSORY | Tie"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nRaj hands Priya a red scarf. Raj hands her a woollen hat.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "red scarf (handed over by raj)"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "hands over red scarf to priya"
+    },
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "woollen hat (handed over by raj)"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "hands over woollen hat to priya"
+    }
+   ],
+   "mustNotContain": [
+    "handed over by priya",
+    "to raj"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nRAJ:\n  Priya, take off that coat.\nPRIYA:\n  Vikram, put on your jacket.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "takes off coat"
+    },
+    {
+     "character": "Vikram",
+     "kind": "CHANGE",
+     "textContains": "puts on jacket"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | CHANGE"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nRaj, Priya and Vikram sit.\nPRIYA:\n  Vikram, put on your jacket.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Vikram",
+     "kind": "CHANGE",
+     "textContains": "puts on jacket"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. STUDY - NIGHT\nRaj reads a letter. Priya enters.\nShe is wearing his old college sweatshirt.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "old college sweatshirt (raj's)"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | GARMENT"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nRAJ:\n  (to Priya, fixing her earring)\n  Hold still.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "ACCESSORY",
+     "textContains": "earring"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | ACCESSORY"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nPRIYA:\n  (handing Raj his coat)\n  Go.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "coat (handed over by priya)"
+    },
+    {
+     "character": "Priya",
+     "kind": "NOTE",
+     "textContains": "hands over coat to raj"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. STREET - NIGHT\nRaj hands Priya his jacket.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "jacket (handed over by raj)"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "hands over jacket to priya"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | GARMENT"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nMeera hands Raj Priya's scarf.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "scarf (handed over by meera)"
+    },
+    {
+     "character": "Meera",
+     "kind": "NOTE",
+     "textContains": "hands over scarf to raj"
+    }
+   ],
+   "mustNotContain": [
+    "Priya | ACCESSORY"
+   ]
+  },
+  {
+   "text": "INT. ROOM - DAY\nPriya picks up Raj's jacket and puts it on.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "puts on jacket (raj's)"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | CHANGE"
+   ]
+  },
+  {
+   "text": "INT. CAR - NIGHT\nPriya takes off her jacket and drapes it over Raj's shoulders.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "takes off jacket"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "jacket (draped over by priya)"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. ROOM - DAY\nRaj drops his watch. Priya picks it up and slips it on.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "watch (dropped)"
+    },
+    {
+     "character": "Priya",
+     "kind": "CHANGE",
+     "textContains": "puts on watch (raj's)"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. HALL - DAY\nRaj's friend wears a leather jacket.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "GARMENT",
+     "textContains": "friend: leather jacket"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | GARMENT"
+   ]
+  },
+  {
+   "text": "INT. WARD - DAY\nPriya, a nurse, wears blue scrubs. Nurse hands Raj a gown.",
+   "characters": [
+    "Priya",
+    "Nurse",
+    "Raj"
+   ],
+   "expected": [
+    {
+     "character": "Priya",
+     "kind": "GARMENT",
+     "textContains": "blue scrubs"
+    },
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "gown (handed over by nurse)"
+    }
+   ],
+   "mustNotContain": [
+    "Nurse | GARMENT"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nPriya watches as Raj comes in wearing a torn kurta and muddy sandals.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "GARMENT",
+     "textContains": "torn kurta"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "torn kurta"
+    },
+    {
+     "character": "Raj",
+     "kind": "ACCESSORY",
+     "textContains": "muddy sandals"
+    },
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "muddy sandals"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "mud/dirt"
+    }
+   ],
+   "mustNotContain": [
+    "kurta muddy"
+   ]
+  },
+  {
+   "text": "INT. ROOM - NIGHT\nRaj imagines Priya in a red dress. Raj remembers Priya in her wedding lehenga. Raj thinks of Priya in a green saree.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [],
+   "mustNotContain": [
+    "dress",
+    "lehenga",
+    "saree",
+    "event"
+   ]
+  },
+  {
+   "text": "EXT. ALLEY - NIGHT\nBlood from Raj's nose spatters Vikram's white shirt.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Vikram",
+     "kind": "CONDITION",
+     "textContains": "blood-spattered white shirt"
+    },
+    {
+     "character": "Vikram",
+     "kind": "NOTE",
+     "textContains": "blood"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | CONDITION"
+   ]
+  },
+  {
+   "text": "EXT. ALLEY - NIGHT\nVikram grabs Raj by the collar and rips his shirt open.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "shirt ripped open"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "damage"
+    }
+   ],
+   "mustNotContain": [
+    "Vikram | CONDITION"
+   ]
+  },
+  {
+   "text": "INT. HALL - DAY\nRaj's shirt is soaked with blood.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "shirt soaked with blood"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "blood"
+    }
+   ],
+   "mustNotContain": [
+    "soaked in blood"
+   ]
+  },
+  {
+   "text": "INT. KITCHEN - MORNING\nRaj's kurta is torn at the sleeve.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "kurta torn at sleeve"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | CONDITION | Kurta torn |"
+   ]
+  },
+  {
+   "text": "INT. HOUSE - DAY\nRaj's sleeve is singed.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": "Raj",
+     "kind": "CONDITION",
+     "textContains": "sleeve burnt/singed"
+    },
+    {
+     "character": "Raj",
+     "kind": "NOTE",
+     "textContains": "fire"
+    }
+   ],
+   "mustNotContain": [
+    "Raj | CONDITION | Singed"
+   ]
+  },
+  {
+   "text": "INT. HOUSE - DAY\nPRIYA'S MOTHER (55), in a widow's white saree, opens the door.",
+   "characters": [
+    "Raj",
+    "Priya"
+   ],
+   "expected": [
+    {
+     "character": null,
+     "kind": "GARMENT",
+     "textContains": "priya's mother: widow's white saree"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "EXT. POLICE STATION - DAY\nInspector Pandey straightens his khaki uniform. Pandey's cap is missing. The inspector's boots are muddy.",
+   "characters": [
+    "Raj",
+    "Priya",
+    "Inspector Pandey",
+    "Raj's Mother",
+    "Vikram",
+    "Meera"
+   ],
+   "expected": [
+    {
+     "character": "Inspector Pandey",
+     "kind": "GARMENT",
+     "textContains": "khaki uniform"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "ACCESSORY",
+     "textContains": "no cap"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "ACCESSORY",
+     "textContains": "boots"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "CONDITION",
+     "textContains": "boots muddy"
+    },
+    {
+     "character": "Inspector Pandey",
+     "kind": "NOTE",
+     "textContains": "mud/dirt"
+    }
+   ],
+   "mustNotContain": []
+  },
+  {
+   "text": "INT. RESTAURANT - NIGHT\nA WAITER in a black vest pours water. Raj nods.",
+   "characters": [
+    "Raj",
+    "Waiter"
+   ],
+   "expected": [
+    {
+     "character": "Waiter",
+     "kind": "GARMENT",
+     "textContains": "black vest"
+    }
+   ],
+   "mustNotContain": [
+    "Waiter:"
+   ],
+   "note": "role word that is also a character name attributes to the character"
+  }
+ ]
+}

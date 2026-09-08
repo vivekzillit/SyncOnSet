@@ -14,7 +14,7 @@ export interface Meta {
   priorities: string[]; fittingStatuses: string[]; fittingItemStatuses: string[]; alterationPipeline: string[]; alterationStatuses: string[];
   damageStatuses: string[]; damageResponsible: string[]; missingStatuses: string[]; rentalStatuses: string[]; expenseCategories: string[];
   photoEntityTypes: string[]; photoKinds: string[]; notificationTypes: string[];
-  cueKinds?: string[]; aiEnabled?: boolean; aiModel?: string | null;
+  cueKinds?: string[]; aiEnabled?: boolean; aiModel?: string | null; cuesEnabled?: boolean; cueEngine?: "ai" | "rules";
 }
 
 export interface Photo { id: string; entityType: string; entityId: string; kind: string; url: string; caption?: string | null; createdAt: string }

@@ -40,6 +40,43 @@ photosRouter.get(
   }),
 );
 
+/** Gallery: every photo in the production with a label for what it shows. ?entityType=&characterId=&sceneId=&q= */
+photosRouter.get(
+  "/gallery",
+  wrap(async (req, res) => {
+    const where: Record<string, unknown> = { projectId: req.projectId };
+    if (req.query.entityType) where.entityType = String(req.query.entityType);
+    const photos = await prisma.photo.findMany({ where, orderBy: { createdAt: "desc" }, take: 2000 });
+    const ids = (t: string) => photos.filter((ph) => ph.entityType === t).map((ph) => ph.entityId);
+    const [costumes, characters, changes, fittings, continuity, cleaning, damages, actors] = await Promise.all([
+      prisma.costume.findMany({ where: { id: { in: ids("COSTUME") } }, select: { id: true, assetNumber: true, name: true, characterId: true, character: { select: { name: true } } } }),
+      prisma.character.findMany({ where: { id: { in: ids("CHARACTER") } }, select: { id: true, name: true } }),
+      prisma.costumeChange.findMany({ where: { id: { in: ids("CHANGE") } }, select: { id: true, changeNumber: true, name: true, characterId: true, character: { select: { name: true } } } }),
+      prisma.fitting.findMany({ where: { id: { in: ids("FITTING") } }, select: { id: true, scheduledAt: true, characterId: true, character: { select: { name: true } } } }),
+      prisma.continuityRecord.findMany({ where: { id: { in: ids("CONTINUITY") } }, select: { id: true, takeNumber: true, sceneId: true, characterId: true, scene: { select: { number: true } }, character: { select: { name: true } } } }),
+      prisma.cleaningRequest.findMany({ where: { id: { in: ids("CLEANING") } }, select: { id: true, sceneId: true, costume: { select: { assetNumber: true, name: true, characterId: true } } } }),
+      prisma.damageReport.findMany({ where: { id: { in: ids("DAMAGE") } }, select: { id: true, sceneId: true, costume: { select: { assetNumber: true, name: true, characterId: true } } } }),
+      prisma.actor.findMany({ where: { id: { in: ids("ACTOR") } }, select: { id: true, name: true } }),
+    ]);
+    const label = new Map<string, { label: string; characterId?: string | null; sceneId?: string | null; link: string }>();
+    costumes.forEach((c) => label.set(`COSTUME:${c.id}`, { label: `${c.assetNumber} ${c.name}${c.character ? ` · ${c.character.name}` : ""}`, characterId: c.characterId, link: `costumes/${c.id}` }));
+    characters.forEach((c) => label.set(`CHARACTER:${c.id}`, { label: c.name, characterId: c.id, link: `characters/${c.id}` }));
+    changes.forEach((c) => label.set(`CHANGE:${c.id}`, { label: `${c.character?.name || ""} · Change #${c.changeNumber} ${c.name}`, characterId: c.characterId, link: `changes/${c.id}` }));
+    fittings.forEach((f) => label.set(`FITTING:${f.id}`, { label: `Fitting · ${f.character?.name || ""} · ${f.scheduledAt.toDateString()}`, characterId: f.characterId, link: `fittings/${f.id}` }));
+    continuity.forEach((r) => label.set(`CONTINUITY:${r.id}`, { label: `Sc ${r.scene?.number} Take ${r.takeNumber} · ${r.character?.name || ""}`, characterId: r.characterId, sceneId: r.sceneId, link: `continuity?sceneId=${r.sceneId}&characterId=${r.characterId}` }));
+    cleaning.forEach((c) => label.set(`CLEANING:${c.id}`, { label: `Cleaning · ${c.costume.assetNumber} ${c.costume.name}`, characterId: c.costume.characterId, sceneId: c.sceneId, link: `cleaning/${c.id}` }));
+    damages.forEach((d) => label.set(`DAMAGE:${d.id}`, { label: `Damage · ${d.costume.assetNumber} ${d.costume.name}`, characterId: d.costume.characterId, sceneId: d.sceneId, link: `damages` }));
+    actors.forEach((a) => label.set(`ACTOR:${a.id}`, { label: a.name, link: `actors` }));
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const characterId = req.query.characterId ? String(req.query.characterId) : null;
+    const sceneId = req.query.sceneId ? String(req.query.sceneId) : null;
+    const items = photos
+      .map((ph) => ({ ...ph, ...(label.get(`${ph.entityType}:${ph.entityId}`) || { label: ph.entityType, link: "" }) }))
+      .filter((ph) => (!characterId || ph.characterId === characterId) && (!sceneId || ph.sceneId === sceneId) && (!q || `${ph.label} ${ph.caption || ""} ${ph.kind}`.toLowerCase().includes(q)));
+    res.json({ items, total: items.length });
+  }),
+);
+
 /** multipart/form-data: file, entityType, entityId, kind?, caption? */
 photosRouter.post(
   "/",

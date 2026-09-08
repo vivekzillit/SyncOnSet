@@ -216,9 +216,9 @@ scenesRouter.post(
   "/extract-cues",
   requireRole(MANAGER_ROLES),
   wrap(async (req, res) => {
-    const { sceneIds } = parse(z.object({ sceneIds: z.array(z.string()).min(1).max(10) }), req.body);
-    const result = await extractAndStoreCues(req.projectId!, sceneIds);
-    await audit(req.user, req.projectId!, "AI_CUES_EXTRACT", "SCENE", "batch", { scenes: sceneIds.length, cues: result.cuesCreated, model: result.model });
+    const { sceneIds, engine } = parse(z.object({ sceneIds: z.array(z.string()).min(1).max(10), engine: z.enum(["auto", "rules", "ai"]).optional() }), req.body);
+    const result = await extractAndStoreCues(req.projectId!, sceneIds, { engine });
+    await audit(req.user, req.projectId!, "AI_CUES_EXTRACT", "SCENE", "batch", { scenes: sceneIds.length, cues: result.cuesCreated, model: result.model, engine: result.engine });
     res.json(result);
   }),
 );

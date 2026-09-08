@@ -66,6 +66,8 @@ Notification (per user)  AuditLog
 ```
 
 Key fields
+- **Project**: `type` (FEATURE | EPISODIC), `studio`, `budgetBand` (UNDER_2M … 80M_PLUS), `country`, `city`, plus status, shooting day, currency, dates.
+- **Actor**: `name`, `gender`, `age`, `phone`, `phone2`, `email`, `email2`, `agency`, `startWorkDate`, `nextFittingAt`, `fittingComment`, measurements JSON; `characterIds` on create/update relinks characters.
 - **Character**: `castNumber` (call-sheet number), type, actor link.
 - **Scene**: slugline fields, `pages` (eighths), `scriptDay`, `shootDate`, `status`, `scriptText`, `revision`, `revisedAt`.
 - **Costume**: `assetNumber` (unique, e.g. `CST-000245`, auto-generated if omitted), `category`, `type`, `color`, `brand`, `size`, `fabric`, `quantity`, `source`, `purchaseCost`, `rentalCostPerDay`, `vendorId`, `characterId`, `status`, `location`, `careInstructions`, `isRetired`.
@@ -131,22 +133,30 @@ not rewritten so manual edits survive), a `characterMap` (detected name → exis
 ignore non-characters) and `castNumbers` for characters created by the import (`Character.castNumber`). Uploads never delete
 scenes or scene-character links, mirroring SyncOnSet's revision behaviour; omitted headings set status OMITTED.
 
-### Sides
+### Script text endpoint
 
-`GET …/scenes/sides?date=YYYY-MM-DD` or `?ids=` returns the day's scenes with slugline data, page counts, revision, cast
-numbers and stored text; the Sides screen renders them as a cover sheet plus screenplay-formatted pages with a name-and-date
-watermark for printing.
+`GET …/scenes/sides?date=YYYY-MM-DD` or `?ids=` returns a day's scenes with slugline data, page counts, revision, cast
+numbers and stored text (kept for exports; not linked in the navigation).
 
-### AI costume cues (tier 2, advisory)
+### Costume cues from script text (tier 2, advisory)
 
-`POST …/scenes/extract-cues { sceneIds }` (managers, up to 10 scenes per call; the client chunks for progress) sends each
-scene's stored text to the Claude API (`claude-opus-5` by default, `ANTHROPIC_MODEL` to override) with a costume-breakdown
-system prompt and a structured-output schema, and stores the result as `ScriptCue` rows: `character`, `kind`
-(GARMENT, ACCESSORY, CONDITION, CHANGE, CONTINUITY, NOTE), `text` (≤ 20 words), a verbatim `quote`, `confidence`, and
+`POST …/scenes/extract-cues { sceneIds, engine? }` (managers, up to 10 scenes per call; the client chunks for progress)
+reads each scene's stored text and stores the result as `ScriptCue` rows: `character`, `kind` (GARMENT, ACCESSORY,
+CONDITION, CHANGE, CONTINUITY, NOTE), `text` (≤ 20 words), a verbatim `quote`, `confidence`, `source` (RULES or AI) and
 `status` SUGGESTED → ACCEPTED | DISMISSED via `PATCH …/cues/:id` or `POST …/cues/bulk`. Re-extraction replaces SUGGESTED
-cues and keeps decided ones. Batches are ~6 scenes or 24k characters; the system prompt is cached. The feature is off unless
-`ANTHROPIC_API_KEY` is set on the server (`GET /meta` reports `aiEnabled`); refusals, auth failures and rate limits map to
-502/503/429 with plain-language messages. Cues never create changes or costumes: they are a checklist for the designer.
+cues and keeps decided ones. Cues never create changes or costumes: they are a checklist for the designer.
+
+Two engines share the same output shape:
+- **Built-in reader (`backend/src/services/scriptCues.ts`, default)** — deterministic, server-side, no key or network.
+  Sentence-level matching of a wardrobe vocabulary (garments incl. Indian wear, accessories, footwear, jewellery, colours,
+  fabrics, condition words, change verbs, continuity phrases, hazards) with word boundaries and plural/possessive handling;
+  cue text composed from modifiers plus the noun; attribution by possessive, appositive introduction, nearest name in the
+  sentence, then last-named character in the paragraph; dialogue lines ignored except explicit costume instructions;
+  anti-patterns for metaphors, sound effects and place names; precision first; deduplicated per scene. A regression suite
+  lives in `backend/scripts/cues-spec.json` and runs with `npx tsx scripts/cues-check.ts`.
+- **AI (`costumeCues.ts`, optional)** — used when `ANTHROPIC_API_KEY` is set (`GET /meta` reports `aiEnabled` and
+  `cueEngine`): `claude-opus-5` by default with a structured-output schema, ~6 scenes per call, cached system prompt;
+  refusals, auth failures and rate limits map to 502/503/429. `engine: "rules" | "ai" | "auto"` selects explicitly.
 
 ## 5. API reference
 
@@ -186,7 +196,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 | alterations | GET (?open=true), POST, GET/:id, PATCH, POST /:id/advance |
 | cues | GET (?status=&characterId=&sceneId=), PATCH/:id `{status,text,characterId}`, POST /bulk `{ids,status}`; scenes: POST /extract-cues `{sceneIds}` |
 | continuity | GET (?sceneId=&characterId=), POST (upsert by scene/character/take; prefilled from previous take), GET /compare?sceneId=&characterId= → `{records,flags}`, GET/:id, DELETE/:id |
-| photos | GET (?entityType=&entityId=), POST multipart `file,entityType,entityId,kind,caption`, DELETE/:id |
+| photos | GET (?entityType=&entityId=), GET /gallery (?entityType=&characterId=&sceneId=&q=, every photo with a label and link to its record), POST multipart `file,entityType,entityId,kind,caption`, DELETE/:id |
 | damages | GET (?open=true), POST, PATCH/:id (`REPAIRED` books a DAMAGE expense; `WRITTEN_OFF` retires) |
 | missing | GET (?status=), POST, PATCH/:id `{status:FOUND,foundLocation}` |
 | vendors | GET, POST, GET/:id, PATCH, DELETE |
@@ -197,15 +207,15 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 
 ## 6. Screens (web app, 27)
 
-Login · Projects · **Dashboard** · Scan · Scenes · Scene detail (readiness, change assignment, takes, tickets) ·
-Characters & actors · Character detail (changes, scenes, pieces, measurements, fittings, photos) · Change detail (pieces, wear notes, photos, scenes) ·
+Login · Projects · Production wizard (type, title, studio, budget band, dates, location, script upload, Character Confirmation) · **Dashboard** · Scan · Scenes · Scene detail (readiness, change assignment, takes, tickets) ·
+Characters · Actors (SyncOnSet-style table and Create Actor form) · Gallery · Character detail (changes, scenes, pieces, measurements, fittings, photos) · Change detail (pieces, wear notes, photos, scenes) ·
 Costumes (search/filter/paginate, create) · Costume detail (QR, actions, used-in, photos, records, timeline) ·
 Sink/Cleaning board (kanban + list) · Cleaning ticket (stepper, work actions, QC, replacement, history, stain photos) ·
 Fittings · Fitting detail (checklist, alteration on the spot, measurements, photos) · Continuity book (takes, flags, record take) ·
 Alterations · Damage reports · Missing items · Vendors & rentals · Budget & expenses · Reports (daily / inventory / wrap, CSV, print) ·
 QR labels (select & print) · Notifications · Team & roles · Project settings · More (mobile menu).
 
-Mobile: bottom navigation **Home | Scenes | Costumes | Scan | Sink | More**, camera capture on all photo inputs, one-hand action bars.
+Desktop navigation follows SyncOnSet: a production header with global search, a department chip and top tabs (Dashboard, Scenes, Characters ▾, Costumes ▾, On Set ▾, Reports ▾, Gallery). Mobile: bottom navigation **Home | Scenes | Costumes | Scan | Sink | More**, camera capture on all photo inputs, one-hand action bars.
 
 ## 7. QR workflow
 

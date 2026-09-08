@@ -34,13 +34,13 @@ export default function Projects() {
             </div>
           </div>
           <div className="row gap-1">
-            {canCreate && <button className="btn btn-accent btn-sm" onClick={() => setOpen(true)}><Plus size={15} /> New project</button>}
+            {canCreate && <Link to="/projects/new" className="btn btn-accent btn-sm"><Plus size={15} /> Create a Production</Link>}
             <button className="btn btn-sm" onClick={() => { logout(); nav("/login"); }}><LogOut size={15} /> Sign out</button>
           </div>
         </div>
         <div className="card">
           <h2 className="mb-2">Your productions</h2>
-          {isLoading ? <Spinner /> : !data?.length ? <Empty icon="🎬" title="No projects yet" hint={canCreate ? "Create your first production." : "Ask a production manager to add you to a project."} /> : (
+          {isLoading ? <Spinner /> : !data?.length ? <Empty icon="🎬" title="Welcome" hint={canCreate ? "Let's get started." : "Ask a production manager to add you to a project."} action={canCreate ? <Link to="/projects/new" className="btn btn-primary">Create a Production</Link> : undefined} /> : (
             <div className="grid grid-2">
               {data.map((pr) => (
                 <Link key={pr.id} to={`/p/${pr.id}`} className="card flat" style={{ display: "block" }}>

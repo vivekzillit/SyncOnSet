@@ -7,6 +7,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod/v4";
 import { prisma } from "../lib/prisma";
 import { HttpError } from "../lib/errors";
+import { extractCuesRules } from "./scriptCues";
 
 export const AI_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 export const aiEnabled = () => !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
@@ -75,8 +76,14 @@ export async function extractCues(scenes: SceneInput[], characterNames: string[]
  * Run extraction for the given scenes and store the cues. Existing SUGGESTED cues on those scenes are replaced;
  * ACCEPTED and DISMISSED cues are kept so nobody has to re-decide.
  */
-export async function extractAndStoreCues(projectId: string, sceneIds: string[]) {
-  getClient(); // fail fast with a clear 503 when the server has no API key, even if nothing would be sent
+export type CueEngine = "auto" | "rules" | "ai";
+
+export async function extractAndStoreCues(projectId: string, sceneIds: string[], opts: { engine?: CueEngine } = {}) {
+  const requested = opts.engine || "auto";
+  const engine: "ai" | "rules" = requested === "auto" ? (aiEnabled() ? "ai" : "rules") : requested;
+  if (engine === "ai") getClient(); // fail fast with a clear 503 when the server has no API key, even if nothing would be sent
+  const source = engine === "ai" ? "AI" : "RULES";
+  const model = engine === "ai" ? AI_MODEL : null;
   const scenes = await prisma.scene.findMany({ where: { projectId, id: { in: sceneIds } }, orderBy: { sortOrder: "asc" } });
   const withText = scenes.filter((s) => s.scriptText && s.scriptText.trim().length > 0);
   const characters = await prisma.character.findMany({ where: { projectId }, select: { id: true, name: true } });
@@ -95,8 +102,23 @@ export async function extractAndStoreCues(projectId: string, sceneIds: string[])
   }
   if (cur.length) batches.push(cur);
 
+  let fallback = false;
   for (const batch of batches) {
-    const result = await extractCues(batch, characters.map((c) => c.name));
+    const names = characters.map((c) => c.name);
+    let result: { scenes: ExtractedScene[]; usage: { input: number; output: number } };
+    if (engine === "ai") {
+      try {
+        result = await extractCues(batch, names);
+      } catch (e) {
+        if (requested !== "auto") throw e; // explicit "ai": surface the error
+        fallback = true; // auto: degrade to the built-in reader rather than stopping the run
+        result = { scenes: extractCuesRules(batch, names), usage: { input: 0, output: 0 } };
+      }
+    } else {
+      result = { scenes: extractCuesRules(batch, names), usage: { input: 0, output: 0 } };
+    }
+    const batchSource = fallback ? "RULES" : source;
+    const batchModel = fallback ? null : model;
     usage = { input: usage.input + result.usage.input, output: usage.output + result.usage.output };
     for (const s of batch) {
       const found = result.scenes.find((r) => r.number.trim().toLowerCase() === s.number.trim().toLowerCase());
@@ -114,11 +136,12 @@ export async function extractAndStoreCues(projectId: string, sceneIds: string[])
           text: c.text.trim(),
           quote: c.quote?.trim() || null,
           confidence: c.confidence,
-          model: AI_MODEL,
+          source: batchSource,
+          model: batchModel,
         }));
       if (rows.length) await prisma.scriptCue.createMany({ data: rows });
       created += rows.length;
     }
   }
-  return { scenesProcessed: withText.length, scenesSkipped: scenes.length - withText.length, cuesCreated: created, usage, model: AI_MODEL };
+  return { scenesProcessed: withText.length, scenesSkipped: scenes.length - withText.length, cuesCreated: created, usage, model: fallback ? null : model, engine: fallback ? "rules" : engine, fallback };
 }

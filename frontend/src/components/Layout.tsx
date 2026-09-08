@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useParams, Link } from "react-router-dom";
-import { ErrorBoundary } from "./ErrorBoundary";
-import { ChangePasswordModal } from "./Account";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, KeyRound, FileText, LayoutDashboard, Clapperboard, Users, Shirt, ScanLine, Droplets, Ruler, BookOpen, Scissors, AlertTriangle, SearchX, Store, Wallet, FileBarChart, Tag, UserCog, Settings, MoreHorizontal, LogOut, ChevronsUpDown } from "lucide-react";
+import { Bell, ChevronDown, ChevronsUpDown, Settings, LayoutDashboard, Clapperboard, Shirt, ScanLine, Droplets, MoreHorizontal, LogOut, KeyRound, UserCog, Images } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useAuth, FINANCE_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { ProjectProvider, useProject } from "@/state/project";
 import { humanize } from "@/lib/format";
 import type { Dashboard } from "@/api/types";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { ChangePasswordModal } from "./Account";
+import { GlobalSearch } from "./GlobalSearch";
 
 export function ProjectShell() {
   const { projectId = "" } = useParams();
@@ -19,97 +20,97 @@ export function ProjectShell() {
   );
 }
 
+interface MenuItem { to: string; label: string; count?: number; danger?: boolean; end?: boolean }
+interface Tab { key: string; label: string; to?: string; items?: MenuItem[]; end?: boolean }
+
+function TabMenu({ tab, activePath }: { tab: Tab; activePath: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
+  const active = tab.items!.some((i) => (i.end ? activePath === i.to : activePath.startsWith(i.to)));
+  const total = tab.items!.reduce((n, i) => n + (i.count || 0), 0);
+  return (
+    <div ref={ref} className={`tab has-menu ${active ? "active" : ""}`}>
+      <button type="button" onClick={() => setOpen((v) => !v)}>{tab.label} {total ? <span className={`count ${tab.items!.some((i) => i.danger && i.count) ? "danger" : ""}`}>{total}</span> : null}<ChevronDown size={14} /></button>
+      {open && (
+        <div className="tab-menu card">
+          {tab.items!.map((i) => (
+            <NavLink key={i.to} to={i.to} end={i.end} onClick={() => setOpen(false)} className={({ isActive }) => (isActive ? "active" : "")}>
+              <span className="grow">{i.label}</span>{i.count ? <span className={`count ${i.danger ? "danger" : ""}`}>{i.count}</span> : null}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Shell() {
   const { projectId, project, can } = useProject();
   const { user, logout } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
   const [pwOpen, setPwOpen] = useState(false);
+  const [gear, setGear] = useState(false);
+  const gearRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { const h = (e: MouseEvent) => { if (gearRef.current && !gearRef.current.contains(e.target as Node)) setGear(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
   const { data: notif } = useQuery({ queryKey: ["notifications", projectId, "unread"], queryFn: () => api<{ unread: number }>(p(projectId, "/notifications?unread=true")), refetchInterval: 30000 });
   const { data: dash } = useQuery({ queryKey: ["dashboard", projectId], queryFn: () => api<Dashboard>(p(projectId, "/dashboard")), refetchInterval: 60000 });
   const c = dash?.counts;
   const base = `/p/${projectId}`;
-  const link = (to: string, icon: React.ReactNode, label: string, count?: number, danger?: boolean, end?: boolean) => (
-    <NavLink to={to} end={end}>
-      {icon}
-      <span>{label}</span>
-      {count ? <span className={`count ${danger ? "danger" : ""}`}>{count}</span> : null}
-    </NavLink>
-  );
+
+  const tabs: Tab[] = [
+    { key: "dash", label: "Dashboard", to: base, end: true },
+    { key: "scenes", label: "Scenes", to: `${base}/scenes` },
+    { key: "characters", label: "Characters", items: [{ to: `${base}/characters`, label: "Characters", end: true }, { to: `${base}/actors`, label: "Actors" }] },
+    { key: "costumes", label: "Costumes", items: [{ to: `${base}/costumes`, label: "Costumes", count: c?.costumes }, { to: `${base}/labels`, label: "QR Labels" }, { to: `${base}/vendors`, label: "Vendors & Rentals", count: c?.rentalsDue, danger: true }] },
+    { key: "set", label: "On Set", items: [{ to: `${base}/scan`, label: "Scan QR" }, { to: `${base}/cleaning`, label: "Sink / Cleaning", count: c?.cleaning }, { to: `${base}/fittings`, label: "Fittings", count: c?.fittingsToday }, { to: `${base}/alterations`, label: "Alterations", count: c?.alteration }, { to: `${base}/damages`, label: "Damage", count: c?.damaged, danger: true }, { to: `${base}/missing`, label: "Missing", count: c?.missing, danger: true }, { to: `${base}/continuity`, label: "Continuity book" }] },
+    { key: "reports", label: "Reports", items: [{ to: `${base}/reports`, label: "Reports" }, ...(can(FINANCE_ROLES) ? [{ to: `${base}/budget`, label: "Budget & Expenses" }] : [])] },
+    { key: "gallery", label: "Gallery", to: `${base}/gallery` },
+  ];
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark">C&amp;S</div>
-          <div>
-            <div className="brand-name">Costumes &amp; Set</div>
-            <div className="brand-sub">Wardrobe & costume ops</div>
-          </div>
-        </div>
-        <div className="project-chip" onClick={() => nav("/projects")} title="Switch project">
-          <div className="grow truncate">
-            <b className="truncate">{project?.name || "…"}</b>
-            <span>{project ? `Day ${project.shootingDay} · ${project.currentLocation || humanize(project.status)}` : ""}</span>
-          </div>
-          <ChevronsUpDown size={16} color="#9a9da6" />
-        </div>
-        <nav className="nav">
-          {link(base, <LayoutDashboard size={17} />, "Dashboard", undefined, false, true)}
-          {link(`${base}/scan`, <ScanLine size={17} />, "Scan QR")}
-          <div className="nav-group">Breakdown</div>
-          {link(`${base}/scenes`, <Clapperboard size={17} />, "Scenes", c?.todaysScenes)}
-          {link(`${base}/characters`, <Users size={17} />, "Characters & Actors")}
-          {link(`${base}/sides`, <FileText size={17} />, "Sides")}
-          {link(`${base}/continuity`, <BookOpen size={17} />, "Continuity book")}
-          <div className="nav-group">Wardrobe</div>
-          {link(`${base}/costumes`, <Shirt size={17} />, "Costumes", c?.costumes)}
-          {link(`${base}/cleaning`, <Droplets size={17} />, "Sink / Cleaning", c?.cleaning)}
-          {link(`${base}/fittings`, <Ruler size={17} />, "Fittings", c?.fittingsToday)}
-          {link(`${base}/alterations`, <Scissors size={17} />, "Alterations", c?.alteration)}
-          {link(`${base}/damages`, <AlertTriangle size={17} />, "Damage", c?.damaged, true)}
-          {link(`${base}/missing`, <SearchX size={17} />, "Missing", c?.missing, true)}
-          <div className="nav-group">Production</div>
-          {link(`${base}/vendors`, <Store size={17} />, "Vendors & Rentals", c?.rentalsDue, true)}
-          {can(FINANCE_ROLES) && link(`${base}/budget`, <Wallet size={17} />, "Budget & Expenses")}
-          {link(`${base}/reports`, <FileBarChart size={17} />, "Reports")}
-          {link(`${base}/labels`, <Tag size={17} />, "QR Labels")}
-          {can(MANAGER_ROLES) && link(`${base}/team`, <UserCog size={17} />, "Team & Roles")}
-          {can(MANAGER_ROLES) && link(`${base}/settings`, <Settings size={17} />, "Project settings")}
-        </nav>
-        <div className="sidebar-foot">
-          <div className="row between">
-            <div className="grow truncate">
-              <div className="bold truncate">{user?.name}</div>
-              <div className="tiny" style={{ color: "#9a9da6" }}>{humanize(user?.role)}</div>
+    <div className="shell-top">
+      <header className="topnav">
+        <div className="topnav-row1">
+          <Link to="/projects" className="row gap-2" style={{ minWidth: 0 }} title="Switch production">
+            <div className="brand-mark">C&amp;S</div>
+            <div className="truncate hide-mobile">
+              <div className="bold truncate" style={{ lineHeight: 1.1 }}>{project?.name || "…"}</div>
+              <div className="tiny subtle">{project ? `${humanize((project as { type?: string }).type || "FEATURE")} · Day ${project.shootingDay}${project.currentLocation ? ` · ${project.currentLocation}` : ""}` : ""}</div>
             </div>
-            <button className="btn btn-ghost btn-sm" style={{ color: "#c9cbd2" }} onClick={() => setPwOpen(true)} title="Change password"><KeyRound size={15} /></button>
-            <button className="btn btn-ghost btn-sm" style={{ color: "#c9cbd2" }} onClick={() => { logout(); nav("/login"); }} title="Sign out"><LogOut size={15} /></button>
+            <div className="truncate bold small show-mobile">{project?.name}</div>
+            <ChevronsUpDown size={14} color="var(--text-3)" className="hide-mobile" />
+          </Link>
+          <div className="grow hide-mobile" style={{ maxWidth: 420 }}><GlobalSearch /></div>
+          <div className="grow show-mobile" />
+          <Link to={`${base}/notifications`} className="iconbtn" aria-label="Notifications"><Bell size={18} />{notif?.unread ? <span className="pip">{notif.unread > 99 ? "99+" : notif.unread}</span> : null}</Link>
+          <div ref={gearRef} className="hide-mobile" style={{ position: "relative" }}>
+            <button type="button" className="iconbtn" aria-label="Settings" onClick={() => setGear((v) => !v)}><Settings size={18} /></button>
+            {gear && (
+              <div className="tab-menu card" style={{ right: 0, left: "auto" }}>
+                <div className="subtle tiny" style={{ padding: "4px 10px" }}>{user?.name} · {humanize(user?.role)}</div>
+                {can(MANAGER_ROLES) && <Link to={`${base}/team`} onClick={() => setGear(false)}><UserCog size={15} /> Team & roles</Link>}
+                {can(MANAGER_ROLES) && <Link to={`${base}/settings`} onClick={() => setGear(false)}><Settings size={15} /> Project settings</Link>}
+                <button type="button" onClick={() => { setGear(false); setPwOpen(true); }}><KeyRound size={15} /> Change password</button>
+                <button type="button" onClick={() => { logout(); nav("/login"); }}><LogOut size={15} /> Sign out</button>
+              </div>
+            )}
           </div>
         </div>
-      </aside>
+        <div className="topnav-row2 hide-mobile">
+          <span className="dept-chip"><span className="dot tone-accent" /> Costumes</span>
+          {tabs.map((t) => t.items ? <TabMenu key={t.key} tab={t} activePath={loc.pathname} /> : (
+            <NavLink key={t.key} to={t.to!} end={t.end} className={({ isActive }) => `tab ${isActive ? "active" : ""}`}>{t.label}</NavLink>
+          ))}
+        </div>
+      </header>
 
-      <div className="main">
-        <header className="topbar">
-          <Link to="/projects" className="show-mobile row gap-1" style={{ minWidth: 0 }}>
-            <div className="brand-mark" style={{ width: 30, height: 30, fontSize: 11 }}>C&amp;S</div>
-            <div className="truncate bold small">{project?.name}</div>
-          </Link>
-          <div className="grow hide-mobile subtle">
-            {project ? <>Shooting day <b>{project.shootingDay}</b> · {project.currentLocation || humanize(project.status)}</> : null}
-          </div>
-          <div className="grow show-mobile" />
-          <Link to={`${base}/notifications`} className="iconbtn" aria-label="Notifications">
-            <Bell size={18} />
-            {notif?.unread ? <span className="pip">{notif.unread > 99 ? "99+" : notif.unread}</span> : null}
-          </Link>
-        </header>
-        <main className="content">
-          <ErrorBoundary resetKey={loc.pathname}>
-            <Outlet />
-          </ErrorBoundary>
-        </main>
-      </div>
+      <main className="content content-top">
+        <ErrorBoundary resetKey={loc.pathname}>
+          <Outlet />
+        </ErrorBoundary>
+      </main>
 
       <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} />
 
@@ -121,6 +122,7 @@ function Shell() {
         <NavLink to={`${base}/cleaning`}><Droplets size={20} /><span>Sink</span></NavLink>
         <NavLink to={`${base}/more`}><MoreHorizontal size={20} /><span>More</span></NavLink>
       </nav>
+      <span hidden><Images size={1} /></span>
     </div>
   );
 }

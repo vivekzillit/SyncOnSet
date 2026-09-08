@@ -37,7 +37,7 @@ export default function Characters() {
 
   return (
     <div>
-      <PageHead title="Characters & Actors" sub="Who wears what. Actor measurements are shared with shoppers and tailors." actions={can(MANAGER_ROLES) && (tab === "characters" ? <button className="btn btn-primary" onClick={() => setCharOpen(true)}><Plus size={16} /> Character</button> : <button className="btn btn-primary" onClick={() => setActorOpen(true)}><Plus size={16} /> Actor</button>)} />
+      <PageHead title="Characters" sub="Who wears what. Cast numbers appear on sides and call sheets." actions={<><Link to={`/p/${projectId}/actors`} className="btn">★ Actors</Link>{can(MANAGER_ROLES) && (tab === "characters" ? <button className="btn btn-primary" onClick={() => setCharOpen(true)}><Plus size={16} /> Character</button> : <button className="btn btn-primary" onClick={() => setActorOpen(true)}><Plus size={16} /> Actor</button>)}</>} />
       <Tabs tabs={[{ key: "characters", label: `Characters (${characters?.length ?? 0})` }, { key: "actors", label: `Actors (${actors?.length ?? 0})` }]} value={tab} onChange={setTab} />
       {tab === "characters" ? (
         <Card pad0>

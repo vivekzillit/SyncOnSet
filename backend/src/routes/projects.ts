@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { wrap, notFound } from "../lib/errors";
 import { parse, zDate, zOptionalString } from "../lib/validate";
 import { requireAuth, requireProject, requireRole } from "../middleware/auth";
-import { MANAGER_ROLES, PROJECT_STATUSES, ROLES } from "../lib/constants";
+import { BUDGET_BANDS, MANAGER_ROLES, PROJECT_STATUSES, PROJECT_TYPES, ROLES } from "../lib/constants";
 import { audit } from "../services/audit";
 import { dashboard } from "../services/reports";
 
@@ -29,6 +29,11 @@ const projectSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(2).max(20).regex(/^[A-Za-z0-9_-]+$/),
   status: z.enum(PROJECT_STATUSES).optional(),
+  type: z.enum(PROJECT_TYPES).optional(),
+  studio: zOptionalString,
+  budgetBand: z.enum(BUDGET_BANDS).optional().nullable(),
+  country: zOptionalString,
+  city: zOptionalString,
   shootingDay: z.number().int().min(0).optional(),
   currentLocation: zOptionalString,
   currency: z.string().length(3).optional(),
