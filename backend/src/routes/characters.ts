@@ -52,7 +52,7 @@ charactersRouter.get(
       where: { id: req.params.id, projectId: req.projectId },
       include: {
         actor: true,
-        scenes: { include: { scene: { select: { id: true, number: true, name: true, shootDate: true, status: true, sortOrder: true, intExt: true, location: true, timeOfDay: true, scriptDay: true, pages: true, synopsis: true } }, change: { select: { id: true, changeNumber: true, name: true } } } },
+        scenes: { include: { scene: { select: { id: true, number: true, name: true, shootDate: true, status: true, sortOrder: true } }, change: { select: { id: true, changeNumber: true, name: true } } } },
         changes: { orderBy: { changeNumber: "asc" }, include: { items: { include: { costume: true } }, _count: { select: { sceneCharacters: true } } } },
         costumes: { orderBy: { assetNumber: "asc" } },
         fittings: { orderBy: { scheduledAt: "desc" }, include: { items: true } },

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { KeyRound, Users, BookOpen, Ruler, Scissors, AlertTriangle, SearchX, Store, Wallet, FileBarChart, Tag, UserCog, Settings, Bell, LogOut, FolderKanban } from "lucide-react";
+import { KeyRound, Users, ClipboardList, BookOpen, Ruler, Scissors, AlertTriangle, SearchX, Store, Wallet, FileBarChart, Tag, UserCog, Settings, Bell, LogOut, FolderKanban } from "lucide-react";
 import { useProject } from "@/state/project";
 import { useAuth, FINANCE_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { humanize } from "@/lib/format";
@@ -14,6 +14,7 @@ export default function More() {
   const [pwOpen, setPwOpen] = useState(false);
   const base = `/p/${projectId}`;
   const items = [
+    [`${base}/breakdown`, <ClipboardList size={18} />, "Breakdown"],
     [`${base}/characters`, <Users size={18} />, "Characters"],
     [`${base}/actors`, <Users size={18} />, "Actors"],
     [`${base}/gallery`, <Users size={18} />, "Gallery"],

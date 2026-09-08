@@ -6,6 +6,7 @@ import Login from "@/pages/Login";
 import Projects from "@/pages/Projects";
 import Dashboard from "@/pages/Dashboard";
 import Scenes from "@/pages/Scenes";
+import Breakdown from "@/pages/Breakdown";
 import SceneDetail from "@/pages/SceneDetail";
 import Characters from "@/pages/Characters";
 import CharacterDetail from "@/pages/CharacterDetail";
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="scan" element={<Scan />} />
         <Route path="scenes" element={<Scenes />} />
         <Route path="scenes/:id" element={<SceneDetail />} />
+        <Route path="breakdown" element={<Breakdown />} />
         <Route path="sides" element={<Sides />} />
         <Route path="characters" element={<Characters />} />
         <Route path="characters/:id" element={<CharacterDetail />} />
