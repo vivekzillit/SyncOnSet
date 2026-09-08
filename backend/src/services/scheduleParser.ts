@@ -52,7 +52,7 @@ const END_RE = /\bend\s+(?:of\s+)?(?:shoot(?:ing)?\s+)?day\b/i;
 // Tomorrow's work, printed at the foot of nearly every call sheet: its scenes are NOT today's.
 const ADVANCE_RE = /\b(?:advance(?:\s+(?:schedule|shooting|call))?|for\s+tomorrow|tomorrow'?s?(?:\s+(?:schedule|scenes|call))?|tomorrow|next\s+day|day\s+after)\b/i;
 // Continuity and costume notes name other scenes by number; those scenes are not shot on this day.
-const NOTE_RE = /\b(?:continuity|cont'?d\.?|continued|same\s+(?:as|look|costume|outfit|clothes|dress|saree|sari|shirt|kurta|jacket)|as\s+(?:in|per)\s+sc|refer(?:ence)?\s+to|see\s+sc|match(?:es|ing)\s+sc|carr(?:y|ied|ies)\s*[- ]?over|picks?\s*up\s+from|flashback\s+to)\b/i;
+const NOTE_RE = /\b(?:continuity|cont'?d\.?|continued|same(?:\s+\w+){0,2}\s+as|as\s+(?:in|per)|refer(?:ence)?\s+to|see|match(?:es|ing)|carr(?:y|ied|ies)\s*[- ]?over|picks?\s*up\s+from|flashback\s+to)\b[^.;]{0,24}?\b(?:scs?|scn|scenes?)\.?\s*#?\s*\d/i;
 // Lines whose date is not a shoot date (revision stamps, print dates, birthdays).
 const META_RE = /\b(?:rev(?:ised|ision)?|version|printed|generated|updated|created|issued|dob|born|expires?)\b/i;
 const TOTAL_RE = /\btotal\b/i;
@@ -343,6 +343,17 @@ function mergeScenes(into: ParsedSceneRef[], more: ParsedSceneRef[]): ParsedScen
   return out;
 }
 
+/** A scene written twice (a strip, a props note, tomorrow's advance) is one scene: complete each mention from the others. */
+function shareDetailByNumber(days: ParsedDay[]): ParsedDay[] {
+  const best = new Map<string, SceneDetail>();
+  for (const d of days) for (const s of d.scenes) {
+    const key = normalizeNumber(s.number);
+    const have = best.get(key);
+    best.set(key, have ? mergeDetail(have, s) : { ...s });
+  }
+  return days.map((d) => ({ ...d, scenes: d.scenes.map((s) => ({ ...s, ...mergeDetail(s, best.get(normalizeNumber(s.number)) || s) })) }));
+}
+
 function finishWarnings(days: ParsedDay[], warnings: string[], n: { ambiguous: number; assumedYear: number; defaultYear: number }) {
   const undated = days.filter((d) => !d.date).reduce((s, d) => s + d.scenes.length, 0);
   if (!days.length) warnings.push(`No scene numbers were found. The reader looks for "Sc 12", "Scene 12A", "Scs. 12, 13", "Sc 55-57" or lines that start with the scene number and INT./EXT.`);
@@ -441,7 +452,7 @@ export function parseScheduleText(text: string, options: ParseOptions): ParsedSc
   if (pending.length) flushPending(sheetDate, null, sheetDate ? "call sheet date" : "no date found");
   if (sheetDate) for (const d of days) if (!d.date && !ADVANCE_RE.test(d.label)) d.date = sheetDate;
 
-  const merged = mergeDays(days);
+  const merged = shareDetailByNumber(mergeDays(days));
   finishWarnings(merged, warnings, { ambiguous, assumedYear, defaultYear: opts.defaultYear });
   if (advanceAssumed) warnings.push("Tomorrow's advance scenes were dated the day after the call sheet. Check that date before applying.");
   if (notesSkipped) warnings.push(`${notesSkipped} continuity or costume note${notesSkipped === 1 ? "" : "s"} mentioning other scenes ${notesSkipped === 1 ? "was" : "were"} not treated as scheduled work.`);

@@ -717,5 +717,64 @@
         }
       }
     }
+  },
+  {
+    "name": "A synopsis that starts \"Pick Up from\" is not a continuity note",
+    "kind": "CALLSHEET",
+    "text": "Date: 12/10/2026\nSc 107pt   INT OLD RUN DOWN AIRPORT - NIGHT   3/8 pgs   Cast: 3, 5 :: Pick Up from van door opens to reveal a scared DAISY\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "107PT"
+        ]
+      },
+      "detail": {
+        "107pt": {
+          "intExt": "INT",
+          "location": "OLD RUN DOWN AIRPORT",
+          "timeOfDay": "NIGHT",
+          "pages": "3/8",
+          "cast": [
+            3,
+            5
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "A bare mention of a scene takes the detail from where the file describes it",
+    "kind": "CALLSHEET",
+    "text": "Date: 12/10/2026\nSc 107pt   INT OLD RUN DOWN AIRPORT - NIGHT   3/8 pgs\nACTION PROPS\nSc. 107pt: GPS Collar, Gabriel's Camera\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "107PT"
+        ]
+      },
+      "detail": {
+        "107PT": {
+          "intExt": "INT",
+          "location": "OLD RUN DOWN AIRPORT",
+          "timeOfDay": "NIGHT",
+          "pages": "3/8"
+        }
+      }
+    }
+  },
+  {
+    "name": "A real continuity cross-reference is still skipped",
+    "kind": "CALLSHEET",
+    "text": "Date: 12/10/2026\nSc 12   INT OFFICE - DAY   1/8 pgs\nCOSTUME NOTES: Sc 12 grey kurta, continuity from Sc 11.\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ]
+      },
+      "warningsInclude": [
+        "continuity or costume note"
+      ]
+    }
   }
 ]
