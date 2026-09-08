@@ -267,7 +267,8 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .login { min-height: 100%; display: grid; place-items: center; padding: 20px; background: radial-gradient(1200px 600px at 20% -10%, #2b2d3a, var(--ink) 60%); }
 .login-card { width: 100%; max-width: 400px; padding: 28px; }
 .demo-users { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
-.demo-users button { text-align: left; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); font-size: 12px; cursor: pointer; }
+.demo-users button { text-align: left; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); font-size: 12px; cursor: pointer; min-width: 0; overflow: hidden; }
+.demo-users button span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .demo-users button:hover { background: #ecebe6; }
 .label-sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 .qr-label { border: 1px dashed #999; border-radius: 6px; padding: 10px; display: flex; gap: 10px; align-items: center; background: #fff; page-break-inside: avoid; }

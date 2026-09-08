@@ -29,6 +29,7 @@ export function ChangePasswordModal({ open, onClose }: { open: boolean; onClose:
         <Field label="Current password"><Input type="password" autoComplete="current-password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} autoFocus /></Field>
         <Field label="New password" help="At least 8 characters"><Input type="password" autoComplete="new-password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} /></Field>
         <Field label="Confirm new password"><Input type="password" autoComplete="new-password" value={f.confirm} onChange={(e) => setF({ ...f, confirm: e.target.value })} /></Field>
+        <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
         <ErrorBox error={error} />
       </form>
     </Modal>

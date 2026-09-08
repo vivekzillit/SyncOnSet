@@ -72,7 +72,7 @@ export async function dashboard(projectId: string, dateStr?: string) {
   if (damagedOpen) priorities.push({ severity: "CRITICAL", text: `${damagedOpen} damage report${damagedOpen > 1 ? "s" : ""} open`, link: "damages" });
   if (alterationOpen) priorities.push({ severity: "WARNING", text: `${alterationOpen} costume${alterationOpen > 1 ? "s" : ""} require alteration`, link: "alterations" });
   if (cleaningOpen) priorities.push({ severity: "INFO", text: `${cleaningOpen} costume${cleaningOpen > 1 ? "s" : ""} in cleaning`, link: "cleaning" });
-  if (rentalsDue) priorities.push({ severity: "WARNING", text: `${rentalsDue} rental${rentalsDue > 1 ? "s" : ""} due for return by tomorrow`, link: "rentals" });
+  if (rentalsDue) priorities.push({ severity: "WARNING", text: `${rentalsDue} rental${rentalsDue > 1 ? "s" : ""} due for return by tomorrow`, link: "vendors" });
   if (fittingsToday) priorities.push({ severity: "INFO", text: `${fittingsToday} fitting${fittingsToday > 1 ? "s" : ""} scheduled today`, link: "fittings" });
   if (returnedToday) priorities.push({ severity: "OK", text: `${returnedToday} costume${returnedToday > 1 ? "s" : ""} returned today`, link: "costumes" });
 
