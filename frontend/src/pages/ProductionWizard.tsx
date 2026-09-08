@@ -103,7 +103,7 @@ export default function ProductionWizard() {
         {step === 0 && (<>
           <h2 className="center">What are you working on{firstName ? `, ${firstName}` : ""}?</h2>
           <div className="grid grid-2 keep mt-3">
-            {[["FEATURE", "Feature", <Film key="f" size={40} />], ["EPISODIC", "TV series", <Tv key="t" size={40} />]].map(([v, label, icon]) => (
+            {[["FEATURE", "Feature", <Film key="f" size={40} />], ["EPISODIC", "Feature TV series", <Tv key="t" size={40} />]].map(([v, label, icon]) => (
               <button key={v as string} type="button" className="card flat" style={{ padding: 22, textAlign: "center", cursor: "pointer", borderColor: f.type === v ? "var(--ink)" : undefined, borderWidth: f.type === v ? 2 : 1 }} onClick={() => setF({ ...f, type: v as string })}>
                 <div style={{ color: "var(--text-2)" }}>{icon}</div><div className="bold mt-1">{label}</div>
               </button>
