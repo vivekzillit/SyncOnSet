@@ -17,7 +17,7 @@ continuity book, asset-numbered inventory, wrap-box labels, per-character/per-sc
 
 | Area | Highlights |
 | --- | --- |
-| **Breakdown** | Scenes (INT/EXT, time of day, script day, shoot date), characters, actors with measurements, bulk breakdown import |
+| **Breakdown** | Upload the screenplay (Final Draft, Fountain, text, PDF) to build scenes, sluglines and characters automatically; manual breakdown import; actors with measurements |
 | **Changes / looks** | Numbered outfits per character, pieces with wear notes, scene ↔ change assignment |
 | **Inventory** | Asset numbers (`CST-000245`), QR codes, category/type/size/colour/source/vendor, location, status, full timeline |
 | **Scan** | Camera QR scanning (or typed asset number) → status, location, scenes, and contextual actions |

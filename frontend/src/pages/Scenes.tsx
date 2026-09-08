@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, FileUp } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, humanize, todayISO } from "@/lib/format";
 import type { Scene } from "@/api/types";
 import { Badge, Card, Chips, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { ScriptUploadModal } from "@/components/ScriptUpload";
 
 const emptyForm = { number: "", name: "", location: "", intExt: "INT", timeOfDay: "DAY", scriptDay: "", pages: "", shootDate: "", status: "PLANNED", synopsis: "" };
 
@@ -21,6 +22,7 @@ export default function Scenes() {
   const [status, setStatus] = useState("");
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [scriptOpen, setScriptOpen] = useState(false);
   const [form, setForm] = useState({ ...emptyForm, shootDate: todayISO() });
   const [importText, setImportText] = useState("24 | Restaurant - the dinner | Restaurant Set | INT | NIGHT | Day 3 | Raj, Priya, Waiter\n25 | Parking lot | Backlot | EXT | NIGHT | Day 3 | Raj, Priya");
 
@@ -51,13 +53,13 @@ export default function Scenes() {
 
   return (
     <div>
-      <PageHead title="Scenes" sub="Script breakdown & costume readiness per scene" actions={can(MANAGER_ROLES) && (<><button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button><button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Scene</button></>)} />
+      <PageHead title="Scenes" sub="Script breakdown & costume readiness per scene" actions={can(MANAGER_ROLES) && (<><button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button><button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button><button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Scene</button></>)} />
       <div className="filters">
         <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "all", label: "All" }]} value={when} onChange={(v) => setWhen(v || "all")} />
         <Select value={status} onChange={(e) => setStatus(e.target.value)} options={meta?.sceneStatuses || []} placeholder="Any status" />
       </div>
       <Card pad0>
-        {isLoading ? <Spinner /> : list.length === 0 ? <Empty icon="🎬" title={when === "today" ? "No scenes scheduled today" : "No scenes"} hint="Import your breakdown or add scenes manually." /> : (
+        {isLoading ? <Spinner /> : list.length === 0 ? <Empty icon="🎬" title={when === "today" ? "No scenes scheduled today" : "No scenes"} hint="Upload the script to build the breakdown automatically, paste a breakdown, or add scenes manually." /> : (
           <div className="list">
             {list.map((s) => (
               <Link key={s.id} to={`/p/${projectId}/scenes/${s.id}`} className="item link">
@@ -94,6 +96,7 @@ export default function Scenes() {
         <ErrorBox error={create.error} />
       </Modal>
 
+      <ScriptUploadModal open={scriptOpen} onClose={() => setScriptOpen(false)} onImported={() => setWhen("all")} />
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Import script breakdown" footer={<><button className="btn" onClick={() => setImportOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={importM.isPending} onClick={() => importM.mutate()}>Import</button></>}>
         <div className="notice info mb-2">One scene per line: <span className="mono">number | name | location | INT/EXT | DAY/NIGHT | script day | characters (comma separated)</span>. Unknown characters are created automatically. Existing scene numbers are updated.</div>
         <Textarea rows={10} value={importText} onChange={(e) => setImportText(e.target.value)} className="mono" />

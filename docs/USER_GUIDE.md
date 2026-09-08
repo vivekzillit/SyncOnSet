@@ -36,12 +36,13 @@ Who does what:
 
 ## 2. Break down the script
 
-1. **Scenes → Import breakdown**. Paste one scene per line: `number | name | location | INT/EXT | DAY/NIGHT | script day | characters (comma separated)`. Characters that do not exist yet are created; existing scene numbers are updated, so you can re-import as the script changes.
-2. Or **Scenes → + Scene** for single scenes. Set the **Shoot date** as soon as the schedule is out: the dashboard, the Scan screen and the continuity book all key off it.
-3. **Characters & Actors**:
+1. **Scenes → Upload script**. Drop in the screenplay as Final Draft (`.fdx`), Fountain (`.fountain`), plain text or a PDF exported from the writing software. The app reads the scene numbers, INT/EXT, location, time of day, the characters who speak in each scene and a one-line synopsis, and shows a preview. Untick any scene you do not want, then **Import**. Characters that do not exist yet are created; scene numbers that already exist are updated, so re-upload each revised draft (blue pages, pink pages) the same way. Nothing is ever deleted by an upload.
+2. **Scenes → Import breakdown** is the manual alternative: paste one scene per line as `number | name | location | INT/EXT | DAY/NIGHT | script day | characters (comma separated)`.
+3. Or **Scenes → + Scene** for single scenes. Set the **Shoot date** as soon as the schedule is out: the dashboard, the Scan screen and the continuity book all key off it.
+4. **Characters & Actors**:
    - **Actors** tab → **+ Actor**: name, contact, agency and **measurements** (height, chest, waist, hips, inseam, shoe…). These show on every fitting for that actor, so shoppers and tailors never have to ask.
    - **Characters** tab → **+ Character**: name, type (Lead, Supporting, Day player, Background), age, the actor playing them, and a description of the look.
-4. Open a scene and use **+ Character** to add anyone the import missed. The change (look) can be assigned later.
+5. Open a scene and use **+ Character** to add anyone the script upload missed, such as non-speaking roles. The change (look) can be assigned later.
 
 ## 3. Build the wardrobe
 

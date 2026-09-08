@@ -1,4 +1,6 @@
 import { Router } from "express";
+import multer from "multer";
+import pdfParse from "pdf-parse";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { wrap, notFound, badRequest } from "../lib/errors";
@@ -7,6 +9,7 @@ import { requireRole } from "../middleware/auth";
 import { INT_EXT, MANAGER_ROLES, SCENE_STATUSES, TIMES_OF_DAY } from "../lib/constants";
 import { audit } from "../services/audit";
 import { sceneReadiness } from "../services/readiness";
+import { detectFormat, parseScript } from "../services/scriptParser";
 
 export const scenesRouter = Router({ mergeParams: true });
 
@@ -79,6 +82,7 @@ scenesRouter.post(
     const projectId = req.projectId!;
     let created = 0;
     let charactersCreated = 0;
+    const known = new Map((await prisma.character.findMany({ where: { projectId }, select: { id: true, name: true } })).map((c) => [c.name.trim().toLowerCase(), c]));
     for (const s of body.scenes) {
       const { characters = [], ...sceneData } = s;
       const scene = await prisma.scene.upsert({
@@ -87,10 +91,13 @@ scenesRouter.post(
         update: { ...sceneData },
       });
       created += 1;
-      for (const name of characters) {
-        let ch = await prisma.character.findFirst({ where: { projectId, name } });
+      for (const rawName of characters) {
+        const name = rawName.trim();
+        if (!name) continue;
+        let ch = known.get(name.toLowerCase());
         if (!ch) {
           ch = await prisma.character.create({ data: { projectId, name, type: "SUPPORTING" } });
+          known.set(name.toLowerCase(), ch);
           charactersCreated += 1;
         }
         await prisma.sceneCharacter.upsert({ where: { sceneId_characterId: { sceneId: scene.id, characterId: ch.id } }, create: { sceneId: scene.id, characterId: ch.id }, update: {} });
@@ -98,6 +105,42 @@ scenesRouter.post(
     }
     await audit(req.user, projectId, "SCENE_IMPORT", "SCENE", "bulk", { scenes: created, charactersCreated });
     res.status(201).json({ scenes: created, charactersCreated });
+  }),
+);
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+
+/**
+ * Upload a screenplay (.fdx, .fountain, .txt, .pdf) and get a breakdown preview: scenes with slugline data,
+ * speaking characters and a synopsis. Nothing is written; confirm with POST /import.
+ */
+scenesRouter.post(
+  "/parse-script",
+  requireRole(MANAGER_ROLES),
+  upload.single("file"),
+  wrap(async (req, res) => {
+    if (!req.file) throw badRequest("file is required (.fdx, .fountain, .txt or .pdf)");
+    const head = req.file.buffer.subarray(0, 512).toString("utf8");
+    const format = detectFormat(req.file.originalname || "", req.file.mimetype || "", head);
+    let content: string;
+    if (format === "pdf") {
+      const pdf = await pdfParse(req.file.buffer);
+      content = pdf.text || "";
+      if (!content.trim()) throw badRequest("No text could be extracted from this PDF. If it is a scanned script, run OCR first or export the screenplay as PDF from your writing software.");
+    } else {
+      content = req.file.buffer.toString("utf8");
+    }
+    const result = parseScript(format, content);
+    const existing = await prisma.character.findMany({ where: { projectId: req.projectId }, select: { name: true } });
+    const existingNames = new Set(existing.map((c) => c.name.trim().toLowerCase()));
+    const existingScenes = new Set((await prisma.scene.findMany({ where: { projectId: req.projectId }, select: { number: true } })).map((sc) => sc.number));
+    await audit(req.user, req.projectId!, "SCRIPT_PARSE", "SCENE", "preview", { file: req.file.originalname, format, scenes: result.scenes.length });
+    res.json({
+      ...result,
+      file: req.file.originalname,
+      characters: result.characters.map((c) => ({ ...c, exists: existingNames.has(c.name.toLowerCase()) })),
+      scenes: result.scenes.map((sc) => ({ ...sc, exists: existingScenes.has(sc.number) })),
+    });
   }),
 );
 

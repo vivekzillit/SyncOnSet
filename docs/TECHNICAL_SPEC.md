@@ -111,6 +111,17 @@ A fitting item marked `ALTERATION_REQUIRED` creates the alteration automatically
 For each `SceneCharacter`: no change → `NOT_ASSIGNED`; otherwise the worst piece status in the change, ordered
 `MISSING > DAMAGED > ALTERATION > CLEANING > NOT_ASSIGNED > READY`. Scene level = worst character level.
 
+### Script upload (tier 1, deterministic)
+
+`POST …/scenes/parse-script` accepts `.fdx`, `.fountain`, `.txt` and `.pdf` (text extracted with pdf-parse). Every format is
+normalised into an element stream (heading, character, dialogue, action, other) by `backend/src/services/scriptParser.ts`:
+Final Draft paragraphs map by their `Type` attribute; text formats use screenplay heuristics (sluglines start with INT/EXT/I/E/EST,
+character cues are short upper-case lines followed by dialogue, transitions end in TO:, page numbers and CONTINUED markers are noise).
+Sluglines yield `intExt`, `location` and `timeOfDay` (MORNING → DAY, LATER → CONTINUOUS, SUNSET → DUSK…); scene numbers come from
+FDX attributes, Fountain `#24#` markers or margin numbers, falling back to order of appearance with a warning. Character names are
+normalised (extensions stripped, title case). The response is a preview only; the client confirms via `POST /import`, which upserts
+scenes by number and matches characters case-insensitively. AI extraction of costume cues is the planned tier 2.
+
 ## 5. API reference
 
 Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV downloads. Auth: `Authorization: Bearer <JWT>`
@@ -141,7 +152,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 | --- | --- |
 | actors | GET, POST, GET/:id, PATCH/:id, DELETE/:id (measurements as JSON object) |
 | characters | GET, POST, GET/:id (scenes, changes, costumes, fittings, photos), PATCH, DELETE |
-| scenes | GET (?date=&status=, includes readiness), POST, POST /import (bulk with character names), GET/:id, GET/:id/readiness, PATCH, DELETE, PUT /:id/characters/:characterId `{changeId,notes}`, DELETE /:id/characters/:characterId |
+| scenes | GET (?date=&status=, includes readiness), POST, POST /parse-script (multipart screenplay → breakdown preview, no writes), POST /import (bulk with character names, case-insensitive match), GET/:id, GET/:id/readiness, PATCH, DELETE, PUT /:id/characters/:characterId `{changeId,notes}`, DELETE /:id/characters/:characterId |
 | changes | GET (?characterId=), POST `{characterId,name,changeNumber?,costumeIds?}`, GET/:id, PATCH, DELETE, POST /:id/items `{costumeId,wearNotes}`, DELETE /:id/items/:costumeId |
 | costumes | GET (?q=&status=&category=&characterId=&source=&location=&page=&pageSize=), POST (auto asset number), POST /import, GET /lookup/:assetNumber (scan; logs SCAN), GET/:id (timeline, photos, tickets), PATCH, DELETE, POST /:id/actions `{action,toLocation,sceneId,takeNumber,note,toStatus}`, GET /:id/timeline, GET /:id/alternatives, GET /:id/qr.png?size=, GET /:id/qr.svg |
 | fittings | GET (?status=&characterId=), POST `{characterId,scheduledAt,location,notes,costumeIds}`, GET/:id, PATCH, DELETE, POST /:id/items, PATCH /:id/items/:costumeId `{status,notes,alteration?}`, DELETE /:id/items/:costumeId |
