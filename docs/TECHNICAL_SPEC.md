@@ -135,8 +135,11 @@ scenes or scene-character links, mirroring SyncOnSet's revision behaviour; omitt
 
 ### Schedule and callsheet upload (deterministic)
 
-`POST …/schedule/parse` (multipart `file` + `kind`) reads a shooting schedule or callsheet: PDF text (pdf-parse), CSV/TSV or plain
-text. `backend/src/services/scheduleParser.ts` finds dates (ISO, 12/10/2026 read as day/month unless the day slot is over 12,
+`POST …/schedule/parse` (multipart `file` + `kind`) reads a shooting schedule or callsheet: PDF, CSV/TSV or plain text. A PDF is
+read through pdf.js with the position of every text run (`backend/src/services/pdfLayout.ts`), because a callsheet is a table:
+rows are rebuilt from y positions (which also repairs superscript dates such as "16th January" that arrive split across lines), and
+where a scene-table header is found (SC. / SET / SYNOPSIS / D/N / PAGE / CAST#) each scene is rebuilt from its columns.
+pdf-parse is the fallback. `backend/src/services/scheduleParser.ts` finds dates (ISO, 12/10/2026 read as day/month unless the day slot is over 12,
 12 Oct 2026, October 12th 2026, two-digit years 2020–2039, a missing year defaults to the production's start year) and scene
 numbers ("Sc 12", "Scenes 12, 13A & 14", strips that start with the number and INT./EXT.), and groups scenes by shoot day.
 Movie Magic "End of Day N -- date" banners close the strips above them; "Day N" headers take the date on the same or next
@@ -146,9 +149,12 @@ continuity and costume notes that name other scenes are skipped; ranges ("Sc 55-
 Date columns is read by column, below any title rows (a blank date continues the day above); durations and page counts glued to
 labels by pdf-parse ("6 scenes9h 15m", "12AINTKITCHEN") are handled. Like the script upload, the response is a preview only —
 nothing is written, the file is not stored — listing one row per scene with the date the document gives it, its current date,
-whether it exists in the breakdown, and any warnings. `POST …/schedule/apply` (`assignments[{sceneId,date}]`) sets
-`Scene.shootDate` and moves PLANNED scenes to SCHEDULED; nothing else changes. Regression suite:
-`backend/scripts/schedule-check.ts` over `schedule-spec.json`.
+whether it exists in the breakdown, and any warnings. Each scene also carries what the document says about it: `intExt`,
+`location` (the set), `timeOfDay`, `pages`, `scriptDay`, `cast` (cast numbers) and `description`.
+`POST …/schedule/apply` (`assignments[{sceneId, number, date, create, fields, cast}]`, optional `overwrite`) sets
+`Scene.shootDate` (PLANNED → SCHEDULED), writes `fields` only where the scene is blank, creates the scenes flagged `create`, and
+links cast numbers to characters with the same `Character.castNumber`. Nothing is overwritten or deleted. Regression suite:
+`backend/scripts/schedule-check.ts` over `schedule-spec.json` (39 cases).
 
 ### Script text endpoint
 
