@@ -36,7 +36,7 @@ interface Element { type: ElementType; text: string; number?: string | null }
 
 const SLUG_RE = /^\s*(?:(\d+[A-Z]?)\s*[.)]?\s+)?(INT\.?\s*\/\s*EXT\.?|EXT\.?\s*\/\s*INT\.?|I\/E\.?|INT\.?|EXT\.?|EST\.?)(?=[\s.\-/])\s*[.\-/]?\s*(.*?)\s*$/i;
 const TRAILING_NUM_RE = /\s+(?:#(\d+[A-Z]?)#|(\d+[A-Z]?))\s*$/;
-const TIME_WORDS: Record<string, string> = {
+export const TIME_WORDS: Record<string, string> = {
   DAY: "DAY", MORNING: "DAY", AFTERNOON: "DAY", NOON: "DAY", MIDDAY: "DAY",
   NIGHT: "NIGHT", EVENING: "NIGHT", MIDNIGHT: "NIGHT", "LATE NIGHT": "NIGHT",
   DAWN: "DAWN", SUNRISE: "DAWN", "EARLY MORNING": "DAWN",

@@ -17,7 +17,7 @@ continuity book, asset-numbered inventory, wrap-box labels, per-character/per-sc
 
 | Area | Highlights |
 | --- | --- |
-| **Breakdown** | Upload the screenplay (Final Draft, Fountain, text, PDF) to build scenes, sluglines, page counts and characters; revised drafts are diffed (new / updated / unchanged) and stamped with a revision name; character confirmation (delete non-characters; names matching existing characters merge automatically); shooting schedules and callsheets (PDF, CSV, text) read the same way for shoot dates, previewed per scene and applied on confirmation; costume cues read from the script text per scene (built-in reader, AI optional) with accept/dismiss; printable sides per shoot day |
+| **Breakdown** | Upload the screenplay (Final Draft, Fountain, text, PDF) to build scenes, sluglines, page counts and characters; revised drafts are diffed (new / updated / unchanged) and stamped with a revision name; character confirmation (delete non-characters; names matching existing characters merge automatically); shooting schedules and callsheets (PDF read by table columns, CSV, text) give shoot dates plus set, INT/EXT, day/night, pages, cast numbers and synopsis, previewed per scene, filling blanks and adding missing scenes on confirmation; costume cues read from the script text per scene (built-in reader, AI optional) with accept/dismiss; printable sides per shoot day |
 | **Changes / looks** | Numbered outfits per character, pieces with wear notes, scene ↔ change assignment |
 | **Inventory** | Asset numbers (`CST-000245`), QR codes, category/type/size/colour/source/vendor, location, status, full timeline |
 | **Scan** | Camera QR scanning (or typed asset number) → status, location, scenes, and contextual actions |

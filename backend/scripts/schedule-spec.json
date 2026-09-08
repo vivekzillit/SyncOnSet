@@ -505,5 +505,217 @@
         "2026-10-17": 6
       }
     }
+  },
+  {
+    "name": "Detail: Movie Magic strip gives set, day/night, pages, story day and cast",
+    "kind": "SCHEDULE",
+    "text": "Day 1 - Mon 12 Oct 2026\nScs. 12  INT. RAJ'S OFFICE - DAY   1 3/8 pgs   D1   Cast: 1, 4, 7\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ]
+      },
+      "detail": {
+        "12": {
+          "intExt": "INT",
+          "location": "RAJ'S OFFICE",
+          "timeOfDay": "DAY",
+          "pages": "1 3/8",
+          "scriptDay": "Day 1",
+          "cast": [
+            1,
+            4,
+            7
+          ],
+          "name": "Raj's Office - Day"
+        }
+      }
+    }
+  },
+  {
+    "name": "Detail: Indian call sheet row with no dash before the time",
+    "kind": "CALLSHEET",
+    "text": "Date: 12/10/2026\nSc 22   INT. BUNGALOW   NIGHT   N9   2 4/8 pgs   Cast: 1, 2\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "22"
+        ]
+      },
+      "detail": {
+        "22": {
+          "intExt": "INT",
+          "location": "BUNGALOW",
+          "timeOfDay": "NIGHT",
+          "pages": "2 4/8",
+          "scriptDay": "Night 9",
+          "cast": [
+            1,
+            2
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Detail: one slugline shared by several scene numbers",
+    "kind": "CALLSHEET",
+    "text": "Date: 12/10/2026\nScene No. 12, 14A & 17 - INT. VIKRAM'S OFFICE - DAY\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12",
+          "14A",
+          "17"
+        ]
+      },
+      "detail": {
+        "14A": {
+          "intExt": "INT",
+          "location": "VIKRAM'S OFFICE",
+          "timeOfDay": "DAY"
+        }
+      }
+    }
+  },
+  {
+    "name": "Detail: EXT and a location with a dash in it",
+    "kind": "SCHEDULE",
+    "text": "Day 2 - 13 Oct 2026\nSc 26  EXT. RESTAURANT - PARKING LOT - NIGHT  4/8 pgs\n",
+    "expect": {
+      "days": {
+        "2026-10-13": [
+          "26"
+        ]
+      },
+      "detail": {
+        "26": {
+          "intExt": "EXT",
+          "location": "RESTAURANT - PARKING LOT",
+          "timeOfDay": "NIGHT",
+          "pages": "4/8"
+        }
+      }
+    }
+  },
+  {
+    "name": "Detail: CSV columns for set, I/E, D/N, pages, cast and description",
+    "kind": "SCHEDULE",
+    "csv": true,
+    "text": "Shoot Day,Date,Scenes,I/E,Set,D/N,Pages,Cast,Description\n1,12-10-2026,12,INT,RAJ'S OFFICE,D,1 3/8,\"1, 4\",Raj gets the call\n2,13-10-2026,26,EXT,MARINE DRIVE,N,4/8,1,Priya waits\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ],
+        "2026-10-13": [
+          "26"
+        ]
+      },
+      "detail": {
+        "12": {
+          "intExt": "INT",
+          "location": "RAJ'S OFFICE",
+          "timeOfDay": "DAY",
+          "pages": "1 3/8",
+          "cast": [
+            1,
+            4
+          ],
+          "description": "Raj gets the call"
+        },
+        "26": {
+          "intExt": "EXT",
+          "location": "MARINE DRIVE",
+          "timeOfDay": "NIGHT",
+          "cast": [
+            1
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Detail: a line that says only the number leaves everything null",
+    "kind": "SCHEDULE",
+    "text": "Day 1 - 12 Oct 2026\nSc 12\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ]
+      },
+      "detail": {
+        "12": {
+          "intExt": null,
+          "location": null,
+          "timeOfDay": null,
+          "pages": null,
+          "scriptDay": null,
+          "cast": [],
+          "name": null
+        }
+      }
+    }
+  },
+  {
+    "name": "Detail: cast numbers are only taken when the line says Cast",
+    "kind": "SCHEDULE",
+    "text": "Day 1 - 12 Oct 2026\nSc 12  INT. OFFICE - DAY  1 3/8 pgs  D1  1, 4, 7\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ]
+      },
+      "detail": {
+        "12": {
+          "cast": [],
+          "location": "OFFICE",
+          "pages": "1 3/8"
+        }
+      }
+    }
+  },
+  {
+    "name": "Detail: StudioBinder glued columns give the set and time",
+    "kind": "SCHEDULE",
+    "text": "Day 1 of 5Mon, Oct 12, 2026\n12AINTKITCHENDAY1 2/8Priya finds the letter.1, 4, 745mStage 4\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12A"
+        ]
+      },
+      "detail": {
+        "12A": {
+          "intExt": "INT"
+        }
+      }
+    }
+  },
+  {
+    "name": "Detail: an est. time column is not read as pages",
+    "kind": "SCHEDULE",
+    "text": "Day 1 - 12 Oct 2026\nSc 40  EXT. TEMPLE STEPS - DAY  2h  Cast: 2, 6\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "40"
+        ]
+      },
+      "detail": {
+        "40": {
+          "location": "TEMPLE STEPS",
+          "timeOfDay": "DAY",
+          "pages": null,
+          "cast": [
+            2,
+            6
+          ]
+        }
+      }
+    }
   }
 ]
