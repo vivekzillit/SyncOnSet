@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/api/client";
 import { ErrorBox, Field, Input, Modal, useToast } from "./ui";
 
@@ -8,6 +8,12 @@ export function ChangePasswordModal({ open, onClose }: { open: boolean; onClose:
   const [f, setF] = useState({ current: "", next: "", confirm: "" });
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setF({ current: "", next: "", confirm: "" });
+      setError(null);
+    }
+  }, [open]);
   const submit = async () => {
     if (f.next !== f.confirm) return setError(new Error("New passwords do not match"));
     setBusy(true);
@@ -42,6 +48,12 @@ export function ResetPasswordModal({ user, onClose }: { user: { id: string; name
   const [pw, setPw] = useState("");
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (user) {
+      setPw("");
+      setError(null);
+    }
+  }, [user]);
   const submit = async () => {
     if (!user) return;
     setBusy(true);
