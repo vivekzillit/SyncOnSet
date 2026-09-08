@@ -16,6 +16,8 @@ export interface ParsedScene {
   status?: string;
   characters: string[];
   dialogueLines: number;
+  /** Scene text (action + dialogue) for downstream AI cue extraction. */
+  text: string;
 }
 export interface ParsedCharacter { name: string; scenes: number; lines: number }
 export interface ParseResult {
@@ -164,10 +166,10 @@ export function parseSlug(text: string): { intExt: string | null; location: stri
 }
 
 export function buildScenes(elements: Element[], format: ScriptFormat): ParseResult {
-  const scenes: (ParsedScene & { _chars: Set<string> })[] = [];
+  const scenes: (ParsedScene & { _chars: Set<string>; _lines: string[] })[] = [];
   const warnings: string[] = [];
   const charIndex = new Map<string, ParsedCharacter>();
-  let current: (ParsedScene & { _chars: Set<string> }) | null = null;
+  let current: (ParsedScene & { _chars: Set<string>; _lines: string[] }) | null = null;
   let headings = 0;
   let cues = 0;
   let missingNumbers = 0;
@@ -179,7 +181,7 @@ export function buildScenes(elements: Element[], format: ScriptFormat): ParseRes
       const omitted = /\bOMITTED\b/i.test(el.text);
       let number = (el.number || "").trim();
       if (!number) { missingNumbers += 1; number = String(scenes.length + 1); }
-      current = { number, name: omitted ? "Omitted" : slug.name, location: slug.location, intExt: slug.intExt, timeOfDay: slug.timeOfDay, synopsis: null, status: omitted ? "OMITTED" : undefined, characters: [], dialogueLines: 0, _chars: new Set() };
+      current = { number, name: omitted ? "Omitted" : slug.name, location: slug.location, intExt: slug.intExt, timeOfDay: slug.timeOfDay, synopsis: null, status: omitted ? "OMITTED" : undefined, characters: [], dialogueLines: 0, text: "", _chars: new Set(), _lines: [el.text] };
       scenes.push(current);
       firstAction = true;
       continue;
@@ -189,6 +191,7 @@ export function buildScenes(elements: Element[], format: ScriptFormat): ParseRes
       cues += 1;
       const name = normaliseName(el.text);
       if (!name) continue;
+      current._lines.push(`${name.toUpperCase()}:`);
       const key = name.toLowerCase();
       if (!current._chars.has(key)) { current._chars.add(key); current.characters.push(name); }
       const c = charIndex.get(key) || { name, scenes: 0, lines: 0 };
@@ -196,7 +199,8 @@ export function buildScenes(elements: Element[], format: ScriptFormat): ParseRes
       c.lines += 1;
       continue;
     }
-    if (el.type === "dialogue") { current.dialogueLines += 1; continue; }
+    if (el.type === "dialogue") { current.dialogueLines += 1; current._lines.push(`  ${el.text}`); continue; }
+    if (el.type === "action") current._lines.push(el.text);
     if (el.type === "action" && firstAction) {
       current.synopsis = el.text.length > 220 ? el.text.slice(0, 217).replace(/\s+\S*$/, "") + "…" : el.text;
       firstAction = false;
@@ -215,7 +219,7 @@ export function buildScenes(elements: Element[], format: ScriptFormat): ParseRes
   else if (missingNumbers > 0) warnings.push(`${missingNumbers} scene heading(s) had no number and were numbered by position.`);
   if (cues === 0 && headings > 0) warnings.push("No character cues detected; characters will not be attached to scenes.");
   const characters = [...charIndex.values()].sort((a, b) => b.lines - a.lines || a.name.localeCompare(b.name));
-  return { format, scenes: scenes.map(({ _chars, ...s }) => s), characters, warnings, stats: { elements: elements.length, headings, cues } };
+  return { format, scenes: scenes.map(({ _chars, _lines, ...s }) => ({ ...s, text: _lines.join("\n").slice(0, 40000) })), characters, warnings, stats: { elements: elements.length, headings, cues } };
 }
 
 export function detectFormat(filename: string, mimetype: string, head: string): ScriptFormat {

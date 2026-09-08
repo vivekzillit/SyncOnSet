@@ -60,6 +60,7 @@ model Project {
   expenses      Expense[]
   notifications Notification[]
   auditLogs     AuditLog[]
+  cues          ScriptCue[]
 }
 
 model ProjectMember {
@@ -113,6 +114,7 @@ model Character {
   continuity ContinuityRecord[]
   alterations AlterationRequest[]
   expenses   Expense[]
+  cues       ScriptCue[]
 }
 
 model Scene {
@@ -127,10 +129,11 @@ model Scene {
   scriptDay String?   // story day, e.g. "Day 3"
   synopsis  String?
   pages     String?   // e.g. "2 3/8"
-  shootDate DateTime?
-  status    String    @default("PLANNED") // PLANNED | SCHEDULED | SHOOTING | SHOT | OMITTED
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  shootDate  DateTime?
+  status     String    @default("PLANNED") // PLANNED | SCHEDULED | SHOOTING | SHOT | OMITTED
+  scriptText String?   // scene text captured from the uploaded screenplay (used for AI costume cues)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   characters SceneCharacter[]
@@ -139,8 +142,33 @@ model Scene {
   damages    DamageReport[]
   movements  CostumeMovement[]
   expenses   Expense[]
+  cues       ScriptCue[]
 
   @@unique([projectId, number])
+}
+
+// Costume cue extracted from the script by AI (advisory: a person accepts or dismisses it)
+model ScriptCue {
+  id            String   @id @default(cuid())
+  projectId     String
+  sceneId       String
+  characterId   String?
+  characterName String?
+  kind          String   // GARMENT | ACCESSORY | CONDITION | CHANGE | CONTINUITY | NOTE
+  text          String
+  quote         String?
+  confidence    String?  // HIGH | MEDIUM | LOW
+  status        String   @default("SUGGESTED") // SUGGESTED | ACCEPTED | DISMISSED
+  source        String   @default("AI")
+  model         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scene     Scene      @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+
+  @@index([sceneId, status])
 }
 
 // Costume requirement: which character appears in a scene and in which change (look)

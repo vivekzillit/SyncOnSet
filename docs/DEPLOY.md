@@ -13,6 +13,7 @@ directory, syncs the Prisma schema, optionally seeds the demo production, and st
 | `UPLOAD_DIR` | `/data/uploads` | Photo storage |
 | `SEED_DEMO` | unset | `true` seeds the "Movie ABC" demo project on first start (safe to leave on: idempotent) |
 | `CORS_ORIGIN` | `*` | Allowed browser origins for the API (same-origin deploys can leave `*`) |
+| `ANTHROPIC_API_KEY` | unset | Optional. Enables AI costume-cue extraction from uploaded scripts (`claude-opus-5`; `ANTHROPIC_MODEL` overrides). Set it as a secret environment variable, never in the repo |
 
 ## Option A — Render (one click)
 

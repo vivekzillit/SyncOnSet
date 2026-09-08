@@ -17,7 +17,7 @@ continuity book, asset-numbered inventory, wrap-box labels, per-character/per-sc
 
 | Area | Highlights |
 | --- | --- |
-| **Breakdown** | Upload the screenplay (Final Draft, Fountain, text, PDF) to build scenes, sluglines and characters automatically; manual breakdown import; actors with measurements |
+| **Breakdown** | Upload the screenplay (Final Draft, Fountain, text, PDF) to build scenes, sluglines and characters automatically; optional AI costume cues per scene (garments, condition, changes, continuity) with accept/dismiss; actors with measurements |
 | **Changes / looks** | Numbered outfits per character, pieces with wear notes, scene ↔ change assignment |
 | **Inventory** | Asset numbers (`CST-000245`), QR codes, category/type/size/colour/source/vendor, location, status, full timeline |
 | **Scan** | Camera QR scanning (or typed asset number) → status, location, scenes, and contextual actions |
@@ -103,6 +103,7 @@ JWT_SECRET="change-me"
 PORT=4000
 UPLOAD_DIR="uploads"
 CORS_ORIGIN="http://localhost:5173"
+ANTHROPIC_API_KEY=""            # optional: enables AI costume cues (claude-opus-5; ANTHROPIC_MODEL overrides)
 ```
 
 **Moving to PostgreSQL:** the schema uses plain string columns instead of DB enums/JSON so it is provider neutral.
@@ -143,5 +144,5 @@ See [docs/DEPLOY.md](docs/DEPLOY.md) for Render, Fly.io, plain Docker and the Po
 - **Phase 1 (this repo):** everything listed above — enough to trial on a real production.
 - **Phase 2:** offline mode with sync queue (mobile), push notifications, multi-project switching polish,
   scheduled rental reminders, PDF export, photo thumbnails/CDN, SwiftUI iOS app on the same API.
-- **Phase 3 (AI):** script → breakdown extraction, continuity photo comparison (advisory), natural-language costume
-  search, stain-photo cleaning recommendation (advisory).
+- **Phase 3 (AI):** continuity photo comparison (advisory), natural-language costume search, stain-photo cleaning
+  recommendation (advisory). Script breakdown and costume-cue extraction already ship.

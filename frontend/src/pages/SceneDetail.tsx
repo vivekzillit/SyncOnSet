@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2, BookOpen } from "lucide-react";
+import { Pencil, Plus, Trash2, BookOpen, Sparkles, Check, X } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
@@ -9,6 +9,8 @@ import { fmtDateLong, humanize, toLocalInput } from "@/lib/format";
 import type { Character, CostumeChange, Readiness, Scene } from "@/api/types";
 import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ReadinessLine } from "@/components/domain";
+import { CueProgress, useCueExtraction } from "@/components/AiCues";
+import { OPS_ROLES } from "@/state/auth";
 
 export default function SceneDetail() {
   const { id = "" } = useParams();
@@ -26,6 +28,17 @@ export default function SceneDetail() {
   const { data: charChanges } = useQuery({ queryKey: ["changes", projectId, addChar], queryFn: () => api<CostumeChange[]>(p(projectId, `/changes?characterId=${addChar}`)), enabled: !!addChar });
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [showDismissed, setShowDismissed] = useState(false);
+  const { progress: cueProgress, run: runCues } = useCueExtraction();
+  const setCue = useMutation({
+    mutationFn: (v: { id: string; status: string }) => api(p(projectId, `/cues/${v.id}`), { method: "PATCH", body: { status: v.status } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["scene", id] }),
+    onError: (e: Error) => toast.push(e.message, "danger"),
+  });
+  const bulkCues = useMutation({
+    mutationFn: (v: { ids: string[]; status: string }) => api(p(projectId, "/cues/bulk"), { body: v }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["scene", id] }); toast.push("Updated", "ok"); },
+  });
 
   const invalidate = () => { qc.invalidateQueries({ queryKey: ["scene", id] }); qc.invalidateQueries({ queryKey: ["readiness", id] }); qc.invalidateQueries({ queryKey: ["scenes", projectId] }); };
   const setChar = useMutation({
@@ -108,6 +121,46 @@ export default function SceneDetail() {
                 ))}
               </div>
             )}
+          </Card>
+          <Card title={<span className="row gap-1"><Sparkles size={16} color="var(--accent)" /> Costume cues from script</span>} actions={can(MANAGER_ROLES) && scene.hasScript && scene.aiEnabled && <button className="btn btn-sm" disabled={cueProgress.running} onClick={() => runCues([scene.id])}>{cueProgress.running ? "Reading…" : (scene.cues || []).length ? "Re-extract" : "Extract"}</button>}>
+            {(() => {
+              const cues = scene.cues || [];
+              const suggested = cues.filter((c) => c.status === "SUGGESTED");
+              const accepted = cues.filter((c) => c.status === "ACCEPTED");
+              const dismissed = cues.filter((c) => c.status === "DISMISSED");
+              const visible = [...suggested, ...accepted, ...(showDismissed ? dismissed : [])];
+              const tone = (k: string) => (k === "CONDITION" || k === "NOTE" ? "WARNING" : k === "CONTINUITY" || k === "CHANGE" ? "INFO" : "MUTED");
+              return (
+                <div className="col gap-2">
+                  <CueProgress progress={cueProgress} />
+                  {cues.length === 0 && !cueProgress.running && (
+                    <div className="subtle">{!scene.hasScript ? "No script text on this scene. Upload the screenplay to enable AI cues." : !scene.aiEnabled ? "AI cues are not configured on this server." : "No cues yet. Press Extract to read this scene."}</div>
+                  )}
+                  {suggested.length > 0 && can(OPS_ROLES) && (
+                    <div className="row gap-1 wrap small"><span className="subtle">{suggested.length} suggestion{suggested.length === 1 ? "" : "s"} to review</span><button className="btn btn-sm" onClick={() => bulkCues.mutate({ ids: suggested.map((c) => c.id), status: "ACCEPTED" })}><Check size={14} /> Accept all</button><button className="btn btn-ghost btn-sm" onClick={() => bulkCues.mutate({ ids: suggested.map((c) => c.id), status: "DISMISSED" })}>Dismiss all</button></div>
+                  )}
+                  {visible.map((c) => (
+                    <div key={c.id} className="card flat" style={{ padding: "8px 10px", opacity: c.status === "DISMISSED" ? 0.55 : 1, borderStyle: c.status === "SUGGESTED" ? "dashed" : "solid" }}>
+                      <div className="row between top gap-2">
+                        <div className="grow" style={{ minWidth: 0 }}>
+                          <div className="row gap-1 wrap"><Badge status={tone(c.kind)}>{humanize(c.kind)}</Badge>{c.character ? <Link to={`${base}/characters/${c.character.id}`} className="bold small">{c.character.name}</Link> : c.characterName ? <span className="bold small">{c.characterName}</span> : <span className="subtle small">Scene</span>}{c.status === "ACCEPTED" && <Badge status="READY">Accepted</Badge>}{c.status === "DISMISSED" && <Badge status="MUTED">Dismissed</Badge>}{c.confidence === "LOW" && <span className="subtle tiny">low confidence</span>}</div>
+                          <div className="small mt-1">{c.text}</div>
+                          {c.quote && <div className="subtle tiny" style={{ fontStyle: "italic" }}>“{c.quote}”</div>}
+                        </div>
+                        {can(OPS_ROLES) && (
+                          <div className="row gap-1">
+                            {c.status !== "ACCEPTED" && <button className="btn btn-sm" title="Accept" onClick={() => setCue.mutate({ id: c.id, status: "ACCEPTED" })}><Check size={14} /></button>}
+                            {c.status !== "DISMISSED" && <button className="btn btn-ghost btn-sm" title="Dismiss" onClick={() => setCue.mutate({ id: c.id, status: "DISMISSED" })}><X size={14} /></button>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {dismissed.length > 0 && <button className="btn btn-ghost btn-sm" onClick={() => setShowDismissed((v) => !v)}>{showDismissed ? "Hide" : "Show"} {dismissed.length} dismissed</button>}
+                  {cues.length > 0 && <div className="subtle tiny">Suggested by AI from the script text. Accept what the department agrees with; it never changes changes or costumes by itself.</div>}
+                </div>
+              );
+            })()}
           </Card>
           <Card title="Open cleaning tickets">
             {!scene.cleaning?.length ? <div className="subtle">None.</div> : (

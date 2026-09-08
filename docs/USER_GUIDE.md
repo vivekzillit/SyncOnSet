@@ -37,6 +37,8 @@ Who does what:
 ## 2. Break down the script
 
 1. **Scenes → Upload script**. Drop in the screenplay as Final Draft (`.fdx`), Fountain (`.fountain`), plain text or a PDF exported from the writing software. The app reads the scene numbers, INT/EXT, location, time of day, the characters who speak in each scene and a one-line synopsis, and shows a preview. Untick any scene you do not want, then **Import**. Characters that do not exist yet are created; scene numbers that already exist are updated, so re-upload each revised draft (blue pages, pink pages) the same way. Nothing is ever deleted by an upload.
+   - Tick **Also extract costume cues with AI after import** (when the server has an AI key) and the app reads every imported scene for wardrobe facts: garments and accessories mentioned, condition (wet, torn, bloodied), costume changes, continuity links and things to prepare for (fights, rain, food). You can also run this later from **Scenes → AI cues**, for all scenes or just today's.
+   - Cues appear on each scene under **Costume cues from script** as suggestions with the supporting line from the script. **Accept** the ones the department agrees with, **Dismiss** the rest, or **Accept all**. Accepting never creates changes or costumes by itself; it is a checklist for building the looks. **Re-extract** on a scene refreshes the suggestions and keeps your decisions.
 2. **Scenes → Import breakdown** is the manual alternative: paste one scene per line as `number | name | location | INT/EXT | DAY/NIGHT | script day | characters (comma separated)`.
 3. Or **Scenes → + Scene** for single scenes. Set the **Shoot date** as soon as the schedule is out: the dashboard, the Scan screen and the continuity book all key off it.
 4. **Characters & Actors**:
@@ -111,6 +113,7 @@ A change is one numbered outfit for one character, made of pieces from the inven
 
 - Demo accounts: change the admin password on first use, then reset or remove the other demo users from **Team & roles** once the real team is in.
 - On Render, set `SEED_DEMO=false` after real data is entered so a redeploy never re-seeds the demo.
+- To turn on AI costume cues, set `ANTHROPIC_API_KEY` on the server (Render → Environment). Without it the buttons explain that AI is not configured; everything else works. The model is `claude-opus-5` by default (`ANTHROPIC_MODEL` overrides it); a feature-length script costs a few cents to read.
 - The current Render service is on the Free plan: the database and photos reset on every deploy and the app sleeps after 15 minutes idle. Before real use, upgrade to Starter with a persistent disk, or move to PostgreSQL. Steps are in [DEPLOY.md](DEPLOY.md).
 
 ## Status glossary

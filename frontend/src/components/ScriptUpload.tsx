@@ -5,16 +5,22 @@ import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { humanize } from "@/lib/format";
 import { Badge, ErrorBox, Modal, useToast } from "./ui";
+import { useAuth } from "@/state/auth";
+import { CueProgress, useCueExtraction } from "./AiCues";
+import type { Scene } from "@/api/types";
 
-interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; synopsis: string | null; status?: string; characters: string[]; dialogueLines: number; exists: boolean }
+interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; synopsis: string | null; status?: string; characters: string[]; dialogueLines: number; text?: string; exists: boolean }
 interface ParsedCharacter { name: string; scenes: number; lines: number; exists: boolean }
 interface ParseResult { format: string; file: string; scenes: ParsedScene[]; characters: ParsedCharacter[]; warnings: string[]; stats: { elements: number; headings: number; cues: number } }
 
 /** Upload a screenplay, preview the breakdown, then import scenes + characters. */
 export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean; onClose: () => void; onImported?: () => void }) {
   const { projectId } = useProject();
+  const { meta } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
+  const { progress, run: runCues } = useCueExtraction();
+  const [withAi, setWithAi] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<ParseResult | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
@@ -26,12 +32,27 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
   });
   const importM = useMutation({
     mutationFn: () => {
-      const scenes = (result?.scenes || []).filter((s) => !excluded.has(s.number)).map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, synopsis: s.synopsis, status: s.status, characters: s.characters }));
+      const scenes = (result?.scenes || []).filter((s) => !excluded.has(s.number)).map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, synopsis: s.synopsis, status: s.status, characters: s.characters, scriptText: s.text || null }));
       return api<{ scenes: number; charactersCreated: number }>(p(projectId, "/scenes/import"), { body: { scenes } });
     },
-    onSuccess: (r) => { qc.invalidateQueries(); toast.push(`Imported ${r.scenes} scenes, ${r.charactersCreated} new characters`, "ok"); reset(); onImported?.(); onClose(); },
+    onSuccess: async (r) => {
+      qc.invalidateQueries();
+      toast.push(`Imported ${r.scenes} scenes, ${r.charactersCreated} new characters`, "ok");
+      onImported?.();
+      if (withAi && meta?.aiEnabled && result) {
+        const numbers = new Set(result.scenes.filter((s) => !excluded.has(s.number)).map((s) => s.number));
+        const all = await api<Scene[]>(p(projectId, "/scenes"));
+        const ids = all.filter((s) => numbers.has(s.number) && s.hasScript).map((s) => s.id);
+        setPhase("cues");
+        await runCues(ids);
+        return;
+      }
+      reset();
+      onClose();
+    },
   });
-  const reset = () => { setResult(null); setFile(null); setExcluded(new Set()); if (fileRef.current) fileRef.current.value = ""; };
+  const [phase, setPhase] = useState<"pick" | "preview" | "cues">("pick");
+  const reset = () => { setResult(null); setFile(null); setExcluded(new Set()); setPhase("pick"); if (fileRef.current) fileRef.current.value = ""; };
   const pick = (f: File | null) => { if (!f) return; setFile(f); parse.mutate(f); };
   const toggle = (n: string) => setExcluded((s) => { const x = new Set(s); x.has(n) ? x.delete(n) : x.add(n); return x; });
   const included = (result?.scenes || []).filter((s) => !excluded.has(s.number));
@@ -40,8 +61,14 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
 
   return (
     <Modal open={open} onClose={() => { reset(); onClose(); }} title="Upload script" wide
-      footer={<><button className="btn" onClick={() => { reset(); onClose(); }}>Cancel</button>{result && <button className="btn btn-primary" disabled={!included.length || importM.isPending} onClick={() => importM.mutate()}>{importM.isPending ? "Importing…" : `Import ${included.length} scene${included.length === 1 ? "" : "s"}`}</button>}</>}>
-      {!result ? (
+      footer={phase === "cues" ? <button className="btn btn-primary" disabled={progress.running} onClick={() => { reset(); onClose(); }}>{progress.running ? "Working…" : "Done"}</button> : <><button className="btn" onClick={() => { reset(); onClose(); }}>Cancel</button>{result && <button className="btn btn-primary" disabled={!included.length || importM.isPending} onClick={() => importM.mutate()}>{importM.isPending ? "Importing…" : `Import ${included.length} scene${included.length === 1 ? "" : "s"}${withAi && meta?.aiEnabled ? " + AI cues" : ""}`}</button>}</>}>
+      {phase === "cues" ? (
+        <div className="col gap-2">
+          <div className="notice ok">Scenes imported. Now reading each scene for costume cues…</div>
+          <CueProgress progress={progress} />
+          {!progress.running && !progress.error && <div className="subtle">Open any scene to review the suggestions under <b>Costume cues from script</b>.</div>}
+        </div>
+      ) : !result ? (
         <div className="col gap-2">
           <div className="notice info">Upload the screenplay and the breakdown is read straight from it: scene numbers, INT/EXT, location, time of day, the characters who speak in each scene, and a one-line synopsis. You review everything before anything is saved.</div>
           <div className="card flat" style={{ borderStyle: "dashed", textAlign: "center", padding: 28, cursor: "pointer" }} onClick={() => fileRef.current?.click()}
@@ -79,6 +106,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
               </tbody>
             </table>
           </div>
+          {meta?.aiEnabled && <label className="check"><input type="checkbox" checked={withAi} onChange={(e) => setWithAi(e.target.checked)} /> Also extract costume cues with AI after import ({meta.aiModel}; a few cents per script)</label>}
           <ErrorBox error={importM.error} />
         </div>
       )}

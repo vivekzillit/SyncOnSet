@@ -120,7 +120,18 @@ character cues are short upper-case lines followed by dialogue, transitions end 
 Sluglines yield `intExt`, `location` and `timeOfDay` (MORNING → DAY, LATER → CONTINUOUS, SUNSET → DUSK…); scene numbers come from
 FDX attributes, Fountain `#24#` markers or margin numbers, falling back to order of appearance with a warning. Character names are
 normalised (extensions stripped, title case). The response is a preview only; the client confirms via `POST /import`, which upserts
-scenes by number and matches characters case-insensitively. AI extraction of costume cues is the planned tier 2.
+scenes by number and matches characters case-insensitively, storing each scene's text in `Scene.scriptText`.
+
+### AI costume cues (tier 2, advisory)
+
+`POST …/scenes/extract-cues { sceneIds }` (managers, up to 10 scenes per call; the client chunks for progress) sends each
+scene's stored text to the Claude API (`claude-opus-5` by default, `ANTHROPIC_MODEL` to override) with a costume-breakdown
+system prompt and a structured-output schema, and stores the result as `ScriptCue` rows: `character`, `kind`
+(GARMENT, ACCESSORY, CONDITION, CHANGE, CONTINUITY, NOTE), `text` (≤ 20 words), a verbatim `quote`, `confidence`, and
+`status` SUGGESTED → ACCEPTED | DISMISSED via `PATCH …/cues/:id` or `POST …/cues/bulk`. Re-extraction replaces SUGGESTED
+cues and keeps decided ones. Batches are ~6 scenes or 24k characters; the system prompt is cached. The feature is off unless
+`ANTHROPIC_API_KEY` is set on the server (`GET /meta` reports `aiEnabled`); refusals, auth failures and rate limits map to
+502/503/429 with plain-language messages. Cues never create changes or costumes: they are a checklist for the designer.
 
 ## 5. API reference
 
@@ -158,6 +169,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 | fittings | GET (?status=&characterId=), POST `{characterId,scheduledAt,location,notes,costumeIds}`, GET/:id, PATCH, DELETE, POST /:id/items, PATCH /:id/items/:costumeId `{status,notes,alteration?}`, DELETE /:id/items/:costumeId |
 | cleaning | GET (?open=true&status=&costumeId=) → `{pipeline,items}`, POST, POST /emergency `{costumeId|assetNumber,sceneId,takeNumber,problem,cleaningType,autoAssignReplacement}`, GET/:id (alternatives, photos), PATCH, POST /:id/advance `{toStatus?,note,qcResult,qcNotes,returnLocation}`, POST /:id/replacement `{costumeId}` |
 | alterations | GET (?open=true), POST, GET/:id, PATCH, POST /:id/advance |
+| cues | GET (?status=&characterId=&sceneId=), PATCH/:id `{status,text,characterId}`, POST /bulk `{ids,status}`; scenes: POST /extract-cues `{sceneIds}` |
 | continuity | GET (?sceneId=&characterId=), POST (upsert by scene/character/take; prefilled from previous take), GET /compare?sceneId=&characterId= → `{records,flags}`, GET/:id, DELETE/:id |
 | photos | GET (?entityType=&entityId=), POST multipart `file,entityType,entityId,kind,caption`, DELETE/:id |
 | damages | GET (?open=true), POST, PATCH/:id (`REPAIRED` books a DAMAGE expense; `WRITTEN_OFF` retires) |
@@ -229,4 +241,4 @@ Production checklist: strong `JWT_SECRET`, HTTPS, PostgreSQL, object storage for
 | 2 | Offline outbox + delta sync API; PWA install; camera improvements |
 | 3 | SwiftUI iOS app (scan, issue/return, cleaning, continuity, fittings) |
 | 4 | Multi-unit / multi-location, shooting schedule import (Movie Magic / Excel), day-out-of-days |
-| 5 | AI Phase 3: script breakdown extraction, continuity photo comparison (advisory), NL costume search, stain triage (advisory) |
+| 5 | AI: continuity photo comparison (advisory), NL costume search, stain triage (advisory). Script breakdown and costume-cue extraction shipped in sprint 0 |

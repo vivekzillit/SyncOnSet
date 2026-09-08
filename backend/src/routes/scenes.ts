@@ -10,6 +10,7 @@ import { INT_EXT, MANAGER_ROLES, SCENE_STATUSES, TIMES_OF_DAY } from "../lib/con
 import { audit } from "../services/audit";
 import { sceneReadiness } from "../services/readiness";
 import { detectFormat, parseScript } from "../services/scriptParser";
+import { aiEnabled, extractAndStoreCues } from "../services/costumeCues";
 
 export const scenesRouter = Router({ mergeParams: true });
 
@@ -25,6 +26,7 @@ const schema = z.object({
   pages: zOptionalString,
   shootDate: zDate,
   status: z.enum(SCENE_STATUSES).optional(),
+  scriptText: z.string().max(60000).optional().nullable(),
 });
 
 function sceneSort(n: string) {
@@ -56,7 +58,8 @@ scenesRouter.get(
       else if (statuses.includes("ALTERATION")) level = "ALTERATION";
       else if (statuses.includes("CLEANING")) level = "CLEANING";
       else if (unassigned || s.characters.length === 0) level = "NOT_ASSIGNED";
-      return { ...s, readiness: level };
+      const { scriptText, ...rest } = s;
+      return { ...rest, hasScript: !!scriptText, readiness: level };
     });
     res.json(withReadiness);
   }),
@@ -144,6 +147,18 @@ scenesRouter.post(
   }),
 );
 
+/** AI: extract costume cues for up to 10 scenes per call (client chunks for progress). */
+scenesRouter.post(
+  "/extract-cues",
+  requireRole(MANAGER_ROLES),
+  wrap(async (req, res) => {
+    const { sceneIds } = parse(z.object({ sceneIds: z.array(z.string()).min(1).max(10) }), req.body);
+    const result = await extractAndStoreCues(req.projectId!, sceneIds);
+    await audit(req.user, req.projectId!, "AI_CUES_EXTRACT", "SCENE", "batch", { scenes: sceneIds.length, cues: result.cuesCreated, model: result.model });
+    res.json(result);
+  }),
+);
+
 scenesRouter.get(
   "/:id",
   wrap(async (req, res) => {
@@ -153,10 +168,11 @@ scenesRouter.get(
         characters: { include: { character: { include: { actor: { select: { id: true, name: true } }, changes: { orderBy: { changeNumber: "asc" }, select: { id: true, changeNumber: true, name: true } } } }, change: { include: { items: { include: { costume: true } } } } } },
         continuity: { orderBy: [{ takeNumber: "asc" }], include: { character: { select: { id: true, name: true } } } },
         cleaning: { where: { status: { notIn: ["READY", "CANCELLED"] } }, include: { costume: { select: { assetNumber: true, name: true } } } },
+        cues: { orderBy: [{ status: "asc" }, { characterName: "asc" }, { createdAt: "asc" }], include: { character: { select: { id: true, name: true } } } },
       },
     });
     if (!scene) throw notFound("Scene");
-    res.json(scene);
+    res.json({ ...scene, hasScript: !!scene.scriptText, aiEnabled: aiEnabled() });
   }),
 );
 

@@ -25,6 +25,7 @@ import { expensesRouter } from "./routes/expenses";
 import { notificationsRouter } from "./routes/notifications";
 import { reportsRouter } from "./routes/reports";
 import { metaRouter } from "./routes/meta";
+import { cuesRouter } from "./routes/cues";
 
 export function createApp() {
   const app = express();
@@ -60,6 +61,7 @@ export function createApp() {
   scoped.use("/expenses", expensesRouter);
   scoped.use("/notifications", notificationsRouter);
   scoped.use("/reports", reportsRouter);
+  scoped.use("/cues", cuesRouter);
   app.use("/api/projects/:projectId", scoped);
 
   // Serve the built frontend in production if present
