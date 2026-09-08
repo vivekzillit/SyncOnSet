@@ -76,6 +76,7 @@ export async function extractCues(scenes: SceneInput[], characterNames: string[]
  * ACCEPTED and DISMISSED cues are kept so nobody has to re-decide.
  */
 export async function extractAndStoreCues(projectId: string, sceneIds: string[]) {
+  getClient(); // fail fast with a clear 503 when the server has no API key, even if nothing would be sent
   const scenes = await prisma.scene.findMany({ where: { projectId, id: { in: sceneIds } }, orderBy: { sortOrder: "asc" } });
   const withText = scenes.filter((s) => s.scriptText && s.scriptText.trim().length > 0);
   const characters = await prisma.character.findMany({ where: { projectId }, select: { id: true, name: true } });
