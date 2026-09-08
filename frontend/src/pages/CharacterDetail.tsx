@@ -10,8 +10,7 @@ import type { Actor, Character, Costume, CostumeChange, Fitting, Photo } from "@
 import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ActorSelect, Avatar, CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
 
-type SceneRow = { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string; intExt?: string | null; location?: string | null; timeOfDay?: string | null; scriptDay?: string | null; pages?: string | null; synopsis?: string | null }; change?: { id: string; changeNumber: number; name: string } | null; notes?: string | null };
-type Detail = Character & { actor?: Actor | null; scenes: SceneRow[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
+type Detail = Character & { actor?: Actor | null; scenes: { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string }; change?: { id: string; changeNumber: number; name: string } | null }[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
 
 export default function CharacterDetail() {
   const { id = "" } = useParams();

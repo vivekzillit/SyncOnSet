@@ -9,7 +9,7 @@ Live app: https://costumes-and-set.onrender.com · Demo password for every demo 
 
 ## 0. Get in
 
-1. Open the app and **sign in**. On a desktop the production's tabs run across the top, SyncOnSet-style: **Costumes** (the department), **Dashboard**, **Scenes**, **Characters ▾** (Characters, Actors), **Costumes ▾** (Costumes, Scan, Sink / Cleaning, Fittings, Alterations, Damage, Missing, QR Labels, Vendors & Rentals), **Continuity ▾** (On Set, Book), **Reports ▾**, **Gallery**, with a search box that finds scenes, characters and costumes by number or name. On a phone, add it to the home screen (Safari: Share → Add to Home Screen; Chrome: menu → Install app) so it opens full-screen with the bottom navigation **Home · Scenes · Costumes · Scan · Sink · More**.
+1. Open the app and **sign in**. On a desktop the production's tabs run across the top, SyncOnSet-style: **Costumes** (the department), **Dashboard**, **Scenes**, **Breakdown**, **Characters ▾** (Characters, Actors), **Costumes ▾** (Costumes, Scan, Sink / Cleaning, Fittings, Alterations, Damage, Missing, QR Labels, Vendors & Rentals), **Continuity ▾** (On Set, Book), **Reports ▾**, **Gallery**, with a search box that finds scenes, characters and costumes by number or name. On a phone, add it to the home screen (Safari: Share → Add to Home Screen; Chrome: menu → Install app) so it opens full-screen with the bottom navigation **Home · Scenes · Costumes · Scan · Sink · More**.
 2. **Change your password** straight away: on desktop click the key icon next to your name at the bottom of the sidebar; on a phone go to **More → Change password**.
 3. Pick your production on the **Projects** screen. Everything after this happens inside one production.
 
