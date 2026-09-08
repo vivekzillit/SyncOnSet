@@ -41,7 +41,7 @@ model Project {
   shootingDay     Int       @default(0)
   currentLocation String?
   currency        String    @default("INR")
-  prepStartDate   DateTime? // pre-production window
+  prepStartDate   DateTime? // prep (pre-production) window
   prepEndDate     DateTime?
   startDate       DateTime? // shoot window
   endDate         DateTime?

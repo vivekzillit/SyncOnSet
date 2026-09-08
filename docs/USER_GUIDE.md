@@ -26,9 +26,9 @@ Who does what:
 
 ## 1. Set up the production (managers)
 
-1. **Projects → Create a Production**. A six-step wizard asks what you are working on (feature or feature TV series), the title, the studio, and the estimated dates: pre-production start and end, then shoot start and end. **Upload script for breakdown** follows: name the draft (for example "White" or "Blue") and drop in the screenplay, or press **Try our demo script**. A script is required; the breakdown is read from it.
+1. **Projects → Create a Production**. A six-step wizard asks what you are working on (feature or feature TV series), the title, the studio, and the estimated dates: prep start and end, then shoot start and end. **Upload script for breakdown** follows: name the draft (for example "White" or "Blue") and drop in the screenplay, or press **Try our demo script**. A script is required; the breakdown is read from it.
    - **Character Confirmation** follows the upload, as in SyncOnSet: every speaking role found in the script is listed with its scene and line counts. **Delete** anything that is not a character (a sound, a sign, a crowd); **Delete All** imports the scenes without any characters, **Skip** imports everything as listed. **Continue** imports the scenes and characters and opens the Scenes list. Cast numbers are set later on each character's page.
-2. **Project settings** (sidebar): pre-production and shoot dates, notes. Update **Shooting day** and **Current location** each shoot day; both show on the dashboard and reports.
+2. **Project settings** (sidebar): prep and shoot dates, notes. Update **Shooting day** and **Current location** each shoot day; both show on the dashboard and reports.
 3. **Team & roles**:
    - **New user** creates an account with a temporary password and adds it to this production (Admin and Production Manager only).
    - **Add member** adds an existing user by name or email and sets their project role. Change a role any time from the dropdown next to their name.

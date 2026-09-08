@@ -66,7 +66,7 @@ Notification (per user)  AuditLog
 ```
 
 Key fields
-- **Project**: `type` (FEATURE | EPISODIC, shown as Feature / Feature TV series), `studio`, `prepStartDate`/`prepEndDate` (pre-production), `startDate`/`endDate` (shoot), plus status, shooting day, currency; `budgetBand`, `country` and `city` remain in the schema but the wizard no longer asks for them.
+- **Project**: `type` (FEATURE | EPISODIC, shown as Feature / Feature TV series), `studio`, `prepStartDate`/`prepEndDate` (prep), `startDate`/`endDate` (shoot), plus status, shooting day, currency; `budgetBand`, `country` and `city` remain in the schema but the wizard no longer asks for them.
 - **Actor**: `name`, `gender`, `age`, `phone`, `phone2`, `email`, `email2`, `agency`, `startWorkDate`, `nextFittingAt`, `fittingComment`, measurements JSON; `characterIds` on create/update relinks characters.
 - **Character**: `castNumber` (call-sheet number), type, actor link.
 - **Scene**: slugline fields, `pages` (eighths), `scriptDay`, `shootDate`, `status`, `scriptText`, `revision`, `revisedAt`.
@@ -207,7 +207,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 
 ## 6. Screens (web app, 27)
 
-Login · Projects · Production wizard (type, title, studio, pre-production and shoot dates, required script upload, Character Confirmation) · **Dashboard** · Scan · Scenes (SyncOnSet-style table: draft selector, inline add, Edit All, row menu Edit/Clone/Omit/Delete, Add & Remove Principals) · Scene detail (readiness, change assignment, takes, tickets) ·
+Login · Projects · Production wizard (type, title, studio, prep and shoot dates, required script upload, Character Confirmation) · **Dashboard** · Scan · Scenes (SyncOnSet-style table: draft selector, inline add, Edit All, row menu Edit/Clone/Omit/Delete, Add & Remove Principals) · Scene detail (readiness, change assignment, takes, tickets) ·
 Characters · Actors (SyncOnSet-style table and Create Actor form) · Gallery · Character detail (changes, scenes, pieces, measurements, fittings, photos) · Change detail (pieces, wear notes, photos, scenes) ·
 Costumes (search/filter/paginate, create) · Costume detail (QR, actions, used-in, photos, records, timeline) ·
 Sink/Cleaning board (kanban + list) · Cleaning ticket (stepper, work actions, QC, replacement, history, stain photos) ·

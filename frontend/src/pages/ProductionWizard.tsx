@@ -127,7 +127,7 @@ export default function ProductionWizard() {
         {step === 3 && (<>
           <h2 className="center">What are the estimated shoot dates?</h2>
           <div className="col mt-3" style={{ gap: 18 }}>
-            {dateRange("Pre-production dates", "prepStartDate", "prepEndDate")}
+            {dateRange("Prep dates", "prepStartDate", "prepEndDate")}
             {dateRange("Shoot dates", "startDate", "endDate")}
           </div>
           {navRow(() => setStep(4))}

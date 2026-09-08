@@ -30,8 +30,8 @@ export default function ProjectSettings() {
           <Field label="Current location"><Input value={f.currentLocation} onChange={(e) => setF({ ...f, currentLocation: e.target.value })} /></Field>
           <Field label="Currency"><Select value={f.currency} onChange={(e) => setF({ ...f, currency: e.target.value })} options={["INR", "USD", "GBP", "EUR", "AED"]} humanizeLabels={false} /></Field>
           <div />
-          <Field label="Pre-production start"><Input type="date" value={f.prepStartDate} onChange={(e) => setF({ ...f, prepStartDate: e.target.value })} /></Field>
-          <Field label="Pre-production end"><Input type="date" value={f.prepEndDate} min={f.prepStartDate || undefined} onChange={(e) => setF({ ...f, prepEndDate: e.target.value })} /></Field>
+          <Field label="Prep start"><Input type="date" value={f.prepStartDate} onChange={(e) => setF({ ...f, prepStartDate: e.target.value })} /></Field>
+          <Field label="Prep end"><Input type="date" value={f.prepEndDate} min={f.prepStartDate || undefined} onChange={(e) => setF({ ...f, prepEndDate: e.target.value })} /></Field>
           <Field label="Shoot start"><Input type="date" value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} /></Field>
           <Field label="Shoot end"><Input type="date" value={f.endDate} min={f.startDate || undefined} onChange={(e) => setF({ ...f, endDate: e.target.value })} /></Field>
           <Field label="Notes" span2><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
