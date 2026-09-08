@@ -37,7 +37,6 @@ export default function Scenes() {
   const canEdit = can(MANAGER_ROLES);
 
   const [when, setWhen] = useState<"today" | "upcoming" | "all" | "">("all");
-  const [status, setStatus] = useState("");
   const [rev, setRev] = useState("");
   const [q, setQ] = useState("");
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -66,11 +65,10 @@ export default function Scenes() {
     if (rev) items = items.filter((s) => pinned(s) || (s.revision || "") === rev);
     if (when === "today") items = items.filter((s) => pinned(s) || dateKey(s.shootDate) === today);
     if (when === "upcoming") items = items.filter((s) => pinned(s) || (s.shootDate && dateKey(s.shootDate) >= today));
-    if (status) items = items.filter((s) => pinned(s) || s.status === status);
     const needle = q.trim().toLowerCase();
     if (needle) items = items.filter((s) => pinned(s) || [s.number, s.name, s.location, s.synopsis, s.scriptDay, s.intExt, ...s.characters.flatMap((c) => [c.character.name, String(c.character.castNumber ?? charById.get(c.characterId)?.castNumber ?? "")])].some((v) => (v || "").toLowerCase().includes(needle)));
     return items;
-  }, [data, drafts, rev, when, status, q, today, charById]);
+  }, [data, drafts, rev, when, q, today, charById]);
 
   // Every draft (the add row first, then edited rows in table order); drafts of scenes deleted elsewhere drop out.
   const draftKeys = useMemo(() => [...(drafts[NEW] ? [NEW] : []), ...list.filter((s) => drafts[s.id]).map((s) => s.id)], [drafts, list]);
@@ -153,7 +151,7 @@ export default function Scenes() {
   const menuScene = menu ? sceneById.get(menu.id) : undefined;
   const addRow = () => setDraft(NEW, emptyDraft());
 
-  const emptyTitle = when === "today" ? "No scenes scheduled today" : when === "upcoming" ? "No upcoming scenes" : q || status || rev ? "No scenes match" : "No scenes yet";
+  const emptyTitle = when === "today" ? "No scenes scheduled today" : when === "upcoming" ? "No upcoming scenes" : q || rev ? "No scenes match" : "No scenes yet";
   const emptyHint = when === "today" ? "Once a schedule and callsheet is uploaded it will appear here." : when === "upcoming" ? "Once a schedule is uploaded it will appear here." : "Upload the script to build the breakdown automatically, paste a breakdown, or add scenes one by one.";
   const draftCount = `${revisions.length} draft${revisions.length === 1 ? "" : "s"}`;
   // The header reads like the reference: the selected draft, or the only draft when there is just one.
@@ -175,7 +173,6 @@ export default function Scenes() {
       <div className="filters">
         <SearchBox value={q} onChange={setQ} placeholder="Search scene, location, description, character…" />
         <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "all", label: "All" }]} value={when} onChange={(v) => setWhen(v || "all")} />
-        <Select value={status} onChange={(e) => setStatus(e.target.value)} options={meta?.sceneStatuses || []} placeholder="Any status" />
         {canEdit && (
           <div className="row gap-1" style={{ marginLeft: "auto" }}>
             {editAll ? (
@@ -193,7 +190,7 @@ export default function Scenes() {
 
       <Card pad0>
         {isLoading ? <Spinner /> : list.length === 0 && !drafts[NEW] ? (
-          <Empty icon="🎬" title={emptyTitle} hint={emptyHint} action={canEdit && when === "all" && !q && !status && !rev ? <button className="btn btn-blue" onClick={addRow}><Plus size={16} /> Add scene</button> : undefined} />
+          <Empty icon="🎬" title={emptyTitle} hint={emptyHint} action={canEdit && when === "all" && !q && !rev ? <button className="btn btn-blue" onClick={addRow}><Plus size={16} /> Add scene</button> : undefined} />
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -249,7 +246,7 @@ export default function Scenes() {
       <PrincipalsModal open={!!principalsDraft} onClose={() => setPrincipalsFor(null)} characters={characters || []} value={principalsDraft?.principals || []} onChange={(ids) => principalsFor && drafts[principalsFor] && setDraft(principalsFor, { ...drafts[principalsFor], principals: ids })} />
 
       <ScriptUploadModal open={scriptOpen} onClose={() => setScriptOpen(false)} onImported={() => { setWhen("all"); setRev(""); }} />
-      <ScheduleUploadModal open={!!docOpen} kind={docOpen || "SCHEDULE"} onClose={() => setDocOpen(null)} onApplied={() => { setWhen(docOpen === "CALLSHEET" ? "today" : "upcoming"); setStatus(""); setRev(""); }} />
+      <ScheduleUploadModal open={!!docOpen} kind={docOpen || "SCHEDULE"} onClose={() => setDocOpen(null)} onApplied={() => { setWhen(docOpen === "CALLSHEET" ? "today" : "upcoming"); setRev(""); }} />
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Import script breakdown" footer={<><button className="btn" onClick={() => setImportOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={importM.isPending} onClick={() => importM.mutate()}>Import</button></>}>
         <div className="notice info mb-2">One scene per line: <span className="mono">number | name | location | INT/EXT | DAY/NIGHT | script day | characters (comma separated)</span>. Unknown characters are created automatically. Existing scene numbers are updated.</div>
         <Textarea rows={10} value={importText} onChange={(e) => setImportText(e.target.value)} className="mono" />
