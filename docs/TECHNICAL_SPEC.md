@@ -235,11 +235,11 @@ Login · Projects · Production wizard (type, title, studio, prep and shoot date
 Characters · Actors (SyncOnSet-style table and Create Actor form) · Gallery · Character detail (changes, scenes, pieces, measurements, fittings, photos) · Change detail (pieces, wear notes, photos, scenes) ·
 Costumes (search/filter/paginate, create) · Costume detail (QR, actions, used-in, photos, records, timeline) ·
 Sink/Cleaning board (kanban + list) · Cleaning ticket (stepper, work actions, QC, replacement, history, stain photos) ·
-Fittings · Fitting detail (checklist, alteration on the spot, measurements, photos) · Continuity book (takes, flags, record take) ·
+Fittings · Fitting detail (checklist, alteration on the spot, measurements, photos) · Continuity On Set (take form with QR scanning) · Continuity book (takes, flags, record take) ·
 Alterations · Damage reports · Missing items · Vendors & rentals · Budget & expenses · Reports (daily / inventory / wrap, CSV, print) ·
 QR labels (select & print) · Notifications · Team & roles · Project settings · More (mobile menu).
 
-Desktop navigation follows SyncOnSet: a production header with global search, a department chip and top tabs (Dashboard, Scenes, Characters ▾, Costumes ▾, On Set ▾, Reports ▾, Gallery). Mobile: bottom navigation **Home | Scenes | Costumes | Scan | Sink | More**, camera capture on all photo inputs, one-hand action bars.
+Desktop navigation follows SyncOnSet: a production header with global search, a department chip and top tabs (Dashboard, Scenes, Characters ▾, Costumes ▾ — inventory, scanning, cleaning, fittings, alterations, damage, missing, labels and vendors — Continuity ▾ (On Set, Book), Reports ▾, Gallery). Mobile: bottom navigation **Home | Scenes | Costumes | Scan | Sink | More**, camera capture on all photo inputs, one-hand action bars.
 
 ## 7. QR workflow
 

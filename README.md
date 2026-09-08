@@ -25,7 +25,7 @@ continuity book, asset-numbered inventory, wrap-box labels, per-character/per-sc
 | **Sink / cleaning** | 13 cleaning types, priority, kanban board through Requested → Received → Cleaning → Drying → Ironing → QC → Ready |
 | **🚨 Emergency** | One tap: URGENT ticket, costume marked unavailable, laundry + supervisor alerted, replacement found and issued |
 | **Scene readiness** | Per-scene, per-character traffic light derived from the assigned change's costume statuses |
-| **Continuity book** | Per scene/character/take: wear details, accessories, notes, photos; automatic diff flags between takes |
+| **Continuity** | **On Set** opens the take form (prefilled from the last take, scan a label to add a piece); the **Book** holds every take with photos and automatic diff flags |
 | **Fittings** | Checklist per piece; "Alteration required" raises a tailoring ticket on the spot |
 | **Alterations, damage, missing** | Ticket pipelines with costume status side-effects and notifications |
 | **Vendors & rentals** | Rental bookings, due/overdue tracking, return reminders |

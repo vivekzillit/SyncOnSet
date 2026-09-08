@@ -9,7 +9,7 @@ Live app: https://costumes-and-set.onrender.com · Demo password for every demo 
 
 ## 0. Get in
 
-1. Open the app and **sign in**. On a desktop the production's tabs run across the top, SyncOnSet-style: **Costumes** (the department), **Dashboard**, **Scenes**, **Characters ▾** (Characters, Actors), **Costumes ▾** (Costumes, QR Labels, Vendors & Rentals), **On Set ▾** (Scan, Sink, Fittings, Alterations, Damage, Missing, Continuity), **Reports ▾**, **Gallery**, with a search box that finds scenes, characters and costumes by number or name. On a phone, add it to the home screen (Safari: Share → Add to Home Screen; Chrome: menu → Install app) so it opens full-screen with the bottom navigation **Home · Scenes · Costumes · Scan · Sink · More**.
+1. Open the app and **sign in**. On a desktop the production's tabs run across the top, SyncOnSet-style: **Costumes** (the department), **Dashboard**, **Scenes**, **Characters ▾** (Characters, Actors), **Costumes ▾** (Costumes, Scan QR, Sink / Cleaning, Fittings, Alterations, Damage, Missing, QR Labels, Vendors & Rentals), **Continuity ▾** (On Set, Book), **Reports ▾**, **Gallery**, with a search box that finds scenes, characters and costumes by number or name. On a phone, add it to the home screen (Safari: Share → Add to Home Screen; Chrome: menu → Install app) so it opens full-screen with the bottom navigation **Home · Scenes · Costumes · Scan · Sink · More**.
 2. **Change your password** straight away: on desktop click the key icon next to your name at the bottom of the sidebar; on a phone go to **More → Change password**.
 3. Pick your production on the **Projects** screen. Everything after this happens inside one production.
 
@@ -21,7 +21,7 @@ Who does what:
 | Costume Assistant, Wardrobe Assistant, Dresser | Everything except money | Day-to-day: scan, issue, return, cleaning, continuity, fittings, damage |
 | Laundry | The Sink board and costume details | Works cleaning tickets |
 | Tailor | Alterations and costume details | Works alteration tickets |
-| Continuity | Continuity book, scenes, costumes | Records takes and photos |
+| Continuity | Continuity (On Set and Book), scenes, costumes | Records takes and photos |
 | Actor | Their scenes, changes and fittings | Read-only |
 
 ## 1. Set up the production (managers)
@@ -91,7 +91,8 @@ A change is one numbered outfit for one character, made of pieces from the inven
 4. Press **Issue to actor** when the piece leaves the truck, and **Send to set** when the actor walks on. Every action is time-stamped in the piece's timeline with who did it.
 
 ### On set
-5. **Continuity book** (Continuity role or wardrobe): choose the scene and the character, press **Record take**. Take 1 is prefilled from the assigned change; each later take is prefilled from the previous one, so you only change what changed. Tick accessories present or not, add notes, and photograph front, side and back on the take card.
+5. **Continuity → On Set** (Continuity role or wardrobe) opens straight into the take form: choose the scene and the character, and the form is ready. Take 1 is prefilled from the assigned change; each later take is prefilled from the previous one, so you only change what changed. Tick pieces present or not, add notes, and **Scan** a label (or type its asset number) to add the piece the actor is wearing. **Save take** clears the form for the next take.
+   - **Continuity → Book** is the record: every take for that scene and character, with photos front, side and back, and the automatic flags between takes.
    - The book compares takes automatically and flags differences ("Ring missing in Take 3", "Sleeves: Rolled → Down").
 6. **Something spills**: scan the piece and press **Emergency clean**. Describe the problem, pick the cleaning type, and leave **Auto-assign the best available replacement** ticked. The app marks the piece as in cleaning, alerts laundry and the supervisor, and issues the closest matching spare (same type, size, colour, character) to the actor. The result screen lists other candidates with an **Assign** button if you prefer a different one.
 7. **Request cleaning** (not urgent), **Report damage** and **Mark missing** are on the same screen. Damage and missing reports alert the managers and turn the piece red on every scene it belongs to.

@@ -17,7 +17,7 @@ import Cleaning from "@/pages/Cleaning";
 import CleaningDetail from "@/pages/CleaningDetail";
 import Fittings from "@/pages/Fittings";
 import FittingDetail from "@/pages/FittingDetail";
-import Continuity from "@/pages/Continuity";
+import ContinuityOnSet, { ContinuityBook } from "@/pages/Continuity";
 import Alterations from "@/pages/Alterations";
 import Damages from "@/pages/Damages";
 import Missing from "@/pages/Missing";
@@ -65,7 +65,8 @@ export default function App() {
         <Route path="cleaning/:id" element={<CleaningDetail />} />
         <Route path="fittings" element={<Fittings />} />
         <Route path="fittings/:id" element={<FittingDetail />} />
-        <Route path="continuity" element={<Continuity />} />
+        <Route path="continuity" element={<ContinuityOnSet />} />
+        <Route path="continuity/book" element={<ContinuityBook />} />
         <Route path="alterations" element={<Alterations />} />
         <Route path="damages" element={<Damages />} />
         <Route path="missing" element={<Missing />} />
