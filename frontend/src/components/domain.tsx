@@ -9,6 +9,7 @@ import { CONTINUITY_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { fmtDateTime, humanize, tone } from "@/lib/format";
 import type { Actor, Costume, Photo, TimelineEvent } from "@/api/types";
 import { Badge, Dot, Empty, ErrorBox, Field, Input, Modal, SearchBox, Select, Spinner, Textarea, initials, useToast } from "./ui";
+import { ActorModal } from "./ActorModal";
 
 /* ---------- QR Scanner (camera) ---------- */
 export function QRScanner({ onScan, active }: { onScan: (text: string) => void; active: boolean }) {
@@ -277,37 +278,20 @@ export function ReadinessLine({ level, name, sub }: { level: string; name: React
 
 /* ---------- Actor picker ---------- */
 const NEW_ACTOR = "__new_actor__";
-const blankActor = { name: "", phone: "", email: "", agency: "", notes: "" };
 
-/** Actor dropdown that also offers "+ New actor", so cast can be added without leaving the character. */
+/** Actor dropdown that also offers "+ New actor", opening the same Create Actor form the Actors page uses. */
 export function ActorSelect({ value, onChange }: { value: string; onChange: (actorId: string) => void }) {
   const { projectId, can } = useProject();
-  const qc = useQueryClient();
-  const toast = useToast();
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState(blankActor);
   const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<Actor[]>(p(projectId, "/actors")) });
   const canAdd = can(MANAGER_ROLES);
-  const close = () => { setOpen(false); setF(blankActor); create.reset(); };
-  const create = useMutation({
-    mutationFn: () => api<Actor>(p(projectId, "/actors"), { body: { name: f.name.trim(), phone: f.phone || null, email: f.email || null, agency: f.agency || null, notes: f.notes || null } }),
-    onSuccess: (a) => { qc.invalidateQueries({ queryKey: ["actors", projectId] }); qc.invalidateQueries({ queryKey: ["characters", projectId] }); onChange(a.id); close(); toast.push("Actor added", "ok"); },
-  });
   const options = [...(actors || []).map((a) => ({ value: a.id, label: a.name })), ...(canAdd ? [{ value: NEW_ACTOR, label: "+ New actor" }] : [])];
 
   return (
     <>
       <Select value={value} onChange={(e) => (e.target.value === NEW_ACTOR ? setOpen(true) : onChange(e.target.value))} options={options} placeholder="— unassigned —" />
-      <Modal open={open} onClose={close} title="New actor" footer={<><button className="btn" onClick={close}>Cancel</button><button className="btn btn-primary" disabled={!f.name.trim() || create.isPending} onClick={() => create.mutate()}>Add & assign</button></>}>
-        <div className="form-grid">
-          <Field label="Name" span2><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoFocus /></Field>
-          <Field label="Phone"><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
-          <Field label="Email"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
-          <Field label="Agency" span2 help="Measurements and fitting dates can be filled in on the Actors page."><Input value={f.agency} onChange={(e) => setF({ ...f, agency: e.target.value })} /></Field>
-          <Field label="Notes" span2><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="Allergies, preferences" /></Field>
-        </div>
-        <ErrorBox error={create.error} />
-      </Modal>
+      {/* Created from a character, so the new actor is assigned straight back to it — no "Create +". */}
+      <ActorModal open={open} onClose={() => setOpen(false)} onSaved={(a) => onChange(a.id)} allowAddAnother={false} saveLabel="Create & assign" />
     </>
   );
 }
