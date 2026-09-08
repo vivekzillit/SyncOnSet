@@ -1,0 +1,517 @@
+// Sink on Set - data model
+// SQLite for local/MVP. To move to PostgreSQL, change provider to "postgresql"
+// and DATABASE_URL; the model itself is provider-neutral (no enums / JSON types
+// are used so that SQLite works; string columns hold the constants declared in
+// src/lib/constants.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   // global role, see ROLES
+  phone        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships   ProjectMember[]
+  notifications Notification[]
+}
+
+model Project {
+  id              String    @id @default(cuid())
+  name            String
+  code            String    @unique
+  status          String    @default("PREP") // PREP | SHOOTING | WRAP | ARCHIVED
+  shootingDay     Int       @default(0)
+  currentLocation String?
+  currency        String    @default("INR")
+  startDate       DateTime?
+  endDate         DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  members       ProjectMember[]
+  actors        Actor[]
+  characters    Character[]
+  scenes        Scene[]
+  changes       CostumeChange[]
+  costumes      Costume[]
+  fittings      Fitting[]
+  cleaning      CleaningRequest[]
+  alterations   AlterationRequest[]
+  continuity    ContinuityRecord[]
+  photos        Photo[]
+  damages       DamageReport[]
+  missing       MissingItem[]
+  vendors       Vendor[]
+  rentals       Rental[]
+  expenses      Expense[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   // project role, see ROLES
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Actor {
+  id           String  @id @default(cuid())
+  projectId    String
+  name         String
+  phone        String?
+  email        String?
+  agency       String?
+  measurements String? // JSON: { chest, waist, hips, inseam, shoe, height, ... }
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  characters Character[]
+  fittings   Fitting[]
+}
+
+model Character {
+  id          String  @id @default(cuid())
+  projectId   String
+  actorId     String?
+  name        String
+  type        String  @default("SUPPORTING") // LEAD | SUPPORTING | DAY_PLAYER | BACKGROUND
+  age         Int?
+  description String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actor      Actor?            @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  scenes     SceneCharacter[]
+  changes    CostumeChange[]
+  costumes   Costume[]
+  fittings   Fitting[]
+  continuity ContinuityRecord[]
+  alterations AlterationRequest[]
+  expenses   Expense[]
+}
+
+model Scene {
+  id        String    @id @default(cuid())
+  projectId String
+  number    String    // script scene number, e.g. "24", "24A"
+  sortOrder Int       @default(0)
+  name      String?
+  location  String?
+  intExt    String?   // INT | EXT | INT/EXT
+  timeOfDay String?   // DAY | NIGHT | DAWN | DUSK
+  scriptDay String?   // story day, e.g. "Day 3"
+  synopsis  String?
+  pages     String?   // e.g. "2 3/8"
+  shootDate DateTime?
+  status    String    @default("PLANNED") // PLANNED | SCHEDULED | SHOOTING | SHOT | OMITTED
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  characters SceneCharacter[]
+  cleaning   CleaningRequest[]
+  continuity ContinuityRecord[]
+  damages    DamageReport[]
+  movements  CostumeMovement[]
+  expenses   Expense[]
+
+  @@unique([projectId, number])
+}
+
+// Costume requirement: which character appears in a scene and in which change (look)
+model SceneCharacter {
+  id          String  @id @default(cuid())
+  sceneId     String
+  characterId String
+  changeId    String?
+  notes       String?
+
+  scene     Scene          @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  character Character      @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  change    CostumeChange? @relation(fields: [changeId], references: [id], onDelete: SetNull)
+
+  @@unique([sceneId, characterId])
+}
+
+// A "change" / "look": numbered outfit for a character (SyncOnSet terminology)
+model CostumeChange {
+  id           String  @id @default(cuid())
+  projectId    String
+  characterId  String
+  changeNumber Int
+  name         String
+  description  String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project         Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  character       Character           @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  items           CostumeChangeItem[]
+  sceneCharacters SceneCharacter[]
+  continuity      ContinuityRecord[]
+
+  @@unique([characterId, changeNumber])
+}
+
+model CostumeChangeItem {
+  id        String  @id @default(cuid())
+  changeId  String
+  costumeId String
+  wearNotes String? // e.g. "sleeves rolled, top button open"
+
+  change  CostumeChange @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  costume Costume       @relation(fields: [costumeId], references: [id], onDelete: Cascade)
+
+  @@unique([changeId, costumeId])
+}
+
+model Costume {
+  id               String   @id @default(cuid())
+  projectId        String
+  assetNumber      String   @unique // CST-000245
+  name             String
+  category         String   // CLOTHING | ACCESSORY | FOOTWEAR | JEWELLERY | PROP
+  type             String?  // Shirt, Jeans, Saree, Watch...
+  color            String?
+  brand            String?
+  size             String?
+  fabric           String?
+  quantity         Int      @default(1)
+  source           String   @default("PURCHASED") // PURCHASED | RENTED | BORROWED | STOCK | CUSTOM_MADE | DESIGNER | ACTORS_OWN
+  purchaseCost     Float?
+  rentalCostPerDay Float?
+  vendorId         String?
+  characterId      String?
+  status           String   @default("AVAILABLE") // see COSTUME_STATUSES
+  location         String   @default("Warehouse")
+  careInstructions String?
+  notes            String?
+  isRetired        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  project      Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vendor       Vendor?             @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  character    Character?          @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  movements    CostumeMovement[]
+  changeItems  CostumeChangeItem[]
+  fittingItems FittingItem[]
+  cleaning     CleaningRequest[]   @relation("CleaningCostume")
+  replacements CleaningRequest[]   @relation("CleaningReplacement")
+  alterations  AlterationRequest[]
+  damages      DamageReport[]
+  missing      MissingItem[]
+  rentals      Rental[]
+  expenses     Expense[]
+}
+
+// Every physical movement / state transition of a costume (the costume timeline)
+model CostumeMovement {
+  id           String   @id @default(cuid())
+  costumeId    String
+  action       String   // see MOVEMENT_ACTIONS
+  fromLocation String?
+  toLocation   String?
+  fromStatus   String?
+  toStatus     String?
+  sceneId      String?
+  takeNumber   Int?
+  note         String?
+  byUserId     String?
+  byUserName   String?
+  createdAt    DateTime @default(now())
+
+  costume Costume @relation(fields: [costumeId], references: [id], onDelete: Cascade)
+  scene   Scene?  @relation(fields: [sceneId], references: [id], onDelete: SetNull)
+
+  @@index([costumeId, createdAt])
+}
+
+model Fitting {
+  id          String   @id @default(cuid())
+  projectId   String
+  characterId String
+  actorId     String?
+  scheduledAt DateTime
+  location    String?
+  status      String   @default("SCHEDULED") // SCHEDULED | IN_PROGRESS | COMPLETED | CANCELLED
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  character Character     @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  actor     Actor?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  items     FittingItem[]
+}
+
+model FittingItem {
+  id        String  @id @default(cuid())
+  fittingId String
+  costumeId String
+  status    String  @default("PENDING") // PENDING | FITTED | ALTERATION_REQUIRED | REJECTED
+  notes     String?
+
+  fitting Fitting @relation(fields: [fittingId], references: [id], onDelete: Cascade)
+  costume Costume @relation(fields: [costumeId], references: [id], onDelete: Cascade)
+
+  @@unique([fittingId, costumeId])
+}
+
+// The "Sink" - cleaning requests and their pipeline
+model CleaningRequest {
+  id                  String    @id @default(cuid())
+  projectId           String
+  costumeId           String
+  sceneId             String?
+  takeNumber          Int?
+  problem             String
+  cleaningType        String    // see CLEANING_TYPES
+  priority            String    @default("NORMAL") // LOW | NORMAL | HIGH | URGENT
+  status              String    @default("REQUESTED") // see CLEANING_STATUSES
+  isEmergency         Boolean   @default(false)
+  requestedById       String?
+  requestedByName     String?
+  assignedToId        String?
+  assignedToName      String?
+  expectedReadyAt     DateTime?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  qcResult            String?   // PASS | FAIL
+  qcNotes             String?
+  replacementCostumeId String?
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costume     Costume       @relation("CleaningCostume", fields: [costumeId], references: [id], onDelete: Cascade)
+  replacement Costume?      @relation("CleaningReplacement", fields: [replacementCostumeId], references: [id], onDelete: SetNull)
+  scene       Scene?        @relation(fields: [sceneId], references: [id], onDelete: SetNull)
+  logs        CleaningLog[]
+
+  @@index([projectId, status])
+}
+
+model CleaningLog {
+  id         String   @id @default(cuid())
+  requestId  String
+  fromStatus String?
+  toStatus   String
+  note       String?
+  byUserId   String?
+  byUserName String?
+  createdAt  DateTime @default(now())
+
+  request CleaningRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model AlterationRequest {
+  id           String    @id @default(cuid())
+  projectId    String
+  costumeId    String
+  characterId  String?
+  issue        String
+  required     String
+  tailorName   String?
+  assignedToId String?
+  priority     String    @default("NORMAL")
+  deadline     DateTime?
+  status       String    @default("REQUESTED") // REQUESTED | ASSIGNED | IN_PROGRESS | QUALITY_CHECK | COMPLETED | CANCELLED
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costume   Costume    @relation(fields: [costumeId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+}
+
+// Digital continuity book: one record per scene / character / take
+model ContinuityRecord {
+  id             String   @id @default(cuid())
+  projectId      String
+  sceneId        String
+  characterId    String
+  changeId       String?
+  takeNumber     Int
+  notes          String?
+  details        String?  // JSON: { "Shirt": "Top button open", "Sleeves": "Rolled", "Hair": "Normal" }
+  accessories    String?  // JSON: [{ "name": "Watch", "present": true }]
+  recordedById   String?
+  recordedByName String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scene     Scene          @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  character Character      @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  change    CostumeChange? @relation(fields: [changeId], references: [id], onDelete: SetNull)
+
+  @@unique([sceneId, characterId, takeNumber])
+}
+
+model Photo {
+  id         String   @id @default(cuid())
+  projectId  String
+  entityType String   // COSTUME | CHANGE | FITTING | CONTINUITY | CLEANING | DAMAGE | CHARACTER
+  entityId   String
+  kind       String   @default("OTHER") // FRONT | SIDE | BACK | CLOSEUP | DETAIL | STAIN | OTHER
+  url        String
+  caption    String?
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+}
+
+model DamageReport {
+  id                  String   @id @default(cuid())
+  projectId           String
+  costumeId           String
+  sceneId             String?
+  takeNumber          Int?
+  description         String
+  estimatedRepairCost Float?
+  responsible         String?  // PRODUCTION | ACTOR | VENDOR | UNKNOWN
+  status              String   @default("OPEN") // OPEN | REPAIRING | REPAIRED | WRITTEN_OFF
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costume Costume @relation(fields: [costumeId], references: [id], onDelete: Cascade)
+  scene   Scene?  @relation(fields: [sceneId], references: [id], onDelete: SetNull)
+}
+
+model MissingItem {
+  id               String    @id @default(cuid())
+  projectId        String
+  costumeId        String
+  lastSeenLocation String?
+  lastAssignedTo   String?
+  lastScanAt       DateTime?
+  status           String    @default("OPEN") // OPEN | FOUND | WRITTEN_OFF
+  notes            String?
+  createdAt        DateTime  @default(now())
+  resolvedAt       DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costume Costume @relation(fields: [costumeId], references: [id], onDelete: Cascade)
+}
+
+model Vendor {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costumes Costume[]
+  rentals  Rental[]
+  expenses Expense[]
+}
+
+model Rental {
+  id         String   @id @default(cuid())
+  projectId  String
+  costumeId  String
+  vendorId   String
+  ratePerDay Float
+  pickupDate DateTime
+  returnDate DateTime
+  status     String   @default("BOOKED") // BOOKED | PICKED_UP | RETURNED | OVERDUE
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costume Costume @relation(fields: [costumeId], references: [id], onDelete: Cascade)
+  vendor  Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  projectId   String
+  category    String   // PURCHASE | RENTAL | LAUNDRY | TAILORING | ACCESSORIES | DAMAGE | OTHER
+  amount      Float
+  description String
+  date        DateTime @default(now())
+  costumeId   String?
+  characterId String?
+  sceneId     String?
+  vendorId    String?
+  createdAt   DateTime @default(now())
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costume   Costume?   @relation(fields: [costumeId], references: [id], onDelete: SetNull)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  scene     Scene?     @relation(fields: [sceneId], references: [id], onDelete: SetNull)
+  vendor    Vendor?    @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  projectId  String
+  userId     String
+  type       String   // CLEANING | MISSING | RENTAL | ALTERATION | DAMAGE | READINESS | GENERAL
+  severity   String   @default("INFO") // INFO | WARNING | CRITICAL
+  title      String
+  body       String
+  entityType String?
+  entityId   String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  projectId  String?
+  userId     String?
+  userName   String?
+  action     String
+  entityType String
+  entityId   String
+  meta       String?  // JSON
+  createdAt  DateTime @default(now())
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+}

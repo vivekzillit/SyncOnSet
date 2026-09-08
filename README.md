@@ -1,0 +1,137 @@
+# Sink on Set
+
+**The digital wardrobe & costume management platform for film and TV production.**
+*From wardrobe to set. Every costume. Every scene. Every take.*
+
+Sink on Set gives the costume department one system for the whole life of a garment:
+
+> Script → Character → Scene → Change (look) → Costume → Fitting → Shoot → Cleaning → Continuity → Wrap
+
+It is modelled on the workflows of tools like SyncOnSet-for-Costumes (script breakdown, numbered changes, a digital
+continuity book, asset-numbered inventory, wrap-box labels, per-character/per-scene budgets) and adds an on-set
+**"Sink"**: an emergency cleaning pipeline with automatic replacement suggestions.
+
+---
+
+## What's in the box
+
+| Area | Highlights |
+| --- | --- |
+| **Breakdown** | Scenes (INT/EXT, time of day, script day, shoot date), characters, actors with measurements, bulk breakdown import |
+| **Changes / looks** | Numbered outfits per character, pieces with wear notes, scene ↔ change assignment |
+| **Inventory** | Asset numbers (`CST-000245`), QR codes, category/type/size/colour/source/vendor, location, status, full timeline |
+| **Scan** | Camera QR scanning (or typed asset number) → status, location, scenes, and contextual actions |
+| **Issue / return** | Issue to actor, send to set, return, move; every movement is logged |
+| **Sink / cleaning** | 13 cleaning types, priority, kanban board through Requested → Received → Cleaning → Drying → Ironing → QC → Ready |
+| **🚨 Emergency** | One tap: URGENT ticket, costume marked unavailable, laundry + supervisor alerted, replacement found and issued |
+| **Scene readiness** | Per-scene, per-character traffic light derived from the assigned change's costume statuses |
+| **Continuity book** | Per scene/character/take: wear details, accessories, notes, photos; automatic diff flags between takes |
+| **Fittings** | Checklist per piece; "Alteration required" raises a tailoring ticket on the spot |
+| **Alterations, damage, missing** | Ticket pipelines with costume status side-effects and notifications |
+| **Vendors & rentals** | Rental bookings, due/overdue tracking, return reminders |
+| **Budget** | Expenses by category, character and scene; inventory value; rental commitments |
+| **Reports** | Wardrobe daily report (CSV), asset inventory (CSV), wrap report, printable QR / wrap-box labels |
+| **Roles** | 11 roles; laundry/tailors never see money; managers control breakdown and team |
+| **Notifications** | Per-user in-app notifications with unread badge |
+| **Audit** | Every write is audit-logged |
+
+## Quick start
+
+Requirements: Node 20+. No database server needed (SQLite).
+
+```bash
+npm run setup     # installs backend + frontend, generates Prisma client, creates DB, seeds demo data
+npm run dev       # API on http://localhost:4000, web app on http://localhost:5173
+```
+
+Then open <http://localhost:5173> and sign in with any demo account (password `password123`):
+
+| Role | Email |
+| --- | --- |
+| Admin | admin@sinkonset.app |
+| Production manager | pm@sinkonset.app |
+| Costume designer | designer@sinkonset.app |
+| Costume supervisor | supervisor@sinkonset.app |
+| Costume assistant | assistant@sinkonset.app |
+| Wardrobe assistant | wardrobe@sinkonset.app |
+| Dresser | dresser@sinkonset.app |
+| Tailor | tailor@sinkonset.app |
+| Laundry | laundry@sinkonset.app |
+| Continuity | continuity@sinkonset.app |
+| Actor | actor@sinkonset.app |
+
+The seed creates the demo production **Movie ABC** (Raj, Priya, Inspector Pandey…, 21 costumes, 11 scenes, open
+cleaning/alteration/damage/missing items) so every screen has data on first run.
+
+Try the headline flow: **Scan → type `CST-000245` → Emergency clean → Raise emergency**.
+
+## Project layout
+
+```
+backend/            Express + TypeScript + Prisma (SQLite) REST API
+  prisma/schema.prisma   data model (25 tables)
+  prisma/seed.ts         demo production
+  src/lib/constants.ts   every status / enum value (single source of truth)
+  src/services/          costume actions & timeline, cleaning pipeline, readiness, reports
+  src/routes/            one router per module, mounted under /api/projects/:projectId/...
+  uploads/               photo storage (local disk)
+frontend/           React 18 + Vite + TypeScript + TanStack Query, mobile-first
+  src/pages/             one file per screen (27 screens)
+  src/components/        UI kit, QR scanner, photo grid, timeline, costume actions
+  src/state/             auth + project context, role helpers
+docs/TECHNICAL_SPEC.md  full technical specification
+```
+
+## Scripts
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` (root) | runs API and web app together |
+| `npm run build` (root) | builds both; the API serves `frontend/dist` in production |
+| `npm start` (root) | starts the built API (serves the SPA too) on `PORT` |
+| `backend: npm run db:reset` | wipe and re-seed the SQLite DB |
+| `backend: npm run db:migrate` | create a Prisma migration (when you change the schema) |
+| `backend/frontend: npm run typecheck` | TypeScript checks |
+
+## Configuration
+
+`backend/.env`
+
+```
+DATABASE_URL="file:./dev.db"          # or postgresql://user:pass@host/db (change provider in schema.prisma)
+JWT_SECRET="change-me"
+PORT=4000
+UPLOAD_DIR="uploads"
+CORS_ORIGIN="http://localhost:5173"
+```
+
+**Moving to PostgreSQL:** the schema uses plain string columns instead of DB enums/JSON so it is provider neutral.
+Change `provider = "sqlite"` to `"postgresql"` in `prisma/schema.prisma`, set `DATABASE_URL`, run `npm run db:migrate`.
+
+## API at a glance
+
+All project resources live under `/api/projects/:projectId/…` and require `Authorization: Bearer <jwt>`.
+
+```
+POST /api/auth/login                       GET /api/auth/me            GET /api/meta (all enums)
+GET|POST /api/projects                     GET /api/projects/:id/dashboard
+…/actors  …/characters  …/scenes (+ /import, /:id/readiness, PUT /:id/characters/:characterId)
+…/changes (+ /:id/items)
+…/costumes (+ /lookup/:assetNumber, /:id/actions, /:id/timeline, /:id/alternatives, /:id/qr.png, /import)
+…/fittings (+ /:id/items/:costumeId)
+…/cleaning (+ /emergency, /:id/advance, /:id/replacement)
+…/alterations (+ /:id/advance)   …/continuity (+ /compare)   …/photos (multipart)
+…/damages   …/missing   …/vendors   …/rentals (+ /remind)   …/expenses (+ /budget)
+…/notifications (+ /read)   …/reports/daily[.csv] | /inventory[?format=csv] | /budget | /wrap
+```
+
+See [docs/TECHNICAL_SPEC.md](docs/TECHNICAL_SPEC.md) for the complete reference, data model, state machines,
+permission matrix, screen list, iOS/offline architecture and the sprint roadmap.
+
+## Roadmap
+
+- **Phase 1 (this repo):** everything listed above — enough to trial on a real production.
+- **Phase 2:** offline mode with sync queue (mobile), push notifications, multi-project switching polish,
+  scheduled rental reminders, PDF export, photo thumbnails/CDN, SwiftUI iOS app on the same API.
+- **Phase 3 (AI):** script → breakdown extraction, continuity photo comparison (advisory), natural-language costume
+  search, stain-photo cleaning recommendation (advisory).
