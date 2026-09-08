@@ -31,7 +31,7 @@ continuity book, asset-numbered inventory, wrap-box labels, per-character/per-sc
 | **Vendors & rentals** | Rental bookings, due/overdue tracking, return reminders |
 | **Budget** | Expenses by category, character and scene; inventory value; rental commitments |
 | **Reports** | Wardrobe daily report (CSV), asset inventory (CSV), wrap report, printable QR / wrap-box labels |
-| **Production setup** | SyncOnSet-style wizard: feature / feature TV series, title, studio, prep and shoot dates, required script upload and Character Confirmation |
+| **Production setup** | SyncOnSet-style wizard: feature / feature TV series, title, studio, prep and shoot dates, optional script upload and Character Confirmation |
 | **Actors & gallery** | Actors page with cast, contacts, next fitting and start dates; Gallery of every photo in the production |
 | **Roles** | 11 roles; laundry/tailors never see money; managers control breakdown and team |
 | **Notifications** | Per-user in-app notifications with unread badge |

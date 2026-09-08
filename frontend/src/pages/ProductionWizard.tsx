@@ -14,7 +14,7 @@ interface ParsedScene { number: string; name: string | null; location: string | 
 interface ParseResult { format: string; file: string; scenes: ParsedScene[]; characters: DetectedCharacter[]; existingCharacters: ExistingCharacter[]; warnings: string[] }
 type DateKey = "prepStartDate" | "prepEndDate" | "startDate" | "endDate";
 
-/** SyncOnSet-style production setup: type → title → studio → prep & shoot dates → script upload (required) → character confirmation. */
+/** SyncOnSet-style production setup: type → title → studio → prep & shoot dates → script upload (optional) → character confirmation. */
 export default function ProductionWizard() {
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -51,11 +51,7 @@ export default function ProductionWizard() {
       setParsed(r); setRows(initialRows(r.characters)); setStep(5);
     } catch (e) { setError(e); } finally { setBusy(false); }
   }
-  async function useDemo() {
-    const res = await fetch("/demo-script.fountain"); const text = await res.text();
-    await parseFile(new File([text], "demo-script.fountain", { type: "text/plain" }));
-  }
-  /** Import the confirmed breakdown (scenes + characters) and open the Scenes list. */
+  /** Create/update the production, import the confirmed breakdown if a script was read, and open the Scenes list. */
   async function finish() {
     setBusy(true); setError(null);
     try {
@@ -142,11 +138,10 @@ export default function ProductionWizard() {
               <div className="subtle">or click to browse · Final Draft, Fountain, text, PDF</div>
               <input ref={fileRef} type="file" accept=".fdx,.fountain,.txt,.pdf,application/pdf,text/plain" hidden onChange={(e) => e.target.files?.[0] && parseFile(e.target.files[0])} />
             </div>
-            <button type="button" className="btn btn-sm" style={{ alignSelf: "center" }} onClick={useDemo} disabled={busy}>Try our demo script</button>
           </div>
           <ErrorBox error={error} />
-          {/* A script is required: Continue only unlocks once one has been read (uploading moves on by itself). */}
-          {navRow(() => setStep(5), !!parsed)}
+          {/* The script is optional: with one read, Continue goes to Character Confirmation; without, it creates the production as is. */}
+          {navRow(() => (parsed ? setStep(5) : finish()))}
         </>)}
         {step === 5 && parsed && (<>
           <div className="row between wrap gap-2">

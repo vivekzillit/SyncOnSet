@@ -207,7 +207,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 
 ## 6. Screens (web app, 27)
 
-Login · Projects · Production wizard (type, title, studio, prep and shoot dates, required script upload, Character Confirmation) · **Dashboard** · Scan · Scenes (SyncOnSet-style table: draft selector, inline add, Edit All, row menu Edit/Clone/Omit/Delete, Add & Remove Principals) · Scene detail (readiness, change assignment, takes, tickets) ·
+Login · Projects · Production wizard (type, title, studio, prep and shoot dates, optional script upload, Character Confirmation) · **Dashboard** · Scan · Scenes (SyncOnSet-style table: draft selector, inline add, Edit All, row menu Edit/Clone/Omit/Delete, Add & Remove Principals) · Scene detail (readiness, change assignment, takes, tickets) ·
 Characters · Actors (SyncOnSet-style table and Create Actor form) · Gallery · Character detail (changes, scenes, pieces, measurements, fittings, photos) · Change detail (pieces, wear notes, photos, scenes) ·
 Costumes (search/filter/paginate, create) · Costume detail (QR, actions, used-in, photos, records, timeline) ·
 Sink/Cleaning board (kanban + list) · Cleaning ticket (stepper, work actions, QC, replacement, history, stain photos) ·
