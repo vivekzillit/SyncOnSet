@@ -69,6 +69,7 @@ Key fields
 - **Project**: `type` (FEATURE | EPISODIC, shown as Feature / Feature TV series), `studio`, `prepStartDate`/`prepEndDate` (prep), `startDate`/`endDate` (shoot), plus status, shooting day, currency; `budgetBand`, `country` and `city` remain in the schema but the wizard no longer asks for them.
 - **Actor**: `name`, `gender`, `age`, `phone`, `phone2`, `email`, `email2`, `agency`, `startWorkDate`, `nextFittingAt`, `fittingComment`, measurements JSON; `characterIds` on create/update relinks characters.
 - **Character**: `castNumber` (call-sheet number), type, actor link.
+- **ProductionDocument**: an uploaded shooting schedule or callsheet (`kind` SCHEDULE | CALLSHEET, `fileName`, `url` under /uploads, `date`, `dayNumber`, `scenes` given a date, `appliedAt`, `uploadedBy`).
 - **Scene**: slugline fields, `pages` (eighths), `scriptDay`, `shootDate`, `status`, `scriptText`, `revision`, `revisedAt`.
 - **Costume**: `assetNumber` (unique, e.g. `CST-000245`, auto-generated if omitted), `category`, `type`, `color`, `brand`, `size`, `fabric`, `quantity`, `source`, `purchaseCost`, `rentalCostPerDay`, `vendorId`, `characterId`, `status`, `location`, `careInstructions`, `isRetired`.
 - **CostumeChange**: `changeNumber` unique per character; items carry `wearNotes` ("sleeves rolled, top button open").
@@ -133,6 +134,19 @@ not rewritten so manual edits survive), a `characterMap` (detected name → exis
 ignore non-characters) and optional `castNumbers` for characters created by the import (`Character.castNumber`; the confirmation table no longer collects numbers, they are set on the character page). Uploads never delete
 scenes or scene-character links, mirroring SyncOnSet's revision behaviour; omitted headings set status OMITTED.
 
+### Schedule and callsheet upload (deterministic)
+
+`POST …/schedule/parse` (multipart `file` + `kind`) reads a shooting schedule or callsheet: PDF text (pdf-parse), CSV/TSV or plain
+text. `backend/src/services/scheduleParser.ts` finds dates (ISO, 12/10/2026 read as day/month unless the day slot is over 12,
+12 Oct 2026, October 12th 2026, two-digit years 2020–2039, a missing year defaults to the production's start year) and scene
+numbers ("Sc 12", "Scenes 12, 13A & 14", strips that start with the number and INT./EXT.), and groups scenes by shoot day.
+Movie Magic "End of Day N -- date" banners close the strips above them; "Day N" headers take the date on the same or next
+line; callsheets take the header date that looks most like a shoot date (weekday, "day") and ignore revision stamps; a CSV with
+Scene and Date columns is read by column (a blank date continues the day above). The file is stored as a `ProductionDocument`;
+the response lists each day with matched / unmatched scene numbers and warnings. `POST …/schedule/apply` (`documentId`,
+`assignments[{sceneId,date}]`) sets `Scene.shootDate`, moves PLANNED scenes to SCHEDULED and stamps `appliedAt`. Regression
+suite: `backend/scripts/schedule-check.ts` over `schedule-spec.json`.
+
 ### Script text endpoint
 
 `GET …/scenes/sides?date=YYYY-MM-DD` or `?ids=` returns a day's scenes with slugline data, page counts, revision, cast
@@ -196,6 +210,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 | alterations | GET (?open=true), POST, GET/:id, PATCH, POST /:id/advance |
 | cues | GET (?status=&characterId=&sceneId=), PATCH/:id `{status,text,characterId}`, POST /bulk `{ids,status}`; scenes: POST /extract-cues `{sceneIds}` |
 | continuity | GET (?sceneId=&characterId=), POST (upsert by scene/character/take; prefilled from previous take), GET /compare?sceneId=&characterId= → `{records,flags}`, GET/:id, DELETE/:id |
+| schedule | GET /documents, POST /parse (multipart `file`, `kind` SCHEDULE|CALLSHEET → days with matched/unmatched scenes, warnings, stored document), POST /apply `{documentId, assignments[{sceneId,date}]}`, DELETE /documents/:id |
 | photos | GET (?entityType=&entityId=), GET /gallery (?entityType=&characterId=&sceneId=&q=, every photo with a label and link to its record), POST multipart `file,entityType,entityId,kind,caption`, DELETE/:id |
 | damages | GET (?open=true), POST, PATCH/:id (`REPAIRED` books a DAMAGE expense; `WRITTEN_OFF` retires) |
 | missing | GET (?status=), POST, PATCH/:id `{status:FOUND,foundLocation}` |
@@ -207,7 +222,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 
 ## 6. Screens (web app, 27)
 
-Login · Projects · Production wizard (type, title, studio, prep and shoot dates, optional script upload, Character Confirmation) · **Dashboard** · Scan · Scenes (SyncOnSet-style table: draft selector, inline add, Edit All, row menu Edit/Clone/Omit/Delete, Add & Remove Principals) · Scene detail (readiness, change assignment, takes, tickets) ·
+Login · Projects · Production wizard (type, title, studio, prep and shoot dates, optional script upload, Character Confirmation) · **Dashboard** · Scan · Scenes (SyncOnSet-style table: draft selector, inline add, Edit All, row menu Edit/Clone/Omit/Delete, Add & Remove Principals; Upload script / callsheet / schedule; Today and Upcoming filters with the linked documents) · Scene detail (readiness, change assignment, takes, tickets) ·
 Characters · Actors (SyncOnSet-style table and Create Actor form) · Gallery · Character detail (changes, scenes, pieces, measurements, fittings, photos) · Change detail (pieces, wear notes, photos, scenes) ·
 Costumes (search/filter/paginate, create) · Costume detail (QR, actions, used-in, photos, records, timeline) ·
 Sink/Cleaning board (kanban + list) · Cleaning ticket (stepper, work actions, QC, replacement, history, stain photos) ·

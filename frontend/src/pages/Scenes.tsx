@@ -1,20 +1,20 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, FileUp, Sparkles, MoreVertical, MoreHorizontal } from "lucide-react";
+import { Plus, Upload, FileUp, CalendarDays, ClipboardList, MoreVertical, MoreHorizontal } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, humanize, todayISO } from "@/lib/format";
-import type { Character, Scene } from "@/api/types";
+import type { Character, ProductionDocument, Scene } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ScriptUploadModal } from "@/components/ScriptUpload";
-import { AiCuesModal } from "@/components/AiCues";
+import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
 import { PrincipalsModal } from "@/components/PrincipalsModal";
 import { FixedMenu } from "@/components/FixedMenu";
 import { EditRow, LOCATION_LIST_ID, NEW, PersistError, emptyDraft, persistDraft, planSaveOrder, principalsOf, principalsText, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
 
-const MENU_H = 152; // approx height of a 4-item menu, used to flip it upward near the bottom of the viewport
+const MENU_H = 188; // approx height of a 5-item menu, used to flip it upward near the bottom of the viewport
 const MENU_W = 176;
 const ITEM = "btn btn-ghost btn-sm btn-block";
 const ITEM_STYLE = { justifyContent: "flex-start" } as const;
@@ -47,11 +47,12 @@ export default function Scenes() {
   const [more, setMore] = useState<MenuPos | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
+  const [docOpen, setDocOpen] = useState<DocKind | null>(null);
   const [importText, setImportText] = useState("24 | Restaurant - the dinner | Restaurant Set | INT | NIGHT | Day 3 | Raj, Priya, Waiter\n25 | Parking lot | Backlot | EXT | NIGHT | Day 3 | Raj, Priya");
 
   const { data, isLoading } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
+  const { data: docs } = useQuery({ queryKey: ["schedule-docs", projectId], queryFn: () => api<ProductionDocument[]>(p(projectId, "/schedule/documents")) });
   const charById = useMemo(() => new Map((characters || []).map((c) => [c.id, c])), [characters]);
   const sceneById = useMemo(() => new Map((data || []).map((s) => [s.id, s])), [data]);
   const locations = useMemo(() => Array.from(new Set((data || []).map((s) => (s.location || "").trim()).filter(Boolean))).sort(), [data]);
@@ -59,6 +60,14 @@ export default function Scenes() {
   const latestRevision = useMemo(() => (data || []).filter((s) => s.revision).sort((a, b) => (b.revisedAt || "").localeCompare(a.revisedAt || ""))[0]?.revision || "", [data]);
 
   const today = todayISO();
+  // Uploaded call sheets for the day(s) in view plus the latest schedule, linked above the table.
+  const docsToShow = useMemo(() => {
+    if (when !== "today" && when !== "upcoming") return [] as ProductionDocument[];
+    const all = docs || [];
+    const latestSchedule = all.find((d) => d.kind === "SCHEDULE");
+    const sheets = all.filter((d) => d.kind === "CALLSHEET" && d.date && (when === "today" ? dateKey(d.date) === today : dateKey(d.date) >= today));
+    return [...sheets, ...(latestSchedule ? [latestSchedule] : [])];
+  }, [docs, when, today]);
   const list = useMemo(() => {
     // A row being edited stays visible whatever the filters say, so an edit can never be hidden (and silently lost) by a filter change.
     const pinned = (s: Scene) => !!drafts[s.id];
@@ -153,7 +162,8 @@ export default function Scenes() {
   const menuScene = menu ? sceneById.get(menu.id) : undefined;
   const addRow = () => setDraft(NEW, emptyDraft());
 
-  const emptyTitle = when === "today" ? "No scenes scheduled today" : q || status || rev ? "No scenes match" : "No scenes yet";
+  const emptyTitle = when === "today" ? "No scenes scheduled today" : when === "upcoming" ? "No upcoming scenes" : q || status || rev ? "No scenes match" : "No scenes yet";
+  const emptyHint = when === "today" ? "Once a schedule and callsheet is uploaded it will appear here." : when === "upcoming" ? "Once a schedule is uploaded it will appear here." : "Upload the script to build the breakdown automatically, paste a breakdown, or add scenes one by one.";
   const draftCount = `${revisions.length} draft${revisions.length === 1 ? "" : "s"}`;
   // The header reads like the reference: the selected draft, or the only draft when there is just one.
   const draftTitle = rev || (revisions.length === 1 ? revisions[0] : revisions.length ? "All drafts" : "Scenes");
@@ -166,7 +176,7 @@ export default function Scenes() {
         actions={(revisions.length > 0 || canEdit) && (
           <>
             {revisions.length > 0 && <Select value={rev} onChange={(e) => setRev(e.target.value)} options={revisions} placeholder="All drafts" humanizeLabels={false} title="Script draft / revision" aria-label="Script draft" style={{ width: "auto", minWidth: 140 }} />}
-            {canEdit && <><button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button><button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button><button className="btn" onClick={() => setAiOpen(true)} title="Read the script for costume cues (garments, condition, changes, continuity)"><Sparkles size={16} /> Script cues</button></>}
+            {canEdit && <><button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button><button className="btn" onClick={() => setDocOpen("CALLSHEET")} title="Read a call sheet: its scenes get that shoot date"><ClipboardList size={16} /> Upload callsheet</button><button className="btn" onClick={() => setDocOpen("SCHEDULE")} title="Read a shooting schedule: every scene gets its shoot date"><CalendarDays size={16} /> Upload schedule</button><button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button></>}
           </>
         )}
       />
@@ -188,11 +198,21 @@ export default function Scenes() {
         )}
       </div>
 
+      {docsToShow.length > 0 && (
+        <div className="row gap-1 wrap mb-2" aria-label="Uploaded documents">
+          {docsToShow.map((d) => (
+            <a key={d.id} className="chip" href={d.url} target="_blank" rel="noreferrer" title={`${d.fileName} · uploaded ${fmtDate(d.createdAt)}${d.uploadedBy ? ` by ${d.uploadedBy}` : ""}`}>
+              {d.kind === "CALLSHEET" ? <ClipboardList size={14} /> : <CalendarDays size={14} />} {d.kind === "CALLSHEET" ? "Callsheet" : "Schedule"}{d.date ? ` · ${fmtDate(d.date, SHOOT_DATE)}` : ""}{d.dayNumber != null ? ` · Day ${d.dayNumber}` : ""}
+            </a>
+          ))}
+        </div>
+      )}
+
       <datalist id={LOCATION_LIST_ID}>{locations.map((l) => <option key={l} value={l} />)}</datalist>
 
       <Card pad0>
         {isLoading ? <Spinner /> : list.length === 0 && !drafts[NEW] ? (
-          <Empty icon="🎬" title={emptyTitle} hint="Upload the script to build the breakdown automatically, paste a breakdown, or add scenes one by one." action={canEdit && when === "all" && !q && !status && !rev ? <button className="btn btn-blue" onClick={addRow}><Plus size={16} /> Add scene</button> : undefined} />
+          <Empty icon="🎬" title={emptyTitle} hint={emptyHint} action={canEdit && when === "all" && !q && !status && !rev ? <button className="btn btn-blue" onClick={addRow}><Plus size={16} /> Add scene</button> : undefined} />
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -239,15 +259,16 @@ export default function Scenes() {
       {more && canEdit && (
         <FixedMenu top={more.top} left={more.left} width={MENU_W} anchor={more.anchor} label="More scene actions" onClose={() => setMore(null)}>
           <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setScriptOpen(true); setMore(null); }}><FileUp size={14} /> Upload script</button>
+          <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setDocOpen("CALLSHEET"); setMore(null); }}><ClipboardList size={14} /> Upload callsheet</button>
+          <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setDocOpen("SCHEDULE"); setMore(null); }}><CalendarDays size={14} /> Upload schedule</button>
           <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setImportOpen(true); setMore(null); }}><Upload size={14} /> Import breakdown</button>
-          <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setAiOpen(true); setMore(null); }}><Sparkles size={14} /> Script cues</button>
         </FixedMenu>
       )}
 
       <PrincipalsModal open={!!principalsDraft} onClose={() => setPrincipalsFor(null)} characters={characters || []} value={principalsDraft?.principals || []} onChange={(ids) => principalsFor && drafts[principalsFor] && setDraft(principalsFor, { ...drafts[principalsFor], principals: ids })} />
 
       <ScriptUploadModal open={scriptOpen} onClose={() => setScriptOpen(false)} onImported={() => { setWhen("all"); setRev(""); }} />
-      <AiCuesModal open={aiOpen} onClose={() => setAiOpen(false)} scenes={data || []} />
+      <ScheduleUploadModal open={!!docOpen} kind={docOpen || "SCHEDULE"} onClose={() => setDocOpen(null)} onApplied={() => { setWhen(docOpen === "CALLSHEET" ? "today" : "upcoming"); setStatus(""); setRev(""); }} />
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Import script breakdown" footer={<><button className="btn" onClick={() => setImportOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={importM.isPending} onClick={() => importM.mutate()}>Import</button></>}>
         <div className="notice info mb-2">One scene per line: <span className="mono">number | name | location | INT/EXT | DAY/NIGHT | script day | characters (comma separated)</span>. Unknown characters are created automatically. Existing scene numbers are updated.</div>
         <Textarea rows={10} value={importText} onChange={(e) => setImportText(e.target.value)} className="mono" />
