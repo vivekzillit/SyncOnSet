@@ -9,7 +9,7 @@ Live app: https://costumes-and-set.onrender.com · Demo password for every demo 
 
 ## 0. Get in
 
-1. Open the app and **sign in**. On a desktop the production's tabs run across the top, SyncOnSet-style: **Costumes** (the department), **Dashboard**, **Scenes**, **Characters ▾** (Characters, Actors), **Costumes ▾** (Costumes, Scan QR, Sink / Cleaning, Fittings, Alterations, Damage, Missing, QR Labels, Vendors & Rentals), **Continuity ▾** (On Set, Book), **Reports ▾**, **Gallery**, with a search box that finds scenes, characters and costumes by number or name. On a phone, add it to the home screen (Safari: Share → Add to Home Screen; Chrome: menu → Install app) so it opens full-screen with the bottom navigation **Home · Scenes · Costumes · Scan · Sink · More**.
+1. Open the app and **sign in**. On a desktop the production's tabs run across the top, SyncOnSet-style: **Costumes** (the department), **Dashboard**, **Scenes**, **Characters ▾** (Characters, Actors), **Costumes ▾** (Costumes, Scan, Sink / Cleaning, Fittings, Alterations, Damage, Missing, QR Labels, Vendors & Rentals), **Continuity ▾** (On Set, Book), **Reports ▾**, **Gallery**, with a search box that finds scenes, characters and costumes by number or name. On a phone, add it to the home screen (Safari: Share → Add to Home Screen; Chrome: menu → Install app) so it opens full-screen with the bottom navigation **Home · Scenes · Costumes · Scan · Sink · More**.
 2. **Change your password** straight away: on desktop click the key icon next to your name at the bottom of the sidebar; on a phone go to **More → Change password**.
 3. Pick your production on the **Projects** screen. Everything after this happens inside one production.
 
@@ -53,6 +53,7 @@ Who does what:
 5. **Characters & Actors**:
    - **Actors** tab → **+ Actor**: name, contact, agency and **measurements** (height, chest, waist, hips, inseam, shoe…). These show on every fitting for that actor, so shoppers and tailors never have to ask.
    - **Characters** tab → **+ Character**: name, type (Lead, Supporting, Day player, Background), age, the actor playing them, and a description of the look.
+   - On a character's page, **References** takes anything the department works from: photographs, a file of any kind (a PDF lookbook, a spreadsheet, a supplier quote) and links out to a shared drive or mood board. The same applies to a look, a costume, a fitting, a cleaning ticket and a damage report. Files that a browser could run, such as .html and .svg, are refused; export them as PDF or attach a link instead.
 5. Open a scene and use **+ Character** to add anyone the script upload missed, such as non-speaking roles. The change (look) can be assigned later.
 
 ## 3. Build the wardrobe

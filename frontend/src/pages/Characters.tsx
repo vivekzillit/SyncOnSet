@@ -8,7 +8,7 @@ import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { humanize } from "@/lib/format";
 import type { Actor, Character } from "@/api/types";
 import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
-import { Avatar } from "@/components/domain";
+import { ActorSelect, Avatar } from "@/components/domain";
 import { initials } from "@/components/ui";
 
 const MEASURES = ["height", "chest", "bust", "waist", "hips", "inseam", "sleeve", "collar", "shoe", "head"];
@@ -81,7 +81,7 @@ export default function Characters() {
           <Field label="Type"><Select value={cf.type} onChange={(e) => setCf({ ...cf, type: e.target.value })} options={meta?.characterTypes || []} /></Field>
           <Field label="Age"><Input type="number" value={cf.age} onChange={(e) => setCf({ ...cf, age: e.target.value })} /></Field>
           <Field label="Cast number" help="As on call sheets and sides"><Input type="number" value={cf.castNumber} onChange={(e) => setCf({ ...cf, castNumber: e.target.value })} /></Field>
-          <Field label="Actor" span2><Select value={cf.actorId} onChange={(e) => setCf({ ...cf, actorId: e.target.value })} options={(actors || []).map((a) => ({ value: a.id, label: a.name }))} placeholder="— unassigned —" /></Field>
+          <Field label="Actor" span2><ActorSelect value={cf.actorId} onChange={(actorId) => setCf({ ...cf, actorId })} /></Field>
           <Field label="Description" span2><Textarea value={cf.description} onChange={(e) => setCf({ ...cf, description: e.target.value })} placeholder="Look, palette, references…" /></Field>
         </div>
         <ErrorBox error={createChar.error} />

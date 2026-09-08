@@ -58,7 +58,7 @@ export default function ChangeDetail() {
           )}
         </Card>
         <div className="col gap-2">
-          <Card title="Look photos"><PhotoGrid photos={ch.photos || []} entityType="CHANGE" entityId={ch.id} kinds={["FRONT", "SIDE", "BACK", "CLOSEUP", "DETAIL"]} /></Card>
+          <Card title="Look photos & references"><PhotoGrid photos={ch.photos || []} entityType="CHANGE" entityId={ch.id} kinds={["FRONT", "SIDE", "BACK", "CLOSEUP", "DETAIL", "REFERENCE", "DOCUMENT"]} /></Card>
           <Card title="Used in scenes" pad0>
             {!ch.sceneCharacters?.length ? <div className="subtle" style={{ padding: 14 }}>Not assigned to any scene yet.</div> : (
               <div className="list">{ch.sceneCharacters.map((sc) => <Link key={sc.scene.id} to={`${base}/scenes/${sc.scene.id}`} className="item link"><div className="avatar">{sc.scene.number}</div><div className="grow"><div className="title small">{sc.scene.name || `Scene ${sc.scene.number}`}</div></div><span className="subtle">{sc.scene.shootDate ? fmtDate(sc.scene.shootDate) : ""}</span></Link>)}</div>

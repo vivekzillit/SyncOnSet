@@ -8,9 +8,10 @@ import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { fmtDate, humanize } from "@/lib/format";
 import type { Actor, Character, Costume, CostumeChange, Fitting, Photo } from "@/api/types";
 import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
-import { Avatar, CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
+import { ActorSelect, Avatar, CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
 
-type Detail = Character & { actor?: Actor | null; scenes: { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string }; change?: { id: string; changeNumber: number; name: string } | null }[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
+type SceneRow = { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string; intExt?: string | null; location?: string | null; timeOfDay?: string | null; scriptDay?: string | null; pages?: string | null; synopsis?: string | null }; change?: { id: string; changeNumber: number; name: string } | null; notes?: string | null };
+type Detail = Character & { actor?: Actor | null; scenes: SceneRow[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
 
 export default function CharacterDetail() {
   const { id = "" } = useParams();
@@ -20,7 +21,6 @@ export default function CharacterDetail() {
   const toast = useToast();
   const base = `/p/${projectId}`;
   const { data: ch, isLoading } = useQuery({ queryKey: ["character", id], queryFn: () => api<Detail>(p(projectId, `/characters/${id}`)) });
-  const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<Actor[]>(p(projectId, "/actors")) });
   const [newOpen, setNewOpen] = useState(false);
   const [nf, setNf] = useState<{ name: string; description: string; costumes: Costume[] }>({ name: "", description: "", costumes: [] });
   const [pick, setPick] = useState(false);
@@ -50,7 +50,7 @@ export default function CharacterDetail() {
       />
       <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
         <div className="col gap-2">
-          <Card title={`Changes / looks (${ch.changes.length})`}>
+          <Card title={`Costume Changes (${ch.changes.length})`}>
             {ch.changes.length === 0 ? <Empty icon="👗" title="No changes yet" hint="A change is a numbered outfit for this character. Add one, then attach costume pieces." /> : (
               <div className="col gap-2">
                 {ch.changes.map((c) => (
@@ -69,7 +69,7 @@ export default function CharacterDetail() {
               </div>
             )}
           </Card>
-          <Card title={`Scenes (${ch.scenes.length})`} pad0>
+          <Card title="List of Scenes" pad0>
             {ch.scenes.length === 0 ? <Empty icon="🎬" title="Not in any scene yet" /> : (
               <div className="list">
                 {ch.scenes.map((s) => (
@@ -96,7 +96,7 @@ export default function CharacterDetail() {
               </>
             ) : <div className="subtle">No actor assigned.</div>}
           </Card>
-          <Card title="Reference photos"><PhotoGrid photos={ch.photos} entityType="CHARACTER" entityId={ch.id} kinds={["FRONT", "SIDE", "BACK", "DETAIL", "OTHER"]} /></Card>
+          <Card title="References"><PhotoGrid photos={ch.photos} entityType="CHARACTER" entityId={ch.id} kinds={["REFERENCE", "FRONT", "SIDE", "BACK", "DETAIL", "DOCUMENT", "OTHER"]} /></Card>
           <Card title="Fittings" pad0>
             {ch.fittings.length === 0 ? <div className="subtle" style={{ padding: 14 }}>No fittings.</div> : (
               <div className="list">{ch.fittings.map((f) => <Link key={f.id} to={`${base}/fittings/${f.id}`} className="item link"><div className="grow"><div className="title small">{fmtDate(f.scheduledAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div><div className="meta">{f.items.length} pieces{f.location ? ` · ${f.location}` : ""}</div></div><Badge status={f.status} /></Link>)}</div>
@@ -125,7 +125,7 @@ export default function CharacterDetail() {
           <Field label="Type"><Select value={ef.type} onChange={(e) => setEf({ ...ef, type: e.target.value })} options={meta?.characterTypes || []} /></Field>
           <Field label="Age"><Input type="number" value={ef.age} onChange={(e) => setEf({ ...ef, age: e.target.value })} /></Field>
           <Field label="Cast number"><Input type="number" value={ef.castNumber} onChange={(e) => setEf({ ...ef, castNumber: e.target.value })} /></Field>
-          <Field label="Actor" span2><Select value={ef.actorId} onChange={(e) => setEf({ ...ef, actorId: e.target.value })} options={(actors || []).map((a) => ({ value: a.id, label: a.name }))} placeholder="— unassigned —" /></Field>
+          <Field label="Actor" span2><ActorSelect value={ef.actorId} onChange={(actorId) => setEf({ ...ef, actorId })} /></Field>
           <Field label="Description" span2><Textarea value={ef.description} onChange={(e) => setEf({ ...ef, description: e.target.value })} /></Field>
           <Field label="Notes" span2><Textarea value={ef.notes} onChange={(e) => setEf({ ...ef, notes: e.target.value })} /></Field>
         </div>

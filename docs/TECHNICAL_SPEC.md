@@ -220,7 +220,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 | cues | GET (?status=&characterId=&sceneId=), PATCH/:id `{status,text,characterId}`, POST /bulk `{ids,status}`; scenes: POST /extract-cues `{sceneIds}` |
 | continuity | GET (?sceneId=&characterId=), POST (upsert by scene/character/take; prefilled from previous take), GET /compare?sceneId=&characterId= → `{records,flags}`, GET/:id, DELETE/:id |
 | schedule | POST /parse (multipart `file`, `kind` SCHEDULE\|CALLSHEET → preview: one row per scene with its shoot date, current date, whether it is in the breakdown, plus warnings), POST /apply `{assignments[{sceneId,date}]}` |
-| photos | GET (?entityType=&entityId=), GET /gallery (?entityType=&characterId=&sceneId=&q=, every photo with a label and link to its record), POST multipart `file,entityType,entityId,kind,caption`, DELETE/:id |
+| photos (references: images, files and links) | GET (?entityType=&entityId=), POST /link `{entityType,entityId,url,title?,kind?}`, GET /gallery (?entityType=&characterId=&sceneId=&q=, every photo with a label and link to its record), POST multipart `file,entityType,entityId,kind,caption`, DELETE/:id |
 | damages | GET (?open=true), POST, PATCH/:id (`REPAIRED` books a DAMAGE expense; `WRITTEN_OFF` retires) |
 | missing | GET (?status=), POST, PATCH/:id `{status:FOUND,foundLocation}` |
 | vendors | GET, POST, GET/:id, PATCH, DELETE |

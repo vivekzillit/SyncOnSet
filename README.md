@@ -21,6 +21,7 @@ continuity book, asset-numbered inventory, wrap-box labels, per-character/per-sc
 | **Changes / looks** | Numbered outfits per character, pieces with wear notes, scene ↔ change assignment |
 | **Inventory** | Asset numbers (`CST-000245`), QR codes, category/type/size/colour/source/vendor, location, status, full timeline |
 | **Scan** | Camera QR scanning (or typed asset number) → status, location, scenes, and contextual actions |
+| **References** | Photos, files of any kind and links attached to a character, look, costume, fitting, cleaning ticket or damage report |
 | **Issue / return** | Issue to actor, send to set, return, move; every movement is logged |
 | **Sink / cleaning** | 13 cleaning types, priority, kanban board through Requested → Received → Cleaning → Drying → Ironing → QC → Ready |
 | **🚨 Emergency** | One tap: URGENT ticket, costume marked unavailable, laundry + supervisor alerted, replacement found and issued |

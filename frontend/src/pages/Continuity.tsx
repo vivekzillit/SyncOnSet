@@ -211,7 +211,7 @@ export function ContinuityBook() {
           {c.records.map((r) => (
             <Card key={r.id} title={`Take ${r.takeNumber}`} actions={<div className="row gap-1">{c.flags.some((fl) => fl.take === r.takeNumber) && <Badge status="WARNING">flagged</Badge>}{can(CONTINUITY_ROLES) && <button className="btn btn-ghost btn-sm" onClick={() => del.mutate(r.id)} title="Delete"><Trash2 size={14} /></button>}</div>}>
               <div className="subtle mb-2">{fmtDateTime(r.createdAt)}{r.recordedByName ? ` · ${r.recordedByName}` : ""}</div>
-              <PhotoGrid photos={photosByRecord.get(r.id) || []} entityType="CONTINUITY" entityId={r.id} kinds={["FRONT", "SIDE", "BACK", "CLOSEUP"]} compact />
+              <PhotoGrid photos={photosByRecord.get(r.id) || []} entityType="CONTINUITY" entityId={r.id} kinds={["FRONT", "SIDE", "BACK", "CLOSEUP"]} compact attachments={false} />
               <dl className="kv mt-2" style={{ gridTemplateColumns: "100px 1fr" }}>
                 {Object.entries(r.details).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v || "—"}</dd></Fragment>)}
               </dl>

@@ -18,7 +18,8 @@ export interface Meta {
   projectTypes?: string[]; budgetBands?: string[]; budgetBandLabels?: Record<string, string>; genders?: string[];
 }
 
-export interface Photo { id: string; entityType: string; entityId: string; kind: string; url: string; caption?: string | null; createdAt: string }
+export type MediaType = "IMAGE" | "FILE" | "LINK";
+export interface Photo { id: string; entityType: string; entityId: string; kind: string; mediaType?: MediaType; url: string; title?: string | null; mimeType?: string | null; size?: number | null; caption?: string | null; createdAt: string }
 export interface Actor {
   id: string; name: string; phone?: string | null; email?: string | null; agency?: string | null; measurements: Record<string, string | number>; notes?: string | null;
   gender?: string | null; age?: number | null; phone2?: string | null; email2?: string | null; startWorkDate?: string | null;

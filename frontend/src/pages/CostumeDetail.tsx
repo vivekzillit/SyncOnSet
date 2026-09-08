@@ -71,7 +71,7 @@ export default function CostumeDetail() {
               </div>
             )}
           </Card>
-          <Card title="Photos"><PhotoGrid photos={c.photos} entityType="COSTUME" entityId={c.id} /></Card>
+          <Card title="Photos & documents"><PhotoGrid photos={c.photos} entityType="COSTUME" entityId={c.id} kinds={["FRONT", "SIDE", "BACK", "CLOSEUP", "DETAIL", "DOCUMENT", "OTHER"]} /></Card>
           {(c.damages.length > 0 || c.missing.length > 0 || c.rentals.length > 0 || c.fittingItems.length > 0) && (
             <Card title="Records">
               <div className="col gap-1 small">

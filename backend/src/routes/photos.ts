@@ -8,6 +8,7 @@ import { wrap, notFound, badRequest } from "../lib/errors";
 import { parse } from "../lib/validate";
 import { requireRole } from "../middleware/auth";
 import { CONTINUITY_ROLES, PHOTO_ENTITY_TYPES, PHOTO_KINDS } from "../lib/constants";
+import { audit } from "../services/audit";
 import { config } from "../config";
 
 export const photosRouter = Router({ mergeParams: true });
@@ -21,11 +22,16 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
   },
 });
+export const IMAGE_RE = /^image\/(jpeg|png|webp|heic|heif|gif|avif)$/i;
+/** Anything that a browser could execute in this origin is refused: an upload is served from the app's own domain. */
+const BLOCKED_RE = /\.(html?|xhtml|svg|js|mjs|jsx|php|phtml|asp|aspx|jsp|sh|bash|command|exe|bat|cmd|msi|scr|jar|app|dmg|pkg|deb|rpm|py|rb|pl|vbs|ps1|hta|wsf|cgi)$/i;
 const upload = multer({
   storage,
-  limits: { fileSize: 15 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (!/^image\/(jpeg|png|webp|heic|heif|gif)$/i.test(file.mimetype)) return cb(badRequest("Only image uploads are allowed"));
+    const name = file.originalname || "";
+    if (BLOCKED_RE.test(name)) return cb(badRequest(`${path.extname(name)} files cannot be attached. Export it as PDF, or share it as a link.`));
+    if (/^(?:text\/html|image\/svg|application\/(?:x-)?(?:javascript|x-msdownload|x-sh))/i.test(file.mimetype)) return cb(badRequest("That file type cannot be attached. Export it as PDF, or share it as a link."));
     cb(null, true);
   },
 });
@@ -46,7 +52,8 @@ photosRouter.get(
   wrap(async (req, res) => {
     const where: Record<string, unknown> = { projectId: req.projectId };
     if (req.query.entityType) where.entityType = String(req.query.entityType);
-    const photos = await prisma.photo.findMany({ where, orderBy: { createdAt: "desc" }, take: 2000 });
+    // The gallery is for pictures; files and links live on the record they belong to.
+    const photos = await prisma.photo.findMany({ where: { ...where, mediaType: "IMAGE" }, orderBy: { createdAt: "desc" }, take: 2000 });
     const ids = (t: string) => photos.filter((ph) => ph.entityType === t).map((ph) => ph.entityId);
     const [costumes, characters, changes, fittings, continuity, cleaning, damages, actors] = await Promise.all([
       prisma.costume.findMany({ where: { id: { in: ids("COSTUME") } }, select: { id: true, assetNumber: true, name: true, characterId: true, character: { select: { name: true } } } }),
@@ -77,7 +84,7 @@ photosRouter.get(
   }),
 );
 
-/** multipart/form-data: file, entityType, entityId, kind?, caption? */
+/** multipart/form-data: file (a photo or any other document), entityType, entityId, kind?, caption? */
 photosRouter.post(
   "/",
   requireRole(CONTINUITY_ROLES),
@@ -85,9 +92,43 @@ photosRouter.post(
   wrap(async (req, res) => {
     if (!req.file) throw badRequest("file is required");
     const meta = parse(z.object({ entityType: z.enum(PHOTO_ENTITY_TYPES), entityId: z.string(), kind: z.enum(PHOTO_KINDS).optional(), caption: z.string().optional() }), req.body);
+    const isImage = IMAGE_RE.test(req.file.mimetype);
     const photo = await prisma.photo.create({
-      data: { projectId: req.projectId!, entityType: meta.entityType, entityId: meta.entityId, kind: meta.kind || "OTHER", caption: meta.caption || null, url: `/uploads/${req.file.filename}` },
+      data: {
+        projectId: req.projectId!, entityType: meta.entityType, entityId: meta.entityId,
+        kind: meta.kind || (isImage ? "OTHER" : "DOCUMENT"),
+        mediaType: isImage ? "IMAGE" : "FILE",
+        title: req.file.originalname || null,
+        mimeType: req.file.mimetype || null,
+        size: req.file.size,
+        caption: meta.caption || null,
+        url: `/uploads/${req.file.filename}`,
+      },
     });
+    res.status(201).json(photo);
+  }),
+);
+
+/** Attach a link (a shared drive, a mood board, a supplier page) rather than a file. */
+photosRouter.post(
+  "/link",
+  requireRole(CONTINUITY_ROLES),
+  wrap(async (req, res) => {
+    const body = parse(z.object({
+      entityType: z.enum(PHOTO_ENTITY_TYPES),
+      entityId: z.string(),
+      url: z.string().trim().min(3).max(2000),
+      title: z.string().trim().max(200).optional(),
+      kind: z.enum(PHOTO_KINDS).optional(),
+      caption: z.string().trim().max(500).optional(),
+    }), req.body);
+    const url = /^https?:\/\//i.test(body.url) ? body.url : `https://${body.url}`;
+    let host: string;
+    try { host = new URL(url).hostname; } catch { throw badRequest("That does not look like a web address"); }
+    const photo = await prisma.photo.create({
+      data: { projectId: req.projectId!, entityType: body.entityType, entityId: body.entityId, kind: body.kind || "REFERENCE", mediaType: "LINK", url, title: body.title || host, caption: body.caption || null },
+    });
+    await audit(req.user, req.projectId!, "REFERENCE_LINK", body.entityType, body.entityId, { url });
     res.status(201).json(photo);
   }),
 );
@@ -97,10 +138,10 @@ photosRouter.delete(
   requireRole(CONTINUITY_ROLES),
   wrap(async (req, res) => {
     const photo = await prisma.photo.findFirst({ where: { id: req.params.id, projectId: req.projectId } });
-    if (!photo) throw notFound("Photo");
+    if (!photo) throw notFound("Reference");
     await prisma.photo.delete({ where: { id: photo.id } });
-    const file = path.join(config.uploadDir, path.basename(photo.url));
-    fs.promises.unlink(file).catch(() => undefined);
+    // A link has no file of its own to remove.
+    if (photo.mediaType !== "LINK") fs.promises.unlink(path.join(config.uploadDir, path.basename(photo.url))).catch(() => undefined);
     res.json({ ok: true });
   }),
 );

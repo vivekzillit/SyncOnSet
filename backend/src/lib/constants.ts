@@ -122,7 +122,9 @@ export const RENTAL_STATUSES = ["BOOKED", "PICKED_UP", "RETURNED", "OVERDUE"] as
 export const EXPENSE_CATEGORIES = ["PURCHASE", "RENTAL", "LAUNDRY", "TAILORING", "ACCESSORIES", "DAMAGE", "OTHER"] as const;
 
 export const PHOTO_ENTITY_TYPES = ["COSTUME", "CHANGE", "FITTING", "CONTINUITY", "CLEANING", "DAMAGE", "CHARACTER", "ACTOR"] as const;
-export const PHOTO_KINDS = ["FRONT", "SIDE", "BACK", "CLOSEUP", "DETAIL", "STAIN", "OTHER"] as const;
+export const PHOTO_KINDS = ["FRONT", "SIDE", "BACK", "CLOSEUP", "DETAIL", "STAIN", "REFERENCE", "DOCUMENT", "OTHER"] as const;
+/** A reference is a photo, any other uploaded file, or a link. */
+export const MEDIA_TYPES = ["IMAGE", "FILE", "LINK"] as const;
 
 export const NOTIFICATION_TYPES = ["CLEANING", "MISSING", "RENTAL", "ALTERATION", "DAMAGE", "READINESS", "FITTING", "GENERAL"] as const;
 
@@ -161,5 +163,6 @@ export const META = {
   expenseCategories: EXPENSE_CATEGORIES,
   photoEntityTypes: PHOTO_ENTITY_TYPES,
   photoKinds: PHOTO_KINDS,
+  mediaTypes: MEDIA_TYPES,
   notificationTypes: NOTIFICATION_TYPES,
 };

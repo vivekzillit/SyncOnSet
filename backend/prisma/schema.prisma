@@ -422,13 +422,18 @@ model ContinuityRecord {
   @@unique([sceneId, characterId, takeNumber])
 }
 
+// A reference attached to a record: a photo, any other file, or a link.
 model Photo {
   id         String   @id @default(cuid())
   projectId  String
   entityType String   // COSTUME | CHANGE | FITTING | CONTINUITY | CLEANING | DAMAGE | CHARACTER
   entityId   String
   kind       String   @default("OTHER") // FRONT | SIDE | BACK | CLOSEUP | DETAIL | STAIN | OTHER
-  url        String
+  mediaType  String   @default("IMAGE") // IMAGE | FILE | LINK
+  url        String   // /uploads/… for an upload, the address itself for a link
+  title      String?  // link title or the file's original name
+  mimeType   String?
+  size       Int?     // bytes, for an upload
   caption    String?
   createdAt  DateTime @default(now())
 

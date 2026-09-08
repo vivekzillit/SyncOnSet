@@ -35,7 +35,14 @@ export function createApp() {
   app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
   app.get("/api/health", (_req, res) => res.json({ ok: true, service: "costumes-and-set-api", time: new Date().toISOString() }));
-  app.use("/uploads", express.static(config.uploadDir, { maxAge: "7d" }));
+  app.use("/uploads", express.static(config.uploadDir, {
+    maxAge: "7d",
+    setHeaders: (res, filePath) => {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      // Pictures, PDFs and media display inline; anything else downloads, so an upload can never run in this origin.
+      if (!/\.(jpe?g|png|webp|heic|heif|gif|avif|pdf|mp4|mov|webm|m4a|mp3|wav)$/i.test(filePath)) res.setHeader("Content-Disposition", "attachment");
+    },
+  }));
 
   app.use("/api/meta", metaRouter);
   app.use("/api/auth", authRouter);
