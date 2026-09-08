@@ -37,6 +37,8 @@ const projectSchema = z.object({
   shootingDay: z.number().int().min(0).optional(),
   currentLocation: zOptionalString,
   currency: z.string().length(3).optional(),
+  prepStartDate: zDate,
+  prepEndDate: zDate,
   startDate: zDate,
   endDate: zDate,
   notes: zOptionalString,

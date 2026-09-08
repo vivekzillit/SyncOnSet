@@ -5,7 +5,7 @@ import { Bell, ChevronDown, ChevronsUpDown, Settings, LayoutDashboard, Clapperbo
 import { api, p } from "@/api/client";
 import { useAuth, FINANCE_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { ProjectProvider, useProject } from "@/state/project";
-import { humanize } from "@/lib/format";
+import { humanize, projectTypeLabel } from "@/lib/format";
 import type { Dashboard } from "@/api/types";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { ChangePasswordModal } from "./Account";
@@ -87,7 +87,7 @@ function Shell() {
             <div className="brand-mark">C&amp;S</div>
             <div className="truncate hide-mobile">
               <div className="bold truncate" style={{ lineHeight: 1.1 }}>{project?.name || "…"}</div>
-              <div className="tiny subtle">{project ? `${humanize(project.type || "FEATURE")} · Day ${project.shootingDay}${project.currentLocation ? ` · ${project.currentLocation}` : ""}` : ""}</div>
+              <div className="tiny subtle">{project ? `${projectTypeLabel(project.type)} · Day ${project.shootingDay}${project.currentLocation ? ` · ${project.currentLocation}` : ""}` : ""}</div>
             </div>
             <div className="truncate bold small show-mobile">{project?.name}</div>
             <ChevronsUpDown size={14} color="var(--text-3)" className="hide-mobile" />

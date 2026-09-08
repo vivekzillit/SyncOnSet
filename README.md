@@ -17,7 +17,7 @@ continuity book, asset-numbered inventory, wrap-box labels, per-character/per-sc
 
 | Area | Highlights |
 | --- | --- |
-| **Breakdown** | Upload the screenplay (Final Draft, Fountain, text, PDF) to build scenes, sluglines, page counts and characters; revised drafts are diffed (new / updated / unchanged) and stamped with a revision name; character confirmation with merge, ignore and cast numbers; costume cues read from the script text per scene (built-in reader, AI optional) with accept/dismiss; printable sides per shoot day |
+| **Breakdown** | Upload the screenplay (Final Draft, Fountain, text, PDF) to build scenes, sluglines, page counts and characters; revised drafts are diffed (new / updated / unchanged) and stamped with a revision name; character confirmation (delete non-characters; names matching existing characters merge automatically); costume cues read from the script text per scene (built-in reader, AI optional) with accept/dismiss; printable sides per shoot day |
 | **Changes / looks** | Numbered outfits per character, pieces with wear notes, scene ↔ change assignment |
 | **Inventory** | Asset numbers (`CST-000245`), QR codes, category/type/size/colour/source/vendor, location, status, full timeline |
 | **Scan** | Camera QR scanning (or typed asset number) → status, location, scenes, and contextual actions |
@@ -31,7 +31,7 @@ continuity book, asset-numbered inventory, wrap-box labels, per-character/per-sc
 | **Vendors & rentals** | Rental bookings, due/overdue tracking, return reminders |
 | **Budget** | Expenses by category, character and scene; inventory value; rental commitments |
 | **Reports** | Wardrobe daily report (CSV), asset inventory (CSV), wrap report, printable QR / wrap-box labels |
-| **Production setup** | SyncOnSet-style wizard: feature/episodic, title, studio, budget band, shoot dates, location, script upload and Character Confirmation (same number merges) |
+| **Production setup** | SyncOnSet-style wizard: feature/TV series, title, studio, pre-production and shoot dates, required script upload and Character Confirmation |
 | **Actors & gallery** | Actors page with cast, contacts, next fitting and start dates; Gallery of every photo in the production |
 | **Roles** | 11 roles; laundry/tailors never see money; managers control breakdown and team |
 | **Notifications** | Per-user in-app notifications with unread badge |

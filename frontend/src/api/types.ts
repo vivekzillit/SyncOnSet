@@ -4,7 +4,7 @@ export type Role =
 
 export interface User { id: string; name: string; email: string; role: Role; phone?: string | null; isActive?: boolean }
 export interface ProjectSummary { id: string; name: string; code: string; status: string; role?: Role; myRole?: Role; shootingDay?: number; currentLocation?: string | null; currency?: string; _count?: Record<string, number> }
-export interface Project extends ProjectSummary { startDate?: string | null; endDate?: string | null; notes?: string | null; currency: string; type?: string; studio?: string | null; budgetBand?: string | null; country?: string | null; city?: string | null }
+export interface Project extends ProjectSummary { prepStartDate?: string | null; prepEndDate?: string | null; startDate?: string | null; endDate?: string | null; notes?: string | null; currency: string; type?: string; studio?: string | null; budgetBand?: string | null; country?: string | null; city?: string | null }
 
 export interface Meta {
   roles: Role[]; financeRoles: Role[]; managerRoles: Role[]; opsRoles: Role[];

@@ -229,8 +229,9 @@ export function buildScenes(elements: Element[], format: ScriptFormat): ParseRes
     seen.set(s.number.replace(/-\d+$/, ""), n + 1);
   }
   if (headings === 0) warnings.push("No scene headings found. Headings must start with INT., EXT., INT./EXT. or EST.");
-  if (missingNumbers > 0 && missingNumbers === headings) warnings.push("The script has no scene numbers; scenes were numbered in order of appearance.");
-  else if (missingNumbers > 0) warnings.push(`${missingNumbers} scene heading(s) had no number and were numbered by position.`);
+  // An entirely unnumbered draft is the normal case (numbers arrive when the script is locked), so numbering by
+  // order of appearance is silent; only a partially numbered script is worth a warning.
+  if (missingNumbers > 0 && missingNumbers < headings) warnings.push(`${missingNumbers} scene heading(s) had no number and were numbered by position.`);
   if (cues === 0 && headings > 0) warnings.push("No character cues detected; characters will not be attached to scenes.");
   const characters = [...charIndex.values()].sort((a, b) => b.lines - a.lines || a.name.localeCompare(b.name));
   const estimateLines = (ls: string[]) => ls.reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 60)), 0) + Math.floor(ls.length / 3);

@@ -36,7 +36,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
       setResult(r);
       setExcluded(new Set());
       setRevision(r.firstUpload ? "White" : `Revision ${new Date().toISOString().slice(0, 10)}`);
-      setRows(initialRows(r.characters, r.existingCharacters));
+      setRows(initialRows(r.characters));
       setTab(r.characters.some((c) => !c.exists) ? "characters" : "scenes");
     },
   });
@@ -71,7 +71,6 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
   const charPlan = buildCharacterImport(rows, result?.existingCharacters || []).characterMap;
   const existingNames = new Set((result?.existingCharacters || []).map((e) => e.name.toLowerCase()));
   const ignored = rows.filter((r) => r.deleted).length;
-  const merged = rows.filter((r) => !r.deleted && charPlan[r.name] && charPlan[r.name]!.toLowerCase() !== r.name.toLowerCase()).length;
   const newChars = rows.filter((r) => !r.deleted && charPlan[r.name]?.toLowerCase() === r.name.toLowerCase() && !existingNames.has(r.name.toLowerCase()));
   const displayName = (c: string) => charPlan[c] ?? c;
   const updates = included.filter((s) => s.change === "updated").length;
@@ -110,7 +109,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
           {result.warnings.map((w, i) => <div key={i} className="notice">{w}</div>)}
           <div className="row gap-2 wrap">
             <div className="field" style={{ minWidth: 260 }}><label>Revision name</label><Input value={revision} onChange={(e) => setRevision(e.target.value)} placeholder='e.g. "Blue 2026-09-08"' /><span className="help">Stamped on new and changed scenes. Use the colour and script date so the team can tell drafts apart.</span></div>
-            <div className="notice ok grow" style={{ alignSelf: "stretch" }}>{newScenes} new · {updates} updated · {unchanged} unchanged scene{included.length === 1 ? "" : "s"}. Characters: {newChars.length} new{merged ? `, ${merged} merged into existing` : ""}{ignored ? `, ${ignored} ignored` : ""}. Nothing is ever deleted by an upload.</div>
+            <div className="notice ok grow" style={{ alignSelf: "stretch" }}>{newScenes} new · {updates} updated · {unchanged} unchanged scene{included.length === 1 ? "" : "s"}. Characters: {newChars.length} new{ignored ? `, ${ignored} ignored` : ""}. Nothing is ever deleted by an upload.</div>
           </div>
           <div className="tabs" style={{ marginBottom: 4 }}>
             <button type="button" className={tab === "scenes" ? "active" : ""} onClick={() => setTab("scenes")}>Scenes ({result.scenes.length})</button>

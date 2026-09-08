@@ -1,3 +1,5 @@
+/** User-facing label for Project.type: the stored value stays FEATURE | EPISODIC, the UI says Feature / TV series. */
+export const projectTypeLabel = (t?: string | null) => (t === "EPISODIC" ? "TV series" : "Feature");
 export const humanize = (s?: string | null) => (s ? s.replace(/_/g, " ").toLowerCase().replace(/(^|\s)\S/g, (t) => t.toUpperCase()) : "");
 
 export function fmtDate(d?: string | Date | null, opts: Intl.DateTimeFormatOptions = { day: "2-digit", month: "short" }) {

@@ -49,6 +49,7 @@ p { margin: 0; }
 .grow { flex: 1; min-width: 0; }
 .gap-1 { gap: 6px; } .gap-2 { gap: 12px; } .gap-3 { gap: 20px; }
 .hide-mobile { display: initial; }
+.table th.hide-mobile, .table td.hide-mobile { display: table-cell; } /* cells must stay cells; the mobile rule below still hides them */
 .show-mobile { display: none !important; }
 
 /* Layout */

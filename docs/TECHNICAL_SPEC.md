@@ -66,7 +66,7 @@ Notification (per user)  AuditLog
 ```
 
 Key fields
-- **Project**: `type` (FEATURE | EPISODIC), `studio`, `budgetBand` (UNDER_2M … 80M_PLUS), `country`, `city`, plus status, shooting day, currency, dates.
+- **Project**: `type` (FEATURE | EPISODIC, shown as Feature / TV series), `studio`, `prepStartDate`/`prepEndDate` (pre-production), `startDate`/`endDate` (shoot), plus status, shooting day, currency; `budgetBand`, `country` and `city` remain in the schema but the wizard no longer asks for them.
 - **Actor**: `name`, `gender`, `age`, `phone`, `phone2`, `email`, `email2`, `agency`, `startWorkDate`, `nextFittingAt`, `fittingComment`, measurements JSON; `characterIds` on create/update relinks characters.
 - **Character**: `castNumber` (call-sheet number), type, actor link.
 - **Scene**: slugline fields, `pages` (eighths), `scriptDay`, `shootDate`, `status`, `scriptText`, `revision`, `revisedAt`.
@@ -122,7 +122,7 @@ normalised into an element stream (heading, character, dialogue, action, other) 
 Final Draft paragraphs map by their `Type` attribute; text formats use screenplay heuristics (sluglines start with INT/EXT/I/E/EST,
 character cues are short upper-case lines followed by dialogue, transitions end in TO:, page numbers and CONTINUED markers are noise).
 Sluglines yield `intExt`, `location` and `timeOfDay` (MORNING → DAY, LATER → CONTINUOUS, SUNSET → DUSK…); scene numbers come from
-FDX attributes, Fountain `#24#` markers or margin numbers, falling back to order of appearance with a warning. Character names are
+FDX attributes, Fountain `#24#` markers or margin numbers, falling back to order of appearance (silently for a fully unnumbered draft; a warning only when some headings are numbered and others are not). Character names are
 normalised (extensions stripped, title case). The response is a preview only; the client confirms via `POST /import`, which upserts
 scenes by number and matches characters case-insensitively, storing each scene's text in `Scene.scriptText`.
 
@@ -130,7 +130,7 @@ The preview compares each parsed scene's text with the stored text and labels it
 its length in eighths (`pages`, from line counts at ~55 lines per page), and lists detected characters against existing ones.
 Import takes a `revision` name (stamped as `Scene.revision`/`revisedAt` on new and updated scenes only; unchanged scenes are
 not rewritten so manual edits survive), a `characterMap` (detected name → existing character to merge into, or `null` to
-ignore non-characters) and `castNumbers` for characters created by the import (`Character.castNumber`). Uploads never delete
+ignore non-characters) and optional `castNumbers` for characters created by the import (`Character.castNumber`; the confirmation table no longer collects numbers, they are set on the character page). Uploads never delete
 scenes or scene-character links, mirroring SyncOnSet's revision behaviour; omitted headings set status OMITTED.
 
 ### Script text endpoint
@@ -207,7 +207,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 
 ## 6. Screens (web app, 27)
 
-Login · Projects · Production wizard (type, title, studio, budget band, dates, location, script upload, Character Confirmation) · **Dashboard** · Scan · Scenes (SyncOnSet-style table: draft selector, inline add, Edit All, row menu Edit/Clone/Omit/Delete, Add & Remove Principals) · Scene detail (readiness, change assignment, takes, tickets) ·
+Login · Projects · Production wizard (type, title, studio, pre-production and shoot dates, required script upload, Character Confirmation) · **Dashboard** · Scan · Scenes (SyncOnSet-style table: draft selector, inline add, Edit All, row menu Edit/Clone/Omit/Delete, Add & Remove Principals) · Scene detail (readiness, change assignment, takes, tickets) ·
 Characters · Actors (SyncOnSet-style table and Create Actor form) · Gallery · Character detail (changes, scenes, pieces, measurements, fittings, photos) · Change detail (pieces, wear notes, photos, scenes) ·
 Costumes (search/filter/paginate, create) · Costume detail (QR, actions, used-in, photos, records, timeline) ·
 Sink/Cleaning board (kanban + list) · Cleaning ticket (stepper, work actions, QC, replacement, history, stain photos) ·
