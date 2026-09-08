@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { ChangePasswordModal } from "./Account";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, LayoutDashboard, Clapperboard, Users, Shirt, ScanLine, Droplets, Ruler, BookOpen, Scissors, AlertTriangle, SearchX, Store, Wallet, FileBarChart, Tag, UserCog, Settings, MoreHorizontal, LogOut, ChevronsUpDown } from "lucide-react";
+import { Bell, KeyRound, LayoutDashboard, Clapperboard, Users, Shirt, ScanLine, Droplets, Ruler, BookOpen, Scissors, AlertTriangle, SearchX, Store, Wallet, FileBarChart, Tag, UserCog, Settings, MoreHorizontal, LogOut, ChevronsUpDown } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useAuth, FINANCE_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { ProjectProvider, useProject } from "@/state/project";
@@ -22,6 +24,7 @@ function Shell() {
   const { user, logout } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
+  const [pwOpen, setPwOpen] = useState(false);
   const { data: notif } = useQuery({ queryKey: ["notifications", projectId, "unread"], queryFn: () => api<{ unread: number }>(p(projectId, "/notifications?unread=true")), refetchInterval: 30000 });
   const { data: dash } = useQuery({ queryKey: ["dashboard", projectId], queryFn: () => api<Dashboard>(p(projectId, "/dashboard")), refetchInterval: 60000 });
   const c = dash?.counts;
@@ -79,6 +82,7 @@ function Shell() {
               <div className="bold truncate">{user?.name}</div>
               <div className="tiny" style={{ color: "#9a9da6" }}>{humanize(user?.role)}</div>
             </div>
+            <button className="btn btn-ghost btn-sm" style={{ color: "#c9cbd2" }} onClick={() => setPwOpen(true)} title="Change password"><KeyRound size={15} /></button>
             <button className="btn btn-ghost btn-sm" style={{ color: "#c9cbd2" }} onClick={() => { logout(); nav("/login"); }} title="Sign out"><LogOut size={15} /></button>
           </div>
         </div>
@@ -105,6 +109,8 @@ function Shell() {
           </ErrorBoundary>
         </main>
       </div>
+
+      <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} />
 
       <nav className="bottom-nav">
         <NavLink to={base} end><LayoutDashboard size={20} /><span>Home</span></NavLink>

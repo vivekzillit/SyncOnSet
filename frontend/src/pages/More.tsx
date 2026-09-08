@@ -1,14 +1,17 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Users, BookOpen, Ruler, Scissors, AlertTriangle, SearchX, Store, Wallet, FileBarChart, Tag, UserCog, Settings, Bell, LogOut, FolderKanban } from "lucide-react";
+import { KeyRound, Users, BookOpen, Ruler, Scissors, AlertTriangle, SearchX, Store, Wallet, FileBarChart, Tag, UserCog, Settings, Bell, LogOut, FolderKanban } from "lucide-react";
 import { useProject } from "@/state/project";
 import { useAuth, FINANCE_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { humanize } from "@/lib/format";
 import { Card, PageHead } from "@/components/ui";
+import { ChangePasswordModal } from "@/components/Account";
 
 export default function More() {
   const { projectId, can, project } = useProject();
   const { user, logout } = useAuth();
   const nav = useNavigate();
+  const [pwOpen, setPwOpen] = useState(false);
   const base = `/p/${projectId}`;
   const items = [
     [`${base}/characters`, <Users size={18} />, "Characters & Actors"],
@@ -33,9 +36,11 @@ export default function More() {
           {items.map(([to, icon, label]) => (
             <Link key={to} to={to} className="item link">{icon}<span className="title grow">{label}</span></Link>
           ))}
+          <div className="item link" onClick={() => setPwOpen(true)}><KeyRound size={18} /><span className="title">Change password</span></div>
           <div className="item link" onClick={() => { logout(); nav("/login"); }}><LogOut size={18} /><span className="title">Sign out</span></div>
         </div>
       </Card>
+      <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} />
     </div>
   );
 }

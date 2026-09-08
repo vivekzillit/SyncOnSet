@@ -125,6 +125,8 @@ GET|POST /api/projects                     GET /api/projects/:id/dashboard
 …/notifications (+ /read)   …/reports/daily[.csv] | /inventory[?format=csv] | /budget | /wrap
 ```
 
+New to the app? Start with the [start-to-finish user guide](docs/USER_GUIDE.md).
+
 See [docs/TECHNICAL_SPEC.md](docs/TECHNICAL_SPEC.md) for the complete reference, data model, state machines,
 permission matrix, screen list, iOS/offline architecture and the sprint roadmap.
 

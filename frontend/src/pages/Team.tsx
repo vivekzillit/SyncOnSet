@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, UserPlus, Trash2 } from "lucide-react";
+import { Plus, UserPlus, Trash2, KeyRound } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth } from "@/state/auth";
@@ -8,6 +8,7 @@ import { humanize } from "@/lib/format";
 import type { Member, Role, User } from "@/api/types";
 import { Badge, Card, ConfirmButton, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { Avatar } from "@/components/domain";
+import { ResetPasswordModal } from "@/components/Account";
 
 export default function Team() {
   const { projectId, role } = useProject();
@@ -20,6 +21,7 @@ export default function Team() {
   const { data: users } = useQuery({ queryKey: ["users", q], queryFn: () => api<(User & { memberships: { projectId: string; role: string }[] })[]>(`/users?q=${encodeURIComponent(q)}`), enabled: addOpen });
   const [addRole, setAddRole] = useState<Role>("WARDROBE_ASSISTANT");
   const [createOpen, setCreateOpen] = useState(false);
+  const [resetUser, setResetUser] = useState<{ id: string; name: string } | null>(null);
   const [cf, setCf] = useState({ name: "", email: "", password: "", role: "WARDROBE_ASSISTANT", phone: "" });
   const upsert = useMutation({ mutationFn: (v: { userId: string; role: string }) => api(p(projectId, "/members"), { body: v }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["members", projectId] }); toast.push("Member updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
   const remove = useMutation({ mutationFn: (userId: string) => api(p(projectId, `/members/${userId}`), { method: "DELETE" }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["members", projectId] }); toast.push("Removed", "ok"); } });
@@ -43,6 +45,7 @@ export default function Team() {
                 </div>
                 <div className="end">
                   <Select value={m.role} onChange={(e) => upsert.mutate({ userId: m.userId, role: e.target.value })} options={meta?.roles || []} style={{ width: "auto", minHeight: 34, padding: "4px 30px 4px 10px" }} />
+                  {canCreateUsers && <button className="btn btn-ghost btn-sm" title="Reset password" onClick={() => setResetUser({ id: m.userId, name: m.user.name })}><KeyRound size={14} /></button>}
                   <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Remove?" onConfirm={() => remove.mutate(m.userId)}><Trash2 size={14} /></ConfirmButton>
                 </div>
               </div>
@@ -61,6 +64,7 @@ export default function Team() {
         </div>
       </Card>
 
+      <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add member">
         <div className="col">
           <SearchBox value={q} onChange={setQ} placeholder="Search by name or email" autoFocus />
