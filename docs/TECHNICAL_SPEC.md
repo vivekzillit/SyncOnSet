@@ -188,7 +188,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 | --- | --- |
 | actors | GET, POST, GET/:id, PATCH/:id, DELETE/:id (measurements as JSON object) |
 | characters | GET, POST, GET/:id (scenes, changes, costumes, fittings, photos), PATCH, DELETE |
-| scenes | GET (?date=&status=, includes readiness, hasScript, revision), POST, POST /parse-script (multipart screenplay → preview with new/updated/unchanged, pages, detected characters), POST /import (`scenes`, `revision`, `characterMap`, `castNumbers`), GET /sides (?date= or ?ids=), GET/:id, GET/:id/readiness, PATCH, DELETE, PUT /:id/characters/:characterId `{changeId,notes}`, DELETE /:id/characters/:characterId |
+| scenes | GET (?date=&status=, includes readiness, hasScript, revision, characters with cast numbers), POST (accepts revision), POST /:id/clone (copy with next free letter suffix, principals and changes), POST /parse-script (multipart screenplay → preview with new/updated/unchanged, pages, detected characters), POST /import (`scenes`, `revision`, `characterMap`, `castNumbers`), GET /sides (?date= or ?ids=), GET/:id, GET/:id/readiness, PATCH, DELETE, PUT /:id/characters/:characterId `{changeId,notes}`, DELETE /:id/characters/:characterId |
 | changes | GET (?characterId=), POST `{characterId,name,changeNumber?,costumeIds?}`, GET/:id, PATCH, DELETE, POST /:id/items `{costumeId,wearNotes}`, DELETE /:id/items/:costumeId |
 | costumes | GET (?q=&status=&category=&characterId=&source=&location=&page=&pageSize=), POST (auto asset number), POST /import, GET /lookup/:assetNumber (scan; logs SCAN), GET/:id (timeline, photos, tickets), PATCH, DELETE, POST /:id/actions `{action,toLocation,sceneId,takeNumber,note,toStatus}`, GET /:id/timeline, GET /:id/alternatives, GET /:id/qr.png?size=, GET /:id/qr.svg |
 | fittings | GET (?status=&characterId=), POST `{characterId,scheduledAt,location,notes,costumeIds}`, GET/:id, PATCH, DELETE, POST /:id/items, PATCH /:id/items/:costumeId `{status,notes,alteration?}`, DELETE /:id/items/:costumeId |
@@ -207,7 +207,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 
 ## 6. Screens (web app, 27)
 
-Login · Projects · Production wizard (type, title, studio, budget band, dates, location, script upload, Character Confirmation) · **Dashboard** · Scan · Scenes · Scene detail (readiness, change assignment, takes, tickets) ·
+Login · Projects · Production wizard (type, title, studio, budget band, dates, location, script upload, Character Confirmation) · **Dashboard** · Scan · Scenes (SyncOnSet-style table: draft selector, inline add, Edit All, row menu Edit/Clone/Omit/Delete, Add & Remove Principals) · Scene detail (readiness, change assignment, takes, tickets) ·
 Characters · Actors (SyncOnSet-style table and Create Actor form) · Gallery · Character detail (changes, scenes, pieces, measurements, fittings, photos) · Change detail (pieces, wear notes, photos, scenes) ·
 Costumes (search/filter/paginate, create) · Costume detail (QR, actions, used-in, photos, records, timeline) ·
 Sink/Cleaning board (kanban + list) · Cleaning ticket (stepper, work actions, QC, replacement, history, stain photos) ·

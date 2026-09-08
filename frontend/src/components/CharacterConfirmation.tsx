@@ -9,7 +9,7 @@ export interface ConfirmRow { name: string; castNumber: string; deleted: boolean
  * Build the import payload from confirmation rows, SyncOnSet style:
  * - a deleted row is not a character (characterMap[name] = null);
  * - rows that share a number merge: into the existing character with that cast number if there is one,
- *   otherwise into the first row carrying that number;
+ *   otherwise into an existing character among those rows, otherwise into the first row carrying that number;
  * - a row whose number matches an existing character's cast number merges into that character.
  */
 export function buildCharacterImport(rows: ConfirmRow[], existing: ExistingCharacter[]) {
@@ -19,11 +19,16 @@ export function buildCharacterImport(rows: ConfirmRow[], existing: ExistingChara
   existing.forEach((e) => { if (e.castNumber != null) existingByNumber.set(e.castNumber, e); });
   const existingByName = new Map(existing.map((e) => [e.name.toLowerCase(), e]));
   const firstByNumber = new Map<number, string>();
-  for (const r of rows) {
+  // Rows that match an existing character claim their number first, so a new name never becomes the merge target of an existing one.
+  const isExisting = (r: ConfirmRow) => existingByName.has(r.name.toLowerCase());
+  const ordered = [...rows.filter(isExisting), ...rows.filter((r) => !isExisting(r))];
+  for (const r of ordered) {
     if (r.deleted) { characterMap[r.name] = null; continue; }
-    const n = r.castNumber.trim() === "" ? null : Number(r.castNumber);
+    // Only a non-negative integer counts as a cast number (the API rejects decimals); anything else = no number.
+    const t = r.castNumber.trim();
+    const n = /^\d+$/.test(t) ? Number.parseInt(t, 10) : null;
     const ex = existingByName.get(r.name.toLowerCase());
-    if (n === null || Number.isNaN(n)) { characterMap[r.name] = ex ? ex.name : r.name; continue; }
+    if (n === null) { characterMap[r.name] = ex ? ex.name : r.name; continue; }
     const byNum = existingByNumber.get(n);
     if (byNum) { characterMap[r.name] = byNum.name; continue; }
     const first = firstByNumber.get(n);
@@ -70,7 +75,7 @@ export function CharacterConfirmation({ rows, onChange, detected, existing }: { 
               const mergedInto = target && target.toLowerCase() !== r.name.toLowerCase() ? target : null;
               return (
                 <tr key={r.name} style={{ opacity: r.deleted ? 0.45 : 1 }}>
-                  <td>{r.deleted ? <span className="subtle">—</span> : <Input type="number" min={0} placeholder="CHAR #" value={r.castNumber} onChange={(e) => set(i, { castNumber: e.target.value })} style={{ width: 92, minHeight: 34, padding: "4px 8px" }} className="mono" />}</td>
+                  <td>{r.deleted ? <span className="subtle">—</span> : <Input type="number" min={0} step={1} placeholder="CHAR #" value={r.castNumber} onChange={(e) => set(i, { castNumber: e.target.value })} style={{ width: 92, minHeight: 34, padding: "4px 8px" }} className="mono" />}</td>
                   <td><span className="bold" style={{ textDecoration: r.deleted ? "line-through" : undefined }}>{r.name.toUpperCase()}</span>{ex && !r.deleted && <span className="subtle tiny"> · existing{ex.castNumber != null ? ` #${ex.castNumber}` : ""}</span>}{mergedInto && !r.deleted && <div className="tiny" style={{ color: "var(--info)" }}>→ merges into {mergedInto}</div>}</td>
                   <td className="hide-mobile num">{d?.scenes ?? ""}</td>
                   <td className="hide-mobile num">{d?.lines ?? ""}</td>

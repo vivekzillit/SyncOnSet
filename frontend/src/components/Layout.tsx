@@ -26,7 +26,12 @@ interface Tab { key: string; label: string; to?: string; items?: MenuItem[]; end
 function TabMenu({ tab, activePath }: { tab: Tab; activePath: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", h); document.addEventListener("keydown", k);
+    return () => { document.removeEventListener("mousedown", h); document.removeEventListener("keydown", k); };
+  }, []);
   const active = tab.items!.some((i) => (i.end ? activePath === i.to : activePath.startsWith(i.to)));
   const total = tab.items!.reduce((n, i) => n + (i.count || 0), 0);
   return (
@@ -53,7 +58,12 @@ function Shell() {
   const [pwOpen, setPwOpen] = useState(false);
   const [gear, setGear] = useState(false);
   const gearRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { const h = (e: MouseEvent) => { if (gearRef.current && !gearRef.current.contains(e.target as Node)) setGear(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (gearRef.current && !gearRef.current.contains(e.target as Node)) setGear(false); };
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") setGear(false); };
+    document.addEventListener("mousedown", h); document.addEventListener("keydown", k);
+    return () => { document.removeEventListener("mousedown", h); document.removeEventListener("keydown", k); };
+  }, []);
   const { data: notif } = useQuery({ queryKey: ["notifications", projectId, "unread"], queryFn: () => api<{ unread: number }>(p(projectId, "/notifications?unread=true")), refetchInterval: 30000 });
   const { data: dash } = useQuery({ queryKey: ["dashboard", projectId], queryFn: () => api<Dashboard>(p(projectId, "/dashboard")), refetchInterval: 60000 });
   const c = dash?.counts;
@@ -77,7 +87,7 @@ function Shell() {
             <div className="brand-mark">C&amp;S</div>
             <div className="truncate hide-mobile">
               <div className="bold truncate" style={{ lineHeight: 1.1 }}>{project?.name || "…"}</div>
-              <div className="tiny subtle">{project ? `${humanize((project as { type?: string }).type || "FEATURE")} · Day ${project.shootingDay}${project.currentLocation ? ` · ${project.currentLocation}` : ""}` : ""}</div>
+              <div className="tiny subtle">{project ? `${humanize(project.type || "FEATURE")} · Day ${project.shootingDay}${project.currentLocation ? ` · ${project.currentLocation}` : ""}` : ""}</div>
             </div>
             <div className="truncate bold small show-mobile">{project?.name}</div>
             <ChevronsUpDown size={14} color="var(--text-3)" className="hide-mobile" />

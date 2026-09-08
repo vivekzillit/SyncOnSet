@@ -93,7 +93,7 @@ export default function Actors() {
         <div className="form-grid">
           <Field label="Name"><div className="row gap-1"><Input value={f.first} onChange={(e) => setF({ ...f, first: e.target.value })} placeholder="First Name" autoFocus /><Input value={f.last} onChange={(e) => setF({ ...f, last: e.target.value })} placeholder="Last Name" /></div></Field>
           <Field label="Phone"><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="Phone" /></Field>
-          <Field label="Gender / Age"><div className="row gap-1"><Select value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })} options={(meta as unknown as { genders?: string[] } | null)?.genders || ["FEMALE", "MALE", "NON_BINARY", "OTHER"]} placeholder="Select" /><Input type="number" value={f.age} onChange={(e) => setF({ ...f, age: e.target.value })} placeholder="Age" style={{ width: 90 }} /></div></Field>
+          <Field label="Gender / Age"><div className="row gap-1"><Select value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })} options={meta?.genders || ["FEMALE", "MALE", "NON_BINARY", "OTHER"]} placeholder="Select" /><Input type="number" value={f.age} onChange={(e) => setF({ ...f, age: e.target.value })} placeholder="Age" style={{ width: 90 }} /></div></Field>
           <Field label="Phone 2"><Input value={f.phone2} onChange={(e) => setF({ ...f, phone2: e.target.value })} placeholder="Phone 2" /></Field>
           <Field label="Characters" help="Tick every character this actor plays">
             <div className="card flat pad-0" style={{ maxHeight: 140, overflowY: "auto", padding: 6 }}>

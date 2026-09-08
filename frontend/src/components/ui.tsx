@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { X, Search } from "lucide-react";
 import { humanize, tone } from "@/lib/format";
 
@@ -183,7 +183,7 @@ export function useToast() {
 }
 
 /** Button that asks for confirmation on first click. */
-export function ConfirmButton({ onConfirm, children, className = "btn", confirmText = "Confirm?" }: { onConfirm: () => void; children: ReactNode; className?: string; confirmText?: string }) {
+export function ConfirmButton({ onConfirm, children, className = "btn", confirmText = "Confirm?", ...rest }: { onConfirm: () => void; children: ReactNode; className?: string; confirmText?: string } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "className" | "children" | "type">) {
   const [arm, setArm] = useState(false);
   useEffect(() => {
     if (!arm) return;
@@ -191,7 +191,7 @@ export function ConfirmButton({ onConfirm, children, className = "btn", confirmT
     return () => clearTimeout(t);
   }, [arm]);
   return (
-    <button type="button" className={`${className} ${arm ? "btn-danger" : ""}`} onClick={() => (arm ? (setArm(false), onConfirm()) : setArm(true))}>
+    <button type="button" {...rest} className={`${className} ${arm ? "btn-danger" : ""}`} onClick={() => (arm ? (setArm(false), onConfirm()) : setArm(true))}>
       {arm ? confirmText : children}
     </button>
   );

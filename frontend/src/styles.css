@@ -109,10 +109,13 @@ p { margin: 0; }
 .btn-primary:hover { background: #2a2c36; }
 .btn-accent { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .btn-accent:hover { background: #f5c56a; }
-.btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
-.btn-danger:hover { background: #b92f24; }
 .btn-ghost { background: transparent; border-color: transparent; }
 .btn-ghost:hover { background: rgba(0,0,0,0.05); }
+/* Declared after .btn-ghost so an armed ConfirmButton on a ghost base (row menus) is clearly red. */
+.btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn-danger:hover { background: #b92f24; }
+.btn-blue { background: #2563eb; color: #fff; border-color: #2563eb; }
+.btn-blue:hover { background: #1d4ed8; }
 .btn-sm { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
 .btn-lg { padding: 13px 20px; font-size: 16px; border-radius: 12px; }
 .btn-block { width: 100%; }
@@ -306,3 +309,4 @@ a.tab.active, .tab.active > button { color: var(--text); border-bottom-color: va
 .gsearch-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: none; border: none; cursor: pointer; text-align: left; width: 100%; font-size: 14px; }
 .gsearch-item:hover { background: var(--surface-2); }
 @media (max-width: 900px) { .topnav-row1 { padding: 8px 14px; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

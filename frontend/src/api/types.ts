@@ -4,7 +4,7 @@ export type Role =
 
 export interface User { id: string; name: string; email: string; role: Role; phone?: string | null; isActive?: boolean }
 export interface ProjectSummary { id: string; name: string; code: string; status: string; role?: Role; myRole?: Role; shootingDay?: number; currentLocation?: string | null; currency?: string; _count?: Record<string, number> }
-export interface Project extends ProjectSummary { startDate?: string | null; endDate?: string | null; notes?: string | null; currency: string }
+export interface Project extends ProjectSummary { startDate?: string | null; endDate?: string | null; notes?: string | null; currency: string; type?: string; studio?: string | null; budgetBand?: string | null; country?: string | null; city?: string | null }
 
 export interface Meta {
   roles: Role[]; financeRoles: Role[]; managerRoles: Role[]; opsRoles: Role[];
@@ -15,10 +15,16 @@ export interface Meta {
   damageStatuses: string[]; damageResponsible: string[]; missingStatuses: string[]; rentalStatuses: string[]; expenseCategories: string[];
   photoEntityTypes: string[]; photoKinds: string[]; notificationTypes: string[];
   cueKinds?: string[]; aiEnabled?: boolean; aiModel?: string | null; cuesEnabled?: boolean; cueEngine?: "ai" | "rules";
+  projectTypes?: string[]; budgetBands?: string[]; budgetBandLabels?: Record<string, string>; genders?: string[];
 }
 
 export interface Photo { id: string; entityType: string; entityId: string; kind: string; url: string; caption?: string | null; createdAt: string }
-export interface Actor { id: string; name: string; phone?: string | null; email?: string | null; agency?: string | null; measurements: Record<string, string | number>; notes?: string | null; characters?: { id: string; name: string; type?: string }[] }
+export interface Actor {
+  id: string; name: string; phone?: string | null; email?: string | null; agency?: string | null; measurements: Record<string, string | number>; notes?: string | null;
+  gender?: string | null; age?: number | null; phone2?: string | null; email2?: string | null; startWorkDate?: string | null;
+  nextFittingAt?: string | null; fittingComment?: string | null; nextFitting?: string | null; nextFittingId?: string | null;
+  characters?: { id: string; name: string; type?: string }[];
+}
 export interface Character { id: string; name: string; type: string; castNumber?: number | null; age?: number | null; description?: string | null; notes?: string | null; actorId?: string | null; actor?: { id: string; name: string } | null; _count?: { scenes: number; changes: number; costumes: number } }
 export interface Costume {
   id: string; assetNumber: string; name: string; category: string; type?: string | null; color?: string | null; brand?: string | null; size?: string | null; fabric?: string | null;

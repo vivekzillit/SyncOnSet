@@ -47,7 +47,7 @@ scenesRouter.get(
     const scenes = await prisma.scene.findMany({
       where,
       orderBy: [{ sortOrder: "asc" }],
-      include: { characters: { include: { character: { select: { id: true, name: true } }, change: { select: { id: true, changeNumber: true, name: true, items: { select: { costume: { select: { status: true } } } } } } } } },
+      include: { characters: { include: { character: { select: { id: true, name: true, castNumber: true } }, change: { select: { id: true, changeNumber: true, name: true, items: { select: { costume: { select: { status: true } } } } } } } } },
     });
     const withReadiness = scenes.map((s) => {
       const statuses = s.characters.flatMap((sc) => sc.change?.items.map((i) => i.costume.status) || []);
@@ -69,8 +69,9 @@ scenesRouter.post(
   "/",
   requireRole(MANAGER_ROLES),
   wrap(async (req, res) => {
-    const data = parse(schema, req.body);
-    const scene = await prisma.scene.create({ data: { ...data, projectId: req.projectId!, sortOrder: data.sortOrder ?? sceneSort(data.number) } });
+    // `revision` lets the inline Add row file a new scene under the draft currently being viewed.
+    const { revision, ...data } = parse(schema.extend({ revision: z.string().trim().max(80).optional().nullable() }), req.body);
+    const scene = await prisma.scene.create({ data: { ...data, projectId: req.projectId!, sortOrder: data.sortOrder ?? sceneSort(data.number), revision: revision || null, revisedAt: revision ? new Date() : null } });
     await audit(req.user, req.projectId!, "SCENE_CREATE", "SCENE", scene.id);
     res.status(201).json(scene);
   }),
@@ -259,6 +260,49 @@ scenesRouter.patch(
     const scene = await prisma.scene.update({ where: { id: existing.id }, data });
     await audit(req.user, req.projectId!, "SCENE_UPDATE", "SCENE", scene.id, data as Record<string, unknown>);
     res.json(scene);
+  }),
+);
+
+/** Clone a scene: same slugline data, number = original + "A" (next free letter), sortOrder + 1, status PLANNED, same characters. */
+scenesRouter.post(
+  "/:id/clone",
+  requireRole(MANAGER_ROLES),
+  wrap(async (req, res) => {
+    const projectId = req.projectId!;
+    const original = await prisma.scene.findFirst({ where: { id: req.params.id, projectId }, include: { characters: true } });
+    if (!original) throw notFound("Scene");
+    const base = original.number.replace(/[A-Za-z]+$/, "") || original.number;
+    const taken = new Set((await prisma.scene.findMany({ where: { projectId }, select: { number: true } })).map((s) => s.number.toUpperCase()));
+    let number: string | null = null;
+    for (let i = 0; i < 26; i += 1) {
+      const candidate = `${base}${String.fromCharCode(65 + i)}`;
+      if (!taken.has(candidate.toUpperCase())) {
+        number = candidate;
+        break;
+      }
+    }
+    if (!number) throw badRequest(`No free scene number left for clones of scene ${original.number}`);
+    const scene = await prisma.scene.create({
+      data: {
+        projectId,
+        number,
+        sortOrder: original.sortOrder + 1,
+        name: original.name,
+        location: original.location,
+        intExt: original.intExt,
+        timeOfDay: original.timeOfDay,
+        scriptDay: original.scriptDay,
+        synopsis: original.synopsis,
+        pages: original.pages,
+        scriptText: original.scriptText,
+        revision: original.revision,
+        status: "PLANNED",
+        characters: { create: original.characters.map((sc) => ({ characterId: sc.characterId, changeId: sc.changeId, notes: sc.notes })) },
+      },
+      include: { characters: { include: { character: { select: { id: true, name: true, castNumber: true } }, change: { select: { id: true, changeNumber: true, name: true } } } } },
+    });
+    await audit(req.user, projectId, "SCENE_CLONE", "SCENE", scene.id, { from: original.id, fromNumber: original.number, number });
+    res.status(201).json({ ...scene, hasScript: !!scene.scriptText });
   }),
 );
 
