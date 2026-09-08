@@ -6,7 +6,7 @@ import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, humanize, todayISO } from "@/lib/format";
-import type { Character, ProductionDocument, Scene } from "@/api/types";
+import type { Character, Scene } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ScriptUploadModal } from "@/components/ScriptUpload";
 import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
@@ -52,7 +52,6 @@ export default function Scenes() {
 
   const { data, isLoading } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
-  const { data: docs } = useQuery({ queryKey: ["schedule-docs", projectId], queryFn: () => api<ProductionDocument[]>(p(projectId, "/schedule/documents")) });
   const charById = useMemo(() => new Map((characters || []).map((c) => [c.id, c])), [characters]);
   const sceneById = useMemo(() => new Map((data || []).map((s) => [s.id, s])), [data]);
   const locations = useMemo(() => Array.from(new Set((data || []).map((s) => (s.location || "").trim()).filter(Boolean))).sort(), [data]);
@@ -60,14 +59,6 @@ export default function Scenes() {
   const latestRevision = useMemo(() => (data || []).filter((s) => s.revision).sort((a, b) => (b.revisedAt || "").localeCompare(a.revisedAt || ""))[0]?.revision || "", [data]);
 
   const today = todayISO();
-  // Uploaded call sheets for the day(s) in view plus the latest schedule, linked above the table.
-  const docsToShow = useMemo(() => {
-    if (when !== "today" && when !== "upcoming") return [] as ProductionDocument[];
-    const all = docs || [];
-    const latestSchedule = all.find((d) => d.kind === "SCHEDULE");
-    const sheets = all.filter((d) => d.kind === "CALLSHEET" && d.date && (when === "today" ? dateKey(d.date) === today : dateKey(d.date) >= today));
-    return [...sheets, ...(latestSchedule ? [latestSchedule] : [])];
-  }, [docs, when, today]);
   const list = useMemo(() => {
     // A row being edited stays visible whatever the filters say, so an edit can never be hidden (and silently lost) by a filter change.
     const pinned = (s: Scene) => !!drafts[s.id];
@@ -197,16 +188,6 @@ export default function Scenes() {
           </div>
         )}
       </div>
-
-      {docsToShow.length > 0 && (
-        <div className="row gap-1 wrap mb-2" aria-label="Uploaded documents">
-          {docsToShow.map((d) => (
-            <a key={d.id} className="chip" href={d.url} target="_blank" rel="noreferrer" title={`${d.fileName} · uploaded ${fmtDate(d.createdAt)}${d.uploadedBy ? ` by ${d.uploadedBy}` : ""}`}>
-              {d.kind === "CALLSHEET" ? <ClipboardList size={14} /> : <CalendarDays size={14} />} {d.kind === "CALLSHEET" ? "Callsheet" : "Schedule"}{d.date ? ` · ${fmtDate(d.date, SHOOT_DATE)}` : ""}{d.dayNumber != null ? ` · Day ${d.dayNumber}` : ""}
-            </a>
-          ))}
-        </div>
-      )}
 
       <datalist id={LOCATION_LIST_ID}>{locations.map((l) => <option key={l} value={l} />)}</datalist>
 

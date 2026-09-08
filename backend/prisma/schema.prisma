@@ -60,7 +60,6 @@ model Project {
   alterations   AlterationRequest[]
   continuity    ContinuityRecord[]
   photos        Photo[]
-  documents     ProductionDocument[]
   damages       DamageReport[]
   missing       MissingItem[]
   vendors       Vendor[]
@@ -421,25 +420,6 @@ model ContinuityRecord {
   change    CostumeChange? @relation(fields: [changeId], references: [id], onDelete: SetNull)
 
   @@unique([sceneId, characterId, takeNumber])
-}
-
-// Uploaded shooting schedule or call sheet: kept for reference and read to give scenes their shoot date
-model ProductionDocument {
-  id         String    @id @default(cuid())
-  projectId  String
-  kind       String    // SCHEDULE | CALLSHEET
-  fileName   String
-  url        String
-  date       DateTime? // call sheet shoot date, or the first shoot day of a schedule
-  dayNumber  Int?      // "Day 5 of 30"
-  scenes     Int       @default(0) // scenes given a date when it was applied
-  appliedAt  DateTime?
-  uploadedBy String?
-  createdAt  DateTime  @default(now())
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([projectId, kind, date])
 }
 
 model Photo {

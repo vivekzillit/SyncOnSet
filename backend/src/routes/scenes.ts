@@ -1,6 +1,5 @@
 import { Router } from "express";
 import multer from "multer";
-import pdfParse from "pdf-parse";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { wrap, notFound, badRequest } from "../lib/errors";
@@ -10,6 +9,7 @@ import { INT_EXT, MANAGER_ROLES, SCENE_STATUSES, TIMES_OF_DAY } from "../lib/con
 import { audit } from "../services/audit";
 import { sceneReadiness } from "../services/readiness";
 import { detectFormat, parseScript } from "../services/scriptParser";
+import { readPdf } from "../services/scheduleParser";
 import { aiEnabled, extractAndStoreCues } from "../services/costumeCues";
 
 export const scenesRouter = Router({ mergeParams: true });
@@ -162,9 +162,7 @@ scenesRouter.post(
     const format = detectFormat(req.file.originalname || "", req.file.mimetype || "", head);
     let content: string;
     if (format === "pdf") {
-      const pdf = await pdfParse(req.file.buffer);
-      content = pdf.text || "";
-      if (!content.trim()) throw badRequest("No text could be extracted from this PDF. If it is a scanned script, run OCR first or export the screenplay as PDF from your writing software.");
+      content = await readPdf(req.file.buffer, "script");
     } else {
       content = req.file.buffer.toString("utf8");
     }

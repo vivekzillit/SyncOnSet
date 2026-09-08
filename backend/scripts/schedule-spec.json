@@ -1,56 +1,509 @@
 [
-  { "name": "Movie Magic one-liner: end-of-day banners close the strips above", "kind": "SCHEDULE",
+  {
+    "name": "Movie Magic one-liner: end-of-day banners close the strips above",
+    "kind": "SCHEDULE",
     "text": "Shooting Schedule - \"Monsoon Wedding\" - White Draft\nScs. 12  INT. RAJ'S OFFICE - DAY   1 3/8 pgs   D1   1\nRaj gets the call\nScs. 24, 25  INT/EXT. RESTAURANT - NIGHT  2 pgs  D3  1, 2, 5\nDinner and the rain\nEnd of Day 1 -- Mon, Oct 12, 2026 -- 3 3/8 Total Pages\nScs. 32  INT. HOSPITAL CORRIDOR - NIGHT  4/8 pgs  D4  1, 3\nEnd of Day 2 -- Tue, Oct 13, 2026 -- 4/8 Total Pages\n",
-    "expect": { "days": { "2026-10-12": ["12", "24", "25"], "2026-10-13": ["32"] } } },
-  { "name": "StudioBinder style: day headers first", "kind": "SCHEDULE",
-    "text": "Day 1 — Monday, October 12, 2026\nScene 12 — INT. RAJ'S OFFICE — DAY — 1 3/8 pages\nScene 24 — INT. RESTAURANT — NIGHT\nDay 2 — Tuesday, October 13, 2026\nScene 32 — INT. HOSPITAL CORRIDOR — NIGHT\n",
-    "expect": { "days": { "2026-10-12": ["12", "24"], "2026-10-13": ["32"] }, "dayNumbers": { "2026-10-12": 1, "2026-10-13": 2 } } },
-  { "name": "Numeric day/month dates, Sc lists with & and repeated Sc", "kind": "SCHEDULE",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12",
+          "24",
+          "25"
+        ],
+        "2026-10-13": [
+          "32"
+        ]
+      }
+    }
+  },
+  {
+    "name": "StudioBinder style: day headers first",
+    "kind": "SCHEDULE",
+    "text": "Day 1 \u2014 Monday, October 12, 2026\nScene 12 \u2014 INT. RAJ'S OFFICE \u2014 DAY \u2014 1 3/8 pages\nScene 24 \u2014 INT. RESTAURANT \u2014 NIGHT\nDay 2 \u2014 Tuesday, October 13, 2026\nScene 32 \u2014 INT. HOSPITAL CORRIDOR \u2014 NIGHT\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12",
+          "24"
+        ],
+        "2026-10-13": [
+          "32"
+        ]
+      },
+      "dayNumbers": {
+        "2026-10-12": 1,
+        "2026-10-13": 2
+      }
+    }
+  },
+  {
+    "name": "Numeric day/month dates, Sc lists with & and repeated Sc",
+    "kind": "SCHEDULE",
     "text": "SHOOT DAY 1 : 12/10/2026\nSc 12, Sc 24 & 25\nSHOOT DAY 2 : 13/10/2026\nSc: 32\n",
-    "expect": { "days": { "2026-10-12": ["12", "24", "25"], "2026-10-13": ["32"] }, "warningsInclude": ["day/month"] } },
-  { "name": "Call sheet: header day, revision stamp ignored, strips, advance schedule", "kind": "CALLSHEET",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12",
+          "24",
+          "25"
+        ],
+        "2026-10-13": [
+          "32"
+        ]
+      },
+      "warningsInclude": [
+        "day/month"
+      ]
+    }
+  },
+  {
+    "name": "Call sheet: header day, revision stamp ignored, strips, advance schedule",
+    "kind": "CALLSHEET",
     "text": "CALL SHEET\nMonsoon Wedding S2 - Shoot Day 5 of 30\nRevised: 11/10/2026\nMonday, 12 October 2026\nCrew call 07:00   Sunrise 06:12   Sunset 18:05\nSCENES\n12  INT. RAJ'S OFFICE  DAY  D1  1 3/8  1\n24A INT. RESTAURANT  NIGHT  D3  1  1,2,5\nCast: 1 Raj  2 Priya  5 Waiter\nADVANCE SCHEDULE - Tuesday 13 October 2026\nSc 32, 33\n",
-    "expect": { "date": "2026-10-12", "dayNumber": 5, "days": { "2026-10-12": ["12", "24A"], "2026-10-13": ["32", "33"] } } },
-  { "name": "Rows that carry their own ISO date", "kind": "SCHEDULE",
+    "expect": {
+      "date": "2026-10-12",
+      "dayNumber": 5,
+      "days": {
+        "2026-10-12": [
+          "12",
+          "24A"
+        ],
+        "2026-10-13": [
+          "32",
+          "33"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Rows that carry their own ISO date",
+    "kind": "SCHEDULE",
     "text": "Scene 12 - 2026-10-12\nScene 24 - 2026-10-12\nScene 32 - 2026-10-13\n",
-    "expect": { "days": { "2026-10-12": ["12", "24"], "2026-10-13": ["32"] } } },
-  { "name": "CSV with Shoot Day, Date and quoted scene list", "kind": "SCHEDULE", "csv": true,
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12",
+          "24"
+        ],
+        "2026-10-13": [
+          "32"
+        ]
+      }
+    }
+  },
+  {
+    "name": "CSV with Shoot Day, Date and quoted scene list",
+    "kind": "SCHEDULE",
+    "csv": true,
     "text": "Shoot Day,Date,Scenes,Location\n1,12-Oct-2026,\"12, 24, 25\",Office\n2,13-Oct-2026,32,Hospital\n",
-    "expect": { "days": { "2026-10-12": ["12", "24", "25"], "2026-10-13": ["32"] }, "dayNumbers": { "2026-10-12": 1, "2026-10-13": 2 } } },
-  { "name": "CSV one row per scene, blank date continues the day above", "kind": "SCHEDULE", "csv": true,
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12",
+          "24",
+          "25"
+        ],
+        "2026-10-13": [
+          "32"
+        ]
+      },
+      "dayNumbers": {
+        "2026-10-12": 1,
+        "2026-10-13": 2
+      }
+    }
+  },
+  {
+    "name": "CSV one row per scene, blank date continues the day above",
+    "kind": "SCHEDULE",
+    "csv": true,
     "text": "Date,Scene\n12/10/2026,12\n,24\n13/10/2026,32\n",
-    "expect": { "days": { "2026-10-12": ["12", "24"], "2026-10-13": ["32"] } } },
-  { "name": "Scenes with no date stay unscheduled with a warning", "kind": "SCHEDULE",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12",
+          "24"
+        ],
+        "2026-10-13": [
+          "32"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Scenes with no date stay unscheduled with a warning",
+    "kind": "SCHEDULE",
     "text": "Scs 5, 6\n",
-    "expect": { "days": { "": ["5", "6"] }, "warningsInclude": ["no shoot date"] } },
-  { "name": "Day header on one line, its date on the next", "kind": "SCHEDULE",
+    "expect": {
+      "days": {
+        "": [
+          "5",
+          "6"
+        ]
+      },
+      "warningsInclude": [
+        "no shoot date"
+      ]
+    }
+  },
+  {
+    "name": "Day header on one line, its date on the next",
+    "kind": "SCHEDULE",
     "text": "Day 3\nWed 14 Oct 2026\n12 INT. OFFICE - DAY\n",
-    "expect": { "days": { "2026-10-14": ["12"] }, "dayNumbers": { "2026-10-14": 3 } } },
-  { "name": "A 'Total scenes: 24' summary line is not a scene", "kind": "SCHEDULE",
+    "expect": {
+      "days": {
+        "2026-10-14": [
+          "12"
+        ]
+      },
+      "dayNumbers": {
+        "2026-10-14": 3
+      }
+    }
+  },
+  {
+    "name": "A 'Total scenes: 24' summary line is not a scene",
+    "kind": "SCHEDULE",
     "text": "Day 1 - 12 Oct 2026\nSc 12\nTotal scenes: 24\n",
-    "expect": { "days": { "2026-10-12": ["12"] } } },
-  { "name": "Leading zeros and letter suffixes normalise", "kind": "SCHEDULE",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Leading zeros and letter suffixes normalise",
+    "kind": "SCHEDULE",
     "text": "Monday 12 Oct 2026\nSc 012A, 007\n",
-    "expect": { "days": { "2026-10-12": ["12A", "7"] } } },
-  { "name": "Movie Magic with a Day header and an end banner", "kind": "SCHEDULE",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12A",
+          "7"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Movie Magic with a Day header and an end banner",
+    "kind": "SCHEDULE",
     "text": "Day 1\nScs. 12 INT. OFFICE - DAY\nEnd Day 1 -- Mon, Oct 12, 2026\n",
-    "expect": { "days": { "2026-10-12": ["12"] }, "dayNumbers": { "2026-10-12": 1 } } },
-  { "name": "Two-digit year", "kind": "SCHEDULE",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ]
+      },
+      "dayNumbers": {
+        "2026-10-12": 1
+      }
+    }
+  },
+  {
+    "name": "Two-digit year",
+    "kind": "SCHEDULE",
     "text": "Sc 7 - 12/10/26\n",
-    "expect": { "days": { "2026-10-12": ["7"] } } },
-  { "name": "Call sheet with the date before the day line", "kind": "CALLSHEET",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "7"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Call sheet with the date before the day line",
+    "kind": "CALLSHEET",
     "text": "CALL SHEET  Monday 12 Oct 2026\nDay 5 of 30\nSc 12\n",
-    "expect": { "date": "2026-10-12", "dayNumber": 5, "days": { "2026-10-12": ["12"] } } },
-  { "name": "Call sheet: scenes before any date get the sheet date", "kind": "CALLSHEET",
+    "expect": {
+      "date": "2026-10-12",
+      "dayNumber": 5,
+      "days": {
+        "2026-10-12": [
+          "12"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Call sheet: scenes before any date get the sheet date",
+    "kind": "CALLSHEET",
     "text": "Sc 3, 4\nUnit call 06:30\nDate: 12.10.2026\n",
-    "expect": { "date": "2026-10-12", "days": { "2026-10-12": ["3", "4"] } } },
-  { "name": "Month-day-year with weekday and ordinal", "kind": "SCHEDULE",
+    "expect": {
+      "date": "2026-10-12",
+      "days": {
+        "2026-10-12": [
+          "3",
+          "4"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Month-day-year with weekday and ordinal",
+    "kind": "SCHEDULE",
     "text": "Tuesday, October 13th, 2026\nScenes 40, 41 and 42B\n",
-    "expect": { "days": { "2026-10-13": ["40", "41", "42B"] } } },
-  { "name": "A version number and a time are not dates", "kind": "SCHEDULE",
+    "expect": {
+      "days": {
+        "2026-10-13": [
+          "40",
+          "41",
+          "42B"
+        ]
+      }
+    }
+  },
+  {
+    "name": "A version number and a time are not dates",
+    "kind": "SCHEDULE",
     "text": "Schedule v1.2.3\nDay 1 - 12 Oct 2026 - call 07:30\nSc 12\n",
-    "expect": { "days": { "2026-10-12": ["12"] } } },
-  { "name": "Missing year assumes the production year", "kind": "SCHEDULE", "defaultYear": 2027,
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Missing year assumes the production year",
+    "kind": "SCHEDULE",
+    "defaultYear": 2027,
     "text": "Mon 5 Jan\nSc 1\n",
-    "expect": { "days": { "2027-01-05": ["1"] }, "warningsInclude": ["2027 was assumed"] } }
+    "expect": {
+      "days": {
+        "2027-01-05": [
+          "1"
+        ]
+      },
+      "warningsInclude": [
+        "2027 was assumed"
+      ]
+    }
+  },
+  {
+    "name": "Indian call sheet: advance block is tomorrow, continuity notes are not scenes",
+    "kind": "CALLSHEET",
+    "text": "CALL SHEET - DHOOP CHHAON\nShooting Day: 12   Date: 12/10/2026   Day: Monday\nLocation: Film City, Goregaon\nScene No. 12, 14A & 17 - INT. VIKRAM'S OFFICE - DAY\nSc 22 (INT. BUNGALOW - NIGHT)\nSc 23 (EXT. TERRACE - NIGHT)\nCOSTUME / CONTINUITY NOTES: Sc 12 grey kurta, continuity from Sc 11.\nAdvance for Tomorrow: Sc 30, 31 - EXT. MARINE DRIVE - DAWN\n",
+    "expect": {
+      "date": "2026-10-12",
+      "dayNumber": 12,
+      "days": {
+        "2026-10-12": [
+          "12",
+          "14A",
+          "17",
+          "22",
+          "23"
+        ],
+        "2026-10-13": [
+          "30",
+          "31"
+        ]
+      },
+      "warningsInclude": [
+        "day after the call sheet",
+        "continuity or costume note"
+      ]
+    }
+  },
+  {
+    "name": "Call sheet: Date and Day on separate lines, advance line carries its own date",
+    "kind": "CALLSHEET",
+    "text": "CALL SHEET\nDate: 12/10/2026\nDay: Monday\nShooting Day: 12\nSc 12, 14A, 17\nSc 22\nAdvance Schedule for Tuesday 13/10/2026: Sc 30, 31\n",
+    "expect": {
+      "date": "2026-10-12",
+      "dayNumber": 12,
+      "days": {
+        "2026-10-12": [
+          "12",
+          "14A",
+          "17",
+          "22"
+        ],
+        "2026-10-13": [
+          "30",
+          "31"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Excel CSV with title rows and a BOM above the header",
+    "kind": "SCHEDULE",
+    "text": "\ufeffDHOOP CHHAON - SHOOTING SCHEDULE (Block 1),,,,\nPrepared by: Production Office,,,,\n,,,,\nShoot Day,Date,Scenes,Location,Cast\n1,12-10-2026,\"12, 14A, 17\",Film City,\"1, 2\"\n2,13-10-2026,\"30, 31\",Marine Drive,1\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12",
+          "14A",
+          "17"
+        ],
+        "2026-10-13": [
+          "30",
+          "31"
+        ]
+      },
+      "dayNumbers": {
+        "2026-10-12": 1,
+        "2026-10-13": 2
+      }
+    }
+  },
+  {
+    "name": "CSV scene range cell 55-57 expands",
+    "kind": "SCHEDULE",
+    "csv": true,
+    "text": "Shoot Day,Date,Scenes\n5,16-10-2026,55-57\n6,17-10-2026,58 & 59\n",
+    "expect": {
+      "days": {
+        "2026-10-16": [
+          "55",
+          "56",
+          "57"
+        ],
+        "2026-10-17": [
+          "58",
+          "59"
+        ]
+      }
+    }
+  },
+  {
+    "name": "One-liner: Scn, SC-, and ranges written both ways",
+    "kind": "SCHEDULE",
+    "text": "Day 1 - Mon 12 Oct 2026\nScn 12  INT. OFFICE - DAY\nSC-14A  INT. OFFICE - DAY\nSc. 55 to 57  EXT. ROAD - DAY\nSc 58-59  INT. CAR - NIGHT\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12",
+          "14A",
+          "55",
+          "56",
+          "57",
+          "58",
+          "59"
+        ]
+      },
+      "dayNumbers": {
+        "2026-10-12": 1
+      }
+    }
+  },
+  {
+    "name": "WhatsApp message: Tomorrow 13/10 and Day after (14/10), continuity ref ignored",
+    "kind": "CALLSHEET",
+    "text": "Tomorrow 13/10: Sc 5, 6 at Bandra. Day 4.\nDay after (14/10) we do Sc 9, 10, 11A.\nPriya wears the same saree as Sc 4.\n",
+    "expect": {
+      "days": {
+        "2026-10-13": [
+          "5",
+          "6"
+        ],
+        "2026-10-14": [
+          "9",
+          "10",
+          "11A"
+        ]
+      },
+      "warningsInclude": [
+        "no year"
+      ]
+    }
+  },
+  {
+    "name": "WhatsApp chat export: the message timestamp is not the shoot date",
+    "kind": "CALLSHEET",
+    "text": "12/10/26, 9:47 pm - Priyanka AD: Tomorrow 13/10: Sc 5, 6 at Bandra\n12/10/26, 9:48 pm - Priyanka AD: Day after (14/10): Sc 9, 10\n",
+    "expect": {
+      "days": {
+        "2026-10-13": [
+          "5",
+          "6"
+        ],
+        "2026-10-14": [
+          "9",
+          "10"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Apostrophe year: 12th Oct'26",
+    "kind": "CALLSHEET",
+    "text": "Date: 12th Oct'26 (Monday)   Shooting Day: 12\nSc 12, 14A\n",
+    "expect": {
+      "date": "2026-10-12",
+      "dayNumber": 12,
+      "days": {
+        "2026-10-12": [
+          "12",
+          "14A"
+        ]
+      }
+    }
+  },
+  {
+    "name": "A schedule's advance-free lines are unaffected by the advance rule",
+    "kind": "SCHEDULE",
+    "text": "Day 1 - 12 Oct 2026\nSc 12\nDay 2 - 13 Oct 2026\nSc 24\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ],
+        "2026-10-13": [
+          "24"
+        ]
+      },
+      "dayNumbers": {
+        "2026-10-12": 1,
+        "2026-10-13": 2
+      }
+    }
+  },
+  {
+    "name": "Page fractions on a day line are never read as dates",
+    "kind": "SCHEDULE",
+    "text": "End of Day 1 -- Mon, Oct 12, 2026 -- 3 3/8 Total Pages\n",
+    "expect": {
+      "days": {}
+    }
+  },
+  {
+    "name": "Shoot Day 12/10/2026 is a date, not day number 12",
+    "kind": "SCHEDULE",
+    "text": "Shoot Day 12/10/2026\nSc 12\n",
+    "expect": {
+      "days": {
+        "2026-10-12": [
+          "12"
+        ]
+      },
+      "dayNumbers": {
+        "2026-10-12": null
+      }
+    }
+  },
+  {
+    "name": "Day No.: 5 and Day - 6 read as day numbers",
+    "kind": "SCHEDULE",
+    "text": "Day No.: 5 - 16 Oct 2026\nSc 55\nDay - 6 - 17 Oct 2026\nSc 58\n",
+    "expect": {
+      "days": {
+        "2026-10-16": [
+          "55"
+        ],
+        "2026-10-17": [
+          "58"
+        ]
+      },
+      "dayNumbers": {
+        "2026-10-16": 5,
+        "2026-10-17": 6
+      }
+    }
+  }
 ]
