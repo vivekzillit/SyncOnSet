@@ -1,0 +1,30 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+# One web service running the Docker image, with a persistent disk for the SQLite DB and photo uploads.
+services:
+  - type: web
+    name: sink-on-set
+    runtime: docker
+    plan: starter            # persistent disks need a paid plan; on "free" the data resets on each deploy
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: sink-on-set-data
+      mountPath: /data
+      sizeGB: 2
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATA_DIR
+        value: /data
+      - key: DATABASE_URL
+        value: file:/data/sink.db
+      - key: UPLOAD_DIR
+        value: /data/uploads
+      - key: SEED_DEMO
+        value: "true"        # set to "false" once the real production data is in
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: PORT
+        value: "4000"

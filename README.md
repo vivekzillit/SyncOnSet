@@ -128,6 +128,14 @@ GET|POST /api/projects                     GET /api/projects/:id/dashboard
 See [docs/TECHNICAL_SPEC.md](docs/TECHNICAL_SPEC.md) for the complete reference, data model, state machines,
 permission matrix, screen list, iOS/offline architecture and the sprint roadmap.
 
+## Deploy
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/vivekzillit/SyncOnSet)
+
+The app ships as a single Docker image (API + built web app) with a `/data` volume for the database and photos.
+`render.yaml` and `fly.toml` are included, and every push to `main` publishes `ghcr.io/vivekzillit/synconset:latest`.
+See [docs/DEPLOY.md](docs/DEPLOY.md) for Render, Fly.io, plain Docker and the PostgreSQL switch.
+
 ## Roadmap
 
 - **Phase 1 (this repo):** everything listed above — enough to trial on a real production.

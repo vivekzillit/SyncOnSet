@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install
+        run: npm --prefix backend ci && npm --prefix frontend ci
+      - name: Backend typecheck & build
+        run: npm --prefix backend run db:generate && npm --prefix backend run typecheck && npm --prefix backend run build
+      - name: Backend smoke test (schema + seed + health)
+        working-directory: backend
+        env:
+          DATABASE_URL: file:./ci.db
+          JWT_SECRET: ci-secret
+          PORT: 4010
+        run: |
+          npx prisma db push --skip-generate
+          node dist/prisma/seed.js
+          (node dist/src/index.js &) ; sleep 3
+          curl -sf http://localhost:4010/api/health
+          curl -sf -X POST http://localhost:4010/api/auth/login -H 'content-type: application/json' -d '{"email":"admin@sinkonset.app","password":"password123"}' | grep -q token
+      - name: Frontend typecheck & build
+        run: npm --prefix frontend run build
