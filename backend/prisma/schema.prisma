@@ -99,6 +99,7 @@ model Character {
   actorId     String?
   name        String
   type        String  @default("SUPPORTING") // LEAD | SUPPORTING | DAY_PLAYER | BACKGROUND
+  castNumber  Int?    // cast/character number used on call sheets and sides
   age         Int?
   description String?
   notes       String?
@@ -131,7 +132,9 @@ model Scene {
   pages     String?   // e.g. "2 3/8"
   shootDate  DateTime?
   status     String    @default("PLANNED") // PLANNED | SCHEDULED | SHOOTING | SHOT | OMITTED
-  scriptText String?   // scene text captured from the uploaded screenplay (used for AI costume cues)
+  scriptText String?   // scene text captured from the uploaded screenplay (used for AI costume cues and sides)
+  revision   String?   // revision name of the upload that last added or changed this scene (e.g. "Blue 2026-09-08")
+  revisedAt  DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 

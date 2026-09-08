@@ -12,6 +12,7 @@ export const charactersRouter = Router({ mergeParams: true });
 const schema = z.object({
   name: z.string().min(1),
   type: z.enum(CHARACTER_TYPES).optional(),
+  castNumber: z.number().int().min(0).optional().nullable(),
   actorId: z.string().optional().nullable(),
   age: z.number().int().min(0).max(150).optional().nullable(),
   description: zOptionalString,
@@ -27,7 +28,7 @@ charactersRouter.get(
         actor: { select: { id: true, name: true } },
         _count: { select: { scenes: true, changes: true, costumes: true } },
       },
-      orderBy: [{ type: "asc" }, { name: "asc" }],
+      orderBy: [{ castNumber: "asc" }, { type: "asc" }, { name: "asc" }],
     });
     res.json(characters);
   }),

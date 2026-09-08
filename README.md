@@ -17,7 +17,7 @@ continuity book, asset-numbered inventory, wrap-box labels, per-character/per-sc
 
 | Area | Highlights |
 | --- | --- |
-| **Breakdown** | Upload the screenplay (Final Draft, Fountain, text, PDF) to build scenes, sluglines and characters automatically; optional AI costume cues per scene (garments, condition, changes, continuity) with accept/dismiss; actors with measurements |
+| **Breakdown** | Upload the screenplay (Final Draft, Fountain, text, PDF) to build scenes, sluglines, page counts and characters; revised drafts are diffed (new / updated / unchanged) and stamped with a revision name; character confirmation with merge, ignore and cast numbers; optional AI costume cues per scene with accept/dismiss; printable sides per shoot day |
 | **Changes / looks** | Numbered outfits per character, pieces with wear notes, scene ↔ change assignment |
 | **Inventory** | Asset numbers (`CST-000245`), QR codes, category/type/size/colour/source/vendor, location, status, full timeline |
 | **Scan** | Camera QR scanning (or typed asset number) → status, location, scenes, and contextual actions |

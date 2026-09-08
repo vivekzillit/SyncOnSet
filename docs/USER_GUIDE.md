@@ -36,15 +36,19 @@ Who does what:
 
 ## 2. Break down the script
 
-1. **Scenes → Upload script**. Drop in the screenplay as Final Draft (`.fdx`), Fountain (`.fountain`), plain text or a PDF exported from the writing software. The app reads the scene numbers, INT/EXT, location, time of day, the characters who speak in each scene and a one-line synopsis, and shows a preview. Untick any scene you do not want, then **Import**. Characters that do not exist yet are created; scene numbers that already exist are updated, so re-upload each revised draft (blue pages, pink pages) the same way. Nothing is ever deleted by an upload.
+1. **Scenes → Upload script**. Drop in the screenplay as Final Draft (`.fdx`), Fountain (`.fountain`), plain text or a PDF exported from the writing software. The app reads the scene numbers, INT/EXT, location, time of day, page length in eighths, the characters who speak in each scene and a one-line synopsis, and shows a preview in two tabs:
+   - **Scenes**: each scene is marked **New**, **Updated** (the text changed since the last upload) or **Unchanged**. Untick any scene you do not want. Give the upload a **Revision name** such as "Blue 2026-09-08"; it is stamped on new and updated scenes only, so unchanged scenes keep any edits you made by hand.
+   - **Characters**: speaking roles are read from the capitals in the script. Confirm them before importing: give new characters a **cast number**, **merge** misspellings or duplicates into the right character, and **ignore** anything that is not a character (a sound effect, a sign, a crowd). Non-speaking roles are added to scenes afterwards with **+ Character** on the scene.
+   - Nothing is ever deleted by an upload: revised drafts add scenes and characters, update sluglines, and mark omitted scenes. If the writers renumbered scenes, fix the numbers in the app before uploading, or the changes will land on the wrong scenes.
    - Tick **Also extract costume cues with AI after import** (when the server has an AI key) and the app reads every imported scene for wardrobe facts: garments and accessories mentioned, condition (wet, torn, bloodied), costume changes, continuity links and things to prepare for (fights, rain, food). You can also run this later from **Scenes → AI cues**, for all scenes or just today's.
    - Cues appear on each scene under **Costume cues from script** as suggestions with the supporting line from the script. **Accept** the ones the department agrees with, **Dismiss** the rest, or **Accept all**. Accepting never creates changes or costumes by itself; it is a checklist for building the looks. **Re-extract** on a scene refreshes the suggestions and keeps your decisions.
 2. **Scenes → Import breakdown** is the manual alternative: paste one scene per line as `number | name | location | INT/EXT | DAY/NIGHT | script day | characters (comma separated)`.
 3. Or **Scenes → + Scene** for single scenes. Set the **Shoot date** as soon as the schedule is out: the dashboard, the Scan screen and the continuity book all key off it.
-4. **Characters & Actors**:
+4. **Sides**. **Scenes → Sides** (or the Sides link in the menu) prints the script pages for a shoot day from the uploaded text: a cover with the scene list, story days, page counts and cast numbers, then each scene laid out as a screenplay, watermarked with your name and the date. Pick the date at the top and **Print**. A single scene's sides open from **Sides** on the scene page.
+5. **Characters & Actors**:
    - **Actors** tab → **+ Actor**: name, contact, agency and **measurements** (height, chest, waist, hips, inseam, shoe…). These show on every fitting for that actor, so shoppers and tailors never have to ask.
    - **Characters** tab → **+ Character**: name, type (Lead, Supporting, Day player, Background), age, the actor playing them, and a description of the look.
-5. Open a scene and use **+ Character** to add anyone the script upload missed, such as non-speaking roles. The change (look) can be assigned later.
+6. Open a scene and use **+ Character** to add anyone the script upload missed, such as non-speaking roles. The change (look) can be assigned later.
 
 ## 3. Build the wardrobe
 

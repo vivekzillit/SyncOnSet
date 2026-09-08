@@ -25,14 +25,14 @@ export default function CharacterDetail() {
   const [nf, setNf] = useState<{ name: string; description: string; costumes: Costume[] }>({ name: "", description: "", costumes: [] });
   const [pick, setPick] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [ef, setEf] = useState({ name: "", type: "", actorId: "", age: "", description: "", notes: "" });
+  const [ef, setEf] = useState({ name: "", type: "", actorId: "", age: "", description: "", notes: "", castNumber: "" });
 
   const createChange = useMutation({
     mutationFn: () => api<CostumeChange>(p(projectId, "/changes"), { body: { characterId: id, name: nf.name, description: nf.description || null, costumeIds: nf.costumes.map((c) => c.id) } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); setNewOpen(false); setNf({ name: "", description: "", costumes: [] }); toast.push("Change created", "ok"); },
   });
   const update = useMutation({
-    mutationFn: () => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { name: ef.name, type: ef.type, actorId: ef.actorId || null, age: ef.age ? Number(ef.age) : null, description: ef.description || null, notes: ef.notes || null } }),
+    mutationFn: () => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { name: ef.name, type: ef.type, actorId: ef.actorId || null, age: ef.age ? Number(ef.age) : null, description: ef.description || null, notes: ef.notes || null, castNumber: ef.castNumber ? Number(ef.castNumber) : null } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["characters", projectId] }); setEditOpen(false); toast.push("Saved", "ok"); },
   });
 
@@ -44,9 +44,9 @@ export default function CharacterDetail() {
     <div>
       <PageHead
         crumbs={<><Link to={`${base}/characters`}>Characters</Link> / {ch.name}</>}
-        title={<span className="row gap-2"><Avatar name={ch.name} lg /><span>{ch.name} <Badge status={ch.type}>{humanize(ch.type)}</Badge></span></span>}
+        title={<span className="row gap-2"><Avatar name={ch.name} lg /><span>{ch.castNumber != null && <span className="mono muted">{ch.castNumber}. </span>}{ch.name} <Badge status={ch.type}>{humanize(ch.type)}</Badge></span></span>}
         sub={<>{ch.actor ? <>Played by <b>{ch.actor.name}</b></> : "No actor assigned"}{ch.age ? ` · age ${ch.age}` : ""}{ch.description ? ` · ${ch.description}` : ""}</>}
-        actions={can(MANAGER_ROLES) && <><button className="btn" onClick={() => { setEf({ name: ch.name, type: ch.type, actorId: ch.actorId || "", age: ch.age ? String(ch.age) : "", description: ch.description || "", notes: ch.notes || "" }); setEditOpen(true); }}><Pencil size={16} /> Edit</button><button className="btn btn-primary" onClick={() => setNewOpen(true)}><Plus size={16} /> Change</button></>}
+        actions={can(MANAGER_ROLES) && <><button className="btn" onClick={() => { setEf({ name: ch.name, type: ch.type, actorId: ch.actorId || "", age: ch.age ? String(ch.age) : "", description: ch.description || "", notes: ch.notes || "", castNumber: ch.castNumber != null ? String(ch.castNumber) : "" }); setEditOpen(true); }}><Pencil size={16} /> Edit</button><button className="btn btn-primary" onClick={() => setNewOpen(true)}><Plus size={16} /> Change</button></>}
       />
       <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
         <div className="col gap-2">
@@ -124,6 +124,7 @@ export default function CharacterDetail() {
           <Field label="Name" span2><Input value={ef.name} onChange={(e) => setEf({ ...ef, name: e.target.value })} /></Field>
           <Field label="Type"><Select value={ef.type} onChange={(e) => setEf({ ...ef, type: e.target.value })} options={meta?.characterTypes || []} /></Field>
           <Field label="Age"><Input type="number" value={ef.age} onChange={(e) => setEf({ ...ef, age: e.target.value })} /></Field>
+          <Field label="Cast number"><Input type="number" value={ef.castNumber} onChange={(e) => setEf({ ...ef, castNumber: e.target.value })} /></Field>
           <Field label="Actor" span2><Select value={ef.actorId} onChange={(e) => setEf({ ...ef, actorId: e.target.value })} options={(actors || []).map((a) => ({ value: a.id, label: a.name }))} placeholder="— unassigned —" /></Field>
           <Field label="Description" span2><Textarea value={ef.description} onChange={(e) => setEf({ ...ef, description: e.target.value })} /></Field>
           <Field label="Notes" span2><Textarea value={ef.notes} onChange={(e) => setEf({ ...ef, notes: e.target.value })} /></Field>

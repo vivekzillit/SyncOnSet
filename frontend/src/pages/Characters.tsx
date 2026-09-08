@@ -9,6 +9,7 @@ import { humanize } from "@/lib/format";
 import type { Actor, Character } from "@/api/types";
 import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
 import { Avatar } from "@/components/domain";
+import { initials } from "@/components/ui";
 
 const MEASURES = ["height", "chest", "bust", "waist", "hips", "inseam", "sleeve", "collar", "shoe", "head"];
 
@@ -22,12 +23,12 @@ export default function Characters() {
   const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<Actor[]>(p(projectId, "/actors")) });
   const [charOpen, setCharOpen] = useState(false);
   const [actorOpen, setActorOpen] = useState(false);
-  const [cf, setCf] = useState({ name: "", type: "SUPPORTING", actorId: "", age: "", description: "" });
+  const [cf, setCf] = useState({ name: "", type: "SUPPORTING", actorId: "", age: "", description: "", castNumber: "" });
   const [af, setAf] = useState<{ name: string; phone: string; email: string; agency: string; notes: string; measurements: Record<string, string> }>({ name: "", phone: "", email: "", agency: "", notes: "", measurements: {} });
 
   const createChar = useMutation({
-    mutationFn: () => api(p(projectId, "/characters"), { body: { name: cf.name, type: cf.type, actorId: cf.actorId || null, age: cf.age ? Number(cf.age) : null, description: cf.description || null } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["characters", projectId] }); setCharOpen(false); setCf({ name: "", type: "SUPPORTING", actorId: "", age: "", description: "" }); toast.push("Character created", "ok"); },
+    mutationFn: () => api(p(projectId, "/characters"), { body: { name: cf.name, type: cf.type, actorId: cf.actorId || null, age: cf.age ? Number(cf.age) : null, description: cf.description || null, castNumber: cf.castNumber ? Number(cf.castNumber) : null } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["characters", projectId] }); setCharOpen(false); setCf({ name: "", type: "SUPPORTING", actorId: "", age: "", description: "", castNumber: "" }); toast.push("Character created", "ok"); },
   });
   const createActor = useMutation({
     mutationFn: () => api(p(projectId, "/actors"), { body: { ...af, measurements: Object.fromEntries(Object.entries(af.measurements).filter(([, v]) => v)) } }),
@@ -44,7 +45,7 @@ export default function Characters() {
             <div className="list">
               {characters.map((c) => (
                 <Link key={c.id} to={`/p/${projectId}/characters/${c.id}`} className="item link">
-                  <Avatar name={c.name} />
+                  <div className="avatar">{c.castNumber != null ? c.castNumber : initials(c.name)}</div>
                   <div className="grow" style={{ minWidth: 0 }}>
                     <div className="row gap-1"><span className="title">{c.name}</span><Badge status={c.type}>{humanize(c.type)}</Badge></div>
                     <div className="meta">{c.actor?.name || "No actor assigned"}{c.age ? ` · age ${c.age}` : ""}</div>
@@ -79,6 +80,7 @@ export default function Characters() {
           <Field label="Name" span2><Input value={cf.name} onChange={(e) => setCf({ ...cf, name: e.target.value })} /></Field>
           <Field label="Type"><Select value={cf.type} onChange={(e) => setCf({ ...cf, type: e.target.value })} options={meta?.characterTypes || []} /></Field>
           <Field label="Age"><Input type="number" value={cf.age} onChange={(e) => setCf({ ...cf, age: e.target.value })} /></Field>
+          <Field label="Cast number" help="As on call sheets and sides"><Input type="number" value={cf.castNumber} onChange={(e) => setCf({ ...cf, castNumber: e.target.value })} /></Field>
           <Field label="Actor" span2><Select value={cf.actorId} onChange={(e) => setCf({ ...cf, actorId: e.target.value })} options={(actors || []).map((a) => ({ value: a.id, label: a.name }))} placeholder="— unassigned —" /></Field>
           <Field label="Description" span2><Textarea value={cf.description} onChange={(e) => setCf({ ...cf, description: e.target.value })} placeholder="Look, palette, references…" /></Field>
         </div>

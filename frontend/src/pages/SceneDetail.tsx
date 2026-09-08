@@ -65,8 +65,8 @@ export default function SceneDetail() {
       <PageHead
         crumbs={<><Link to={`${base}/scenes`}>Scenes</Link> / Sc {scene.number}</>}
         title={<span className="row gap-2 wrap"><span>Sc {scene.number}{scene.name ? ` · ${scene.name}` : ""}</span>{readiness && <Badge status={readiness.overall} lg>{readiness.overall === "READY" ? "Costume ready" : humanize(readiness.overall)}</Badge>}</span>}
-        sub={[scene.intExt, scene.location, scene.timeOfDay, scene.scriptDay, scene.pages ? `${scene.pages} pgs` : null, scene.shootDate ? fmtDateLong(scene.shootDate) : "Unscheduled"].filter(Boolean).join(" · ")}
-        actions={<><Link to={`${base}/continuity?sceneId=${scene.id}`} className="btn"><BookOpen size={16} /> Continuity</Link>{can(MANAGER_ROLES) && <button className="btn" onClick={openEdit}><Pencil size={16} /> Edit</button>}</>}
+        sub={[scene.intExt, scene.location, scene.timeOfDay, scene.scriptDay, scene.pages ? `${scene.pages} pgs` : null, scene.revision ? `Rev. ${scene.revision}` : null, scene.shootDate ? fmtDateLong(scene.shootDate) : "Unscheduled"].filter(Boolean).join(" · ")}
+        actions={<>{scene.hasScript && <Link to={`${base}/sides?ids=${scene.id}`} className="btn">Sides</Link>}<Link to={`${base}/continuity?sceneId=${scene.id}`} className="btn"><BookOpen size={16} /> Continuity</Link>{can(MANAGER_ROLES) && <button className="btn" onClick={openEdit}><Pencil size={16} /> Edit</button>}</>}
       />
       {scene.synopsis && <div className="notice info mb-2">{scene.synopsis}</div>}
 

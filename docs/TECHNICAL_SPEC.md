@@ -66,6 +66,8 @@ Notification (per user)  AuditLog
 ```
 
 Key fields
+- **Character**: `castNumber` (call-sheet number), type, actor link.
+- **Scene**: slugline fields, `pages` (eighths), `scriptDay`, `shootDate`, `status`, `scriptText`, `revision`, `revisedAt`.
 - **Costume**: `assetNumber` (unique, e.g. `CST-000245`, auto-generated if omitted), `category`, `type`, `color`, `brand`, `size`, `fabric`, `quantity`, `source`, `purchaseCost`, `rentalCostPerDay`, `vendorId`, `characterId`, `status`, `location`, `careInstructions`, `isRetired`.
 - **CostumeChange**: `changeNumber` unique per character; items carry `wearNotes` ("sleeves rolled, top button open").
 - **SceneCharacter**: the costume requirement — which change a character wears in a scene.
@@ -122,6 +124,19 @@ FDX attributes, Fountain `#24#` markers or margin numbers, falling back to order
 normalised (extensions stripped, title case). The response is a preview only; the client confirms via `POST /import`, which upserts
 scenes by number and matches characters case-insensitively, storing each scene's text in `Scene.scriptText`.
 
+The preview compares each parsed scene's text with the stored text and labels it `new`, `updated` or `unchanged`, estimates
+its length in eighths (`pages`, from line counts at ~55 lines per page), and lists detected characters against existing ones.
+Import takes a `revision` name (stamped as `Scene.revision`/`revisedAt` on new and updated scenes only; unchanged scenes are
+not rewritten so manual edits survive), a `characterMap` (detected name → existing character to merge into, or `null` to
+ignore non-characters) and `castNumbers` for characters created by the import (`Character.castNumber`). Uploads never delete
+scenes or scene-character links, mirroring SyncOnSet's revision behaviour; omitted headings set status OMITTED.
+
+### Sides
+
+`GET …/scenes/sides?date=YYYY-MM-DD` or `?ids=` returns the day's scenes with slugline data, page counts, revision, cast
+numbers and stored text; the Sides screen renders them as a cover sheet plus screenplay-formatted pages with a name-and-date
+watermark for printing.
+
 ### AI costume cues (tier 2, advisory)
 
 `POST …/scenes/extract-cues { sceneIds }` (managers, up to 10 scenes per call; the client chunks for progress) sends each
@@ -163,7 +178,7 @@ Base URL `/api`. JSON everywhere except photo upload (multipart) and QR/CSV down
 | --- | --- |
 | actors | GET, POST, GET/:id, PATCH/:id, DELETE/:id (measurements as JSON object) |
 | characters | GET, POST, GET/:id (scenes, changes, costumes, fittings, photos), PATCH, DELETE |
-| scenes | GET (?date=&status=, includes readiness), POST, POST /parse-script (multipart screenplay → breakdown preview, no writes), POST /import (bulk with character names, case-insensitive match), GET/:id, GET/:id/readiness, PATCH, DELETE, PUT /:id/characters/:characterId `{changeId,notes}`, DELETE /:id/characters/:characterId |
+| scenes | GET (?date=&status=, includes readiness, hasScript, revision), POST, POST /parse-script (multipart screenplay → preview with new/updated/unchanged, pages, detected characters), POST /import (`scenes`, `revision`, `characterMap`, `castNumbers`), GET /sides (?date= or ?ids=), GET/:id, GET/:id/readiness, PATCH, DELETE, PUT /:id/characters/:characterId `{changeId,notes}`, DELETE /:id/characters/:characterId |
 | changes | GET (?characterId=), POST `{characterId,name,changeNumber?,costumeIds?}`, GET/:id, PATCH, DELETE, POST /:id/items `{costumeId,wearNotes}`, DELETE /:id/items/:costumeId |
 | costumes | GET (?q=&status=&category=&characterId=&source=&location=&page=&pageSize=), POST (auto asset number), POST /import, GET /lookup/:assetNumber (scan; logs SCAN), GET/:id (timeline, photos, tickets), PATCH, DELETE, POST /:id/actions `{action,toLocation,sceneId,takeNumber,note,toStatus}`, GET /:id/timeline, GET /:id/alternatives, GET /:id/qr.png?size=, GET /:id/qr.svg |
 | fittings | GET (?status=&characterId=), POST `{characterId,scheduledAt,location,notes,costumeIds}`, GET/:id, PATCH, DELETE, POST /:id/items, PATCH /:id/items/:costumeId `{status,notes,alteration?}`, DELETE /:id/items/:costumeId |

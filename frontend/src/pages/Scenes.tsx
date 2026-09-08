@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, FileUp, Sparkles } from "lucide-react";
+import { Plus, Upload, FileUp, Sparkles, Printer } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
@@ -55,7 +55,7 @@ export default function Scenes() {
 
   return (
     <div>
-      <PageHead title="Scenes" sub="Script breakdown & costume readiness per scene" actions={can(MANAGER_ROLES) && (<><button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button><button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button><button className="btn" onClick={() => setAiOpen(true)} title={meta?.aiEnabled ? "Extract costume cues from the script with AI" : "AI not configured on this server"}><Sparkles size={16} /> AI cues</button><button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Scene</button></>)} />
+      <PageHead title="Scenes" sub="Script breakdown & costume readiness per scene" actions={<><Link to={`/p/${projectId}/sides?date=${todayISO()}`} className="btn" title="Print today's script pages"><Printer size={16} /> Sides</Link>{can(MANAGER_ROLES) && (<><button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button><button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button><button className="btn" onClick={() => setAiOpen(true)} title={meta?.aiEnabled ? "Extract costume cues from the script with AI" : "AI not configured on this server"}><Sparkles size={16} /> AI cues</button><button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Scene</button></>)}</>} />
       <div className="filters">
         <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "all", label: "All" }]} value={when} onChange={(v) => setWhen(v || "all")} />
         <Select value={status} onChange={(e) => setStatus(e.target.value)} options={meta?.sceneStatuses || []} placeholder="Any status" />
@@ -75,6 +75,7 @@ export default function Scenes() {
                   <span className="subtle nowrap">{s.shootDate ? fmtDate(s.shootDate) : "unscheduled"}</span>
                   <Badge status={s.readiness}>{s.readiness === "READY" ? "Ready" : humanize(s.readiness)}</Badge>
                   <Badge status={s.status} className="hide-mobile" />
+                  {s.revision && <span className="subtle tiny hide-mobile" title="Script revision">{s.revision}</span>}
                 </div>
               </Link>
             ))}

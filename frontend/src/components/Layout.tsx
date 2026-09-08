@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate, useParams, Link } from "reac
 import { ErrorBoundary } from "./ErrorBoundary";
 import { ChangePasswordModal } from "./Account";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, KeyRound, LayoutDashboard, Clapperboard, Users, Shirt, ScanLine, Droplets, Ruler, BookOpen, Scissors, AlertTriangle, SearchX, Store, Wallet, FileBarChart, Tag, UserCog, Settings, MoreHorizontal, LogOut, ChevronsUpDown } from "lucide-react";
+import { Bell, KeyRound, FileText, LayoutDashboard, Clapperboard, Users, Shirt, ScanLine, Droplets, Ruler, BookOpen, Scissors, AlertTriangle, SearchX, Store, Wallet, FileBarChart, Tag, UserCog, Settings, MoreHorizontal, LogOut, ChevronsUpDown } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useAuth, FINANCE_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { ProjectProvider, useProject } from "@/state/project";
@@ -60,6 +60,7 @@ function Shell() {
           <div className="nav-group">Breakdown</div>
           {link(`${base}/scenes`, <Clapperboard size={17} />, "Scenes", c?.todaysScenes)}
           {link(`${base}/characters`, <Users size={17} />, "Characters & Actors")}
+          {link(`${base}/sides`, <FileText size={17} />, "Sides")}
           {link(`${base}/continuity`, <BookOpen size={17} />, "Continuity book")}
           <div className="nav-group">Wardrobe</div>
           {link(`${base}/costumes`, <Shirt size={17} />, "Costumes", c?.costumes)}

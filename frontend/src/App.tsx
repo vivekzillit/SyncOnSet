@@ -29,6 +29,7 @@ import Notifications from "@/pages/Notifications";
 import Team from "@/pages/Team";
 import ProjectSettings from "@/pages/ProjectSettings";
 import More from "@/pages/More";
+import Sides from "@/pages/Sides";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { user, loading } = useAuth();
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="scan" element={<Scan />} />
         <Route path="scenes" element={<Scenes />} />
         <Route path="scenes/:id" element={<SceneDetail />} />
+        <Route path="sides" element={<Sides />} />
         <Route path="characters" element={<Characters />} />
         <Route path="characters/:id" element={<CharacterDetail />} />
         <Route path="changes/:id" element={<ChangeDetail />} />

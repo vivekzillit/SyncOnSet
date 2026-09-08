@@ -18,6 +18,9 @@ export interface ParsedScene {
   dialogueLines: number;
   /** Scene text (action + dialogue) for downstream AI cue extraction. */
   text: string;
+  /** Estimated length in script pages, in eighths (e.g. "1 3/8"), from ~55 lines per page. */
+  pages: string | null;
+  lines: number;
 }
 export interface ParsedCharacter { name: string; scenes: number; lines: number }
 export interface ParseResult {
@@ -165,6 +168,17 @@ export function parseSlug(text: string): { intExt: string | null; location: stri
   return { intExt, location, timeOfDay, name: name.replace(/\b([A-Z])([A-Z']+)\b/g, (_, a, b) => a + b.toLowerCase()) };
 }
 
+/** Format a line count as screenplay eighths: 12 lines ≈ 2/8, 55 lines ≈ 1 page. */
+export function linesToEighths(lines: number): string | null {
+  if (lines <= 0) return null;
+  const eighths = Math.max(1, Math.round((lines / 55) * 8));
+  const whole = Math.floor(eighths / 8);
+  const rem = eighths % 8;
+  if (whole && rem) return `${whole} ${rem}/8`;
+  if (whole) return String(whole);
+  return `${rem}/8`;
+}
+
 export function buildScenes(elements: Element[], format: ScriptFormat): ParseResult {
   const scenes: (ParsedScene & { _chars: Set<string>; _lines: string[] })[] = [];
   const warnings: string[] = [];
@@ -181,7 +195,7 @@ export function buildScenes(elements: Element[], format: ScriptFormat): ParseRes
       const omitted = /\bOMITTED\b/i.test(el.text);
       let number = (el.number || "").trim();
       if (!number) { missingNumbers += 1; number = String(scenes.length + 1); }
-      current = { number, name: omitted ? "Omitted" : slug.name, location: slug.location, intExt: slug.intExt, timeOfDay: slug.timeOfDay, synopsis: null, status: omitted ? "OMITTED" : undefined, characters: [], dialogueLines: 0, text: "", _chars: new Set(), _lines: [el.text] };
+      current = { number, name: omitted ? "Omitted" : slug.name, location: slug.location, intExt: slug.intExt, timeOfDay: slug.timeOfDay, synopsis: null, status: omitted ? "OMITTED" : undefined, characters: [], dialogueLines: 0, text: "", pages: null, lines: 0, _chars: new Set(), _lines: [el.text] };
       scenes.push(current);
       firstAction = true;
       continue;
@@ -219,7 +233,8 @@ export function buildScenes(elements: Element[], format: ScriptFormat): ParseRes
   else if (missingNumbers > 0) warnings.push(`${missingNumbers} scene heading(s) had no number and were numbered by position.`);
   if (cues === 0 && headings > 0) warnings.push("No character cues detected; characters will not be attached to scenes.");
   const characters = [...charIndex.values()].sort((a, b) => b.lines - a.lines || a.name.localeCompare(b.name));
-  return { format, scenes: scenes.map(({ _chars, _lines, ...s }) => ({ ...s, text: _lines.join("\n").slice(0, 40000) })), characters, warnings, stats: { elements: elements.length, headings, cues } };
+  const estimateLines = (ls: string[]) => ls.reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 60)), 0) + Math.floor(ls.length / 3);
+  return { format, scenes: scenes.map(({ _chars, _lines, ...s }) => { const lines = estimateLines(_lines); return { ...s, text: _lines.join("\n").slice(0, 40000), lines, pages: linesToEighths(lines) }; }), characters, warnings, stats: { elements: elements.length, headings, cues } };
 }
 
 export function detectFormat(filename: string, mimetype: string, head: string): ScriptFormat {
