@@ -1,4 +1,4 @@
-# Sink on Set - single-container production image (API + built web app)
+# Costumes & Set - single-container production image (API + built web app)
 FROM node:20-alpine AS build
 RUN apk add --no-cache openssl
 WORKDIR /app

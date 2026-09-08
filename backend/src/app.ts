@@ -32,7 +32,7 @@ export function createApp() {
   app.use(express.json({ limit: "5mb" }));
   app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
-  app.get("/api/health", (_req, res) => res.json({ ok: true, service: "sink-on-set-api", time: new Date().toISOString() }));
+  app.get("/api/health", (_req, res) => res.json({ ok: true, service: "costumes-and-set-api", time: new Date().toISOString() }));
   app.use("/uploads", express.static(config.uploadDir, { maxAge: "7d" }));
 
   app.use("/api/meta", metaRouter);

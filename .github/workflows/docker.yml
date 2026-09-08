@@ -21,7 +21,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/synconset
+          images: ghcr.io/${{ github.repository_owner }}/costumes-and-set
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=

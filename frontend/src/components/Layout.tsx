@@ -38,9 +38,9 @@ function Shell() {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">SoS</div>
+          <div className="brand-mark">C&amp;S</div>
           <div>
-            <div className="brand-name">Sink on Set</div>
+            <div className="brand-name">Costumes &amp; Set</div>
             <div className="brand-sub">Wardrobe & costume ops</div>
           </div>
         </div>
@@ -87,7 +87,7 @@ function Shell() {
       <div className="main">
         <header className="topbar">
           <Link to="/projects" className="show-mobile row gap-1" style={{ minWidth: 0 }}>
-            <div className="brand-mark" style={{ width: 30, height: 30, fontSize: 11 }}>SoS</div>
+            <div className="brand-mark" style={{ width: 30, height: 30, fontSize: 11 }}>C&amp;S</div>
             <div className="truncate bold small">{project?.name}</div>
           </Link>
           <div className="grow hide-mobile subtle">

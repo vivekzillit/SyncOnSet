@@ -1,5 +1,5 @@
 # Fly.io - `fly launch --copy-config --yes` then `fly volumes create data --size 2` (if not created by launch)
-app = "sink-on-set"
+app = "costumes-and-set"
 primary_region = "bom"
 
 [build]

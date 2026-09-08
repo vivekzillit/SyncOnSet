@@ -1,4 +1,4 @@
-/* Demo seed: "Movie ABC" production matching the Sink on Set blueprint. */
+/* Demo seed: "Movie ABC" production matching the Costumes & Set blueprint. */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -11,17 +11,17 @@ const dayOnly = (offset = 0) => new Date(today.getFullYear(), today.getMonth(), 
 async function main() {
   const password = await bcrypt.hash("password123", 10);
   const usersData = [
-    { name: "Vivek Mishra", email: "admin@sinkonset.app", role: "ADMIN" },
-    { name: "Meera Iyer", email: "pm@sinkonset.app", role: "PRODUCTION_MANAGER" },
-    { name: "Anita Desai", email: "designer@sinkonset.app", role: "COSTUME_DESIGNER" },
-    { name: "Rahul Verma", email: "supervisor@sinkonset.app", role: "COSTUME_SUPERVISOR" },
-    { name: "Sana Khan", email: "assistant@sinkonset.app", role: "COSTUME_ASSISTANT" },
-    { name: "Deepak Rao", email: "wardrobe@sinkonset.app", role: "WARDROBE_ASSISTANT" },
-    { name: "Pooja Nair", email: "dresser@sinkonset.app", role: "DRESSER" },
-    { name: "Ramesh Tailor", email: "tailor@sinkonset.app", role: "TAILOR" },
-    { name: "Suresh Laundry", email: "laundry@sinkonset.app", role: "LAUNDRY" },
-    { name: "Nikhil Continuity", email: "continuity@sinkonset.app", role: "CONTINUITY" },
-    { name: "Arjun Kapoor", email: "actor@sinkonset.app", role: "ACTOR" },
+    { name: "Vivek Mishra", email: "admin@costumesandset.app", role: "ADMIN" },
+    { name: "Meera Iyer", email: "pm@costumesandset.app", role: "PRODUCTION_MANAGER" },
+    { name: "Anita Desai", email: "designer@costumesandset.app", role: "COSTUME_DESIGNER" },
+    { name: "Rahul Verma", email: "supervisor@costumesandset.app", role: "COSTUME_SUPERVISOR" },
+    { name: "Sana Khan", email: "assistant@costumesandset.app", role: "COSTUME_ASSISTANT" },
+    { name: "Deepak Rao", email: "wardrobe@costumesandset.app", role: "WARDROBE_ASSISTANT" },
+    { name: "Pooja Nair", email: "dresser@costumesandset.app", role: "DRESSER" },
+    { name: "Ramesh Tailor", email: "tailor@costumesandset.app", role: "TAILOR" },
+    { name: "Suresh Laundry", email: "laundry@costumesandset.app", role: "LAUNDRY" },
+    { name: "Nikhil Continuity", email: "continuity@costumesandset.app", role: "CONTINUITY" },
+    { name: "Arjun Kapoor", email: "actor@costumesandset.app", role: "ACTOR" },
   ];
   const users: Record<string, { id: string; name: string; role: string }> = {};
   for (const u of usersData) {
@@ -242,7 +242,7 @@ async function main() {
   await prisma.auditLog.create({ data: { projectId: pid, userId: users.ADMIN.id, userName: users.ADMIN.name, action: "SEED", entityType: "PROJECT", entityId: pid } });
 
   console.log("Seeded demo project 'Movie ABC'.");
-  console.log("Login: admin@sinkonset.app / password123 (all demo users share this password)");
+  console.log("Login: admin@costumesandset.app / password123 (all demo users share this password)");
 }
 
 main()

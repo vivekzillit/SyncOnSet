@@ -1,4 +1,4 @@
-# Deploying Sink on Set
+# Deploying Costumes & Set
 
 The app ships as **one container**: the Express API serves the built web app, so a single web service with a
 persistent disk is all that is needed. The container runs `backend/scripts/start.sh`, which creates the data
@@ -35,21 +35,21 @@ fly open
 
 ## Option C — Any Docker host (VPS, Railway, DigitalOcean, Coolify…)
 
-Every push to `main` publishes `ghcr.io/vivekzillit/synconset:latest` via GitHub Actions. On the host:
+Every push to `main` publishes `ghcr.io/vivekzillit/costumes-and-set:latest` via GitHub Actions. On the host:
 
 ```bash
-docker run -d --name sink-on-set --restart unless-stopped \
+docker run -d --name costumes-and-set --restart unless-stopped \
   -p 80:4000 -v sink_data:/data \
   -e JWT_SECRET="$(openssl rand -hex 32)" -e SEED_DEMO=true \
-  ghcr.io/vivekzillit/synconset:latest
+  ghcr.io/vivekzillit/costumes-and-set:latest
 ```
 
-Or build locally: `docker build -t sink-on-set . && docker run -p 4000:4000 -v sink_data:/data -e JWT_SECRET=dev sink-on-set`.
+Or build locally: `docker build -t costumes-and-set . && docker run -p 4000:4000 -v sink_data:/data -e JWT_SECRET=dev costumes-and-set`.
 
 ## Moving to PostgreSQL (recommended for multi-user production)
 
 1. In `backend/prisma/schema.prisma` change `provider = "sqlite"` to `"postgresql"`.
-2. Set `DATABASE_URL=postgresql://user:pass@host:5432/sinkonset` on the service (Render/Fly both offer managed Postgres).
+2. Set `DATABASE_URL=postgresql://user:pass@host:5432/costumesandset` on the service (Render/Fly both offer managed Postgres).
 3. Redeploy; `start.sh` runs `prisma db push` against the new database. For a migration history use `npm run db:migrate` locally and commit `prisma/migrations`.
 
 ## Uploads at scale
@@ -59,7 +59,7 @@ Photos are stored on the mounted disk. For multi-region or object storage, point
 
 ## After the first deploy
 
-1. Sign in as `admin@sinkonset.app` / `password123`, go to **Team & roles**, create your real users, then deactivate
+1. Sign in as `admin@costumesandset.app` / `password123`, go to **Team & roles**, create your real users, then deactivate
    or re-password the demo accounts.
 2. Set `SEED_DEMO=false` and redeploy once real data is in.
 3. Print QR labels from **QR Labels** and tag the inventory.

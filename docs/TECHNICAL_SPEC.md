@@ -1,4 +1,4 @@
-# Sink on Set — Technical Specification (v0.1)
+# Costumes & Set — Technical Specification (v0.1)
 
 ## 1. Product objective
 

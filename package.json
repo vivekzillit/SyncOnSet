@@ -1,8 +1,8 @@
 {
-  "name": "sink-on-set",
+  "name": "costumes-and-set",
   "version": "0.1.0",
   "private": true,
-  "description": "Sink on Set - digital wardrobe & costume management platform for film and TV production",
+  "description": "Costumes & Set - digital wardrobe & costume management platform for film and TV production",
   "scripts": {
     "setup": "npm --prefix backend install && npm --prefix frontend install && npm --prefix backend run db:setup",
     "dev": "concurrently -n api,web -c blue,magenta \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",

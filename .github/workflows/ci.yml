@@ -26,6 +26,6 @@ jobs:
           node dist/prisma/seed.js
           (node dist/src/index.js &) ; sleep 3
           curl -sf http://localhost:4010/api/health
-          curl -sf -X POST http://localhost:4010/api/auth/login -H 'content-type: application/json' -d '{"email":"admin@sinkonset.app","password":"password123"}' | grep -q token
+          curl -sf -X POST http://localhost:4010/api/auth/login -H 'content-type: application/json' -d '{"email":"admin@costumesandset.app","password":"password123"}' | grep -q token
       - name: Frontend typecheck & build
         run: npm --prefix frontend run build

@@ -27,9 +27,9 @@ export default function Projects() {
       <div style={{ width: "100%", maxWidth: 760 }}>
         <div className="row between mb-2" style={{ color: "#e8e6e1" }}>
           <div className="row gap-2">
-            <div className="brand-mark">SoS</div>
+            <div className="brand-mark">C&amp;S</div>
             <div>
-              <div className="bold">Sink on Set</div>
+              <div className="bold">Costumes &amp; Set</div>
               <div className="tiny" style={{ color: "#9a9da6" }}>{user?.name} · {humanize(user?.role)}</div>
             </div>
           </div>

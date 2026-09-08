@@ -1,9 +1,9 @@
-# Sink on Set
+# Costumes & Set
 
 **The digital wardrobe & costume management platform for film and TV production.**
 *From wardrobe to set. Every costume. Every scene. Every take.*
 
-Sink on Set gives the costume department one system for the whole life of a garment:
+Costumes & Set gives the costume department one system for the whole life of a garment:
 
 > Script → Character → Scene → Change (look) → Costume → Fitting → Shoot → Cleaning → Continuity → Wrap
 
@@ -48,17 +48,17 @@ Then open <http://localhost:5173> and sign in with any demo account (password `p
 
 | Role | Email |
 | --- | --- |
-| Admin | admin@sinkonset.app |
-| Production manager | pm@sinkonset.app |
-| Costume designer | designer@sinkonset.app |
-| Costume supervisor | supervisor@sinkonset.app |
-| Costume assistant | assistant@sinkonset.app |
-| Wardrobe assistant | wardrobe@sinkonset.app |
-| Dresser | dresser@sinkonset.app |
-| Tailor | tailor@sinkonset.app |
-| Laundry | laundry@sinkonset.app |
-| Continuity | continuity@sinkonset.app |
-| Actor | actor@sinkonset.app |
+| Admin | admin@costumesandset.app |
+| Production manager | pm@costumesandset.app |
+| Costume designer | designer@costumesandset.app |
+| Costume supervisor | supervisor@costumesandset.app |
+| Costume assistant | assistant@costumesandset.app |
+| Wardrobe assistant | wardrobe@costumesandset.app |
+| Dresser | dresser@costumesandset.app |
+| Tailor | tailor@costumesandset.app |
+| Laundry | laundry@costumesandset.app |
+| Continuity | continuity@costumesandset.app |
+| Actor | actor@costumesandset.app |
 
 The seed creates the demo production **Movie ABC** (Raj, Priya, Inspector Pandey…, 21 costumes, 11 scenes, open
 cleaning/alteration/damage/missing items) so every screen has data on first run.
@@ -133,7 +133,7 @@ permission matrix, screen list, iOS/offline architecture and the sprint roadmap.
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/vivekzillit/SyncOnSet)
 
 The app ships as a single Docker image (API + built web app) with a `/data` volume for the database and photos.
-`render.yaml` and `fly.toml` are included, and every push to `main` publishes `ghcr.io/vivekzillit/synconset:latest`.
+`render.yaml` and `fly.toml` are included, and every push to `main` publishes `ghcr.io/vivekzillit/costumes-and-set:latest`.
 See [docs/DEPLOY.md](docs/DEPLOY.md) for Render, Fly.io, plain Docker and the PostgreSQL switch.
 
 ## Roadmap

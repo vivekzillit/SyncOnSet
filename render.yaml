@@ -2,7 +2,7 @@
 # One web service running the Docker image, with a persistent disk for the SQLite DB and photo uploads.
 services:
   - type: web
-    name: sink-on-set
+    name: costumes-and-set
     runtime: docker
     plan: starter            # persistent disks need a paid plan; on "free" the data resets on each deploy
     region: singapore
@@ -10,7 +10,7 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     disk:
-      name: sink-on-set-data
+      name: costumes-and-set-data
       mountPath: /data
       sizeGB: 2
     envVars:

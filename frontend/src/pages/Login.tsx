@@ -4,16 +4,16 @@ import { useAuth } from "@/state/auth";
 import { ErrorBox, Field, Input } from "@/components/ui";
 
 const DEMO = [
-  ["Admin", "admin@sinkonset.app"], ["Production Mgr", "pm@sinkonset.app"], ["Costume Designer", "designer@sinkonset.app"], ["Supervisor", "supervisor@sinkonset.app"],
-  ["Wardrobe Asst", "wardrobe@sinkonset.app"], ["Dresser", "dresser@sinkonset.app"], ["Tailor", "tailor@sinkonset.app"], ["Laundry", "laundry@sinkonset.app"],
-  ["Continuity", "continuity@sinkonset.app"], ["Actor", "actor@sinkonset.app"],
+  ["Admin", "admin@costumesandset.app"], ["Production Mgr", "pm@costumesandset.app"], ["Costume Designer", "designer@costumesandset.app"], ["Supervisor", "supervisor@costumesandset.app"],
+  ["Wardrobe Asst", "wardrobe@costumesandset.app"], ["Dresser", "dresser@costumesandset.app"], ["Tailor", "tailor@costumesandset.app"], ["Laundry", "laundry@costumesandset.app"],
+  ["Continuity", "continuity@costumesandset.app"], ["Actor", "actor@costumesandset.app"],
 ];
 
 export default function Login() {
   const { login, user } = useAuth();
   const nav = useNavigate();
   const loc = useLocation() as { state?: { from?: string } };
-  const [email, setEmail] = useState("admin@sinkonset.app");
+  const [email, setEmail] = useState("admin@costumesandset.app");
   const [password, setPassword] = useState("password123");
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -39,9 +39,9 @@ export default function Login() {
     <div className="login">
       <div className="card login-card">
         <div className="row gap-2 mb-2">
-          <div className="brand-mark">SoS</div>
+          <div className="brand-mark">C&amp;S</div>
           <div>
-            <h1 style={{ fontSize: 20 }}>Sink on Set</h1>
+            <h1 style={{ fontSize: 20 }}>Costumes &amp; Set</h1>
             <div className="subtle">Digital wardrobe & costume management</div>
           </div>
         </div>

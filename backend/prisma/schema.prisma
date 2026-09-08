@@ -1,4 +1,4 @@
-// Sink on Set - data model
+// Costumes & Set - data model
 // SQLite for local/MVP. To move to PostgreSQL, change provider to "postgresql"
 // and DATABASE_URL; the model itself is provider-neutral (no enums / JSON types
 // are used so that SQLite works; string columns hold the constants declared in
