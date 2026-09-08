@@ -49,6 +49,19 @@ export default function CharacterDetail() {
       />
       <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
         <div className="col gap-2">
+          <Card title="List of Scenes" pad0>
+            {ch.scenes.length === 0 ? <Empty icon="🎬" title="Not in any scene yet" /> : (
+              <div className="list">
+                {ch.scenes.map((s) => (
+                  <Link key={s.scene.id} to={`${base}/scenes/${s.scene.id}`} className="item link">
+                    <div className="avatar">{s.scene.number}</div>
+                    <div className="grow"><div className="title">{s.scene.name || `Scene ${s.scene.number}`}</div><div className="meta">{s.change ? `Change #${s.change.changeNumber} ${s.change.name}` : "No change assigned"}</div></div>
+                    <div className="end subtle">{s.scene.shootDate ? fmtDate(s.scene.shootDate) : ""}<Badge status={s.scene.status} /></div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
           <Card title={`Costume Changes (${ch.changes.length})`}>
             {ch.changes.length === 0 ? <Empty icon="👗" title="No changes yet" hint="A change is a numbered outfit for this character. Add one, then attach costume pieces." /> : (
               <div className="col gap-2">
@@ -63,19 +76,6 @@ export default function CharacterDetail() {
                       {c.items.map((it) => <Badge key={it.id} status={it.costume.status}><span className="mono">{it.costume.assetNumber}</span> {it.costume.name}</Badge>)}
                       {c.items.length === 0 && <span className="subtle">No pieces attached</span>}
                     </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Card>
-          <Card title="List of Scenes" pad0>
-            {ch.scenes.length === 0 ? <Empty icon="🎬" title="Not in any scene yet" /> : (
-              <div className="list">
-                {ch.scenes.map((s) => (
-                  <Link key={s.scene.id} to={`${base}/scenes/${s.scene.id}`} className="item link">
-                    <div className="avatar">{s.scene.number}</div>
-                    <div className="grow"><div className="title">{s.scene.name || `Scene ${s.scene.number}`}</div><div className="meta">{s.change ? `Change #${s.change.changeNumber} ${s.change.name}` : "No change assigned"}</div></div>
-                    <div className="end subtle">{s.scene.shootDate ? fmtDate(s.scene.shootDate) : ""}<Badge status={s.scene.status} /></div>
                   </Link>
                 ))}
               </div>
