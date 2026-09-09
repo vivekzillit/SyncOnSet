@@ -96,7 +96,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
       footer={phase === "cues"
         ? <button className="btn btn-primary" disabled={progress.running} onClick={() => { reset(); onClose(); }}>{progress.running ? "Working…" : "Done"}</button>
         : confirmReplace
-          ? <><button className="btn" onClick={keepCurrent}>Keep the current breakdown</button><button className="btn btn-danger" onClick={goAhead}>Replace {existingScenes} scene{existingScenes === 1 ? "" : "s"}</button></>
+          ? <><button className="btn" onClick={keepCurrent}>Keep the current script</button><button className="btn btn-danger" onClick={goAhead}>Replace Script</button></>
           : <><button className="btn" onClick={() => { reset(); onClose(); }}>Cancel</button>{result && <button className={`btn ${replacing ? "btn-danger" : "btn-primary"}`} disabled={!included.length || importM.isPending} onClick={() => importM.mutate(replacing)}>{importM.isPending ? (replacing ? "Replacing…" : "Importing…") : replacing ? `Replace with ${included.length} scene${included.length === 1 ? "" : "s"}` : `Import ${included.length} scene${included.length === 1 ? "" : "s"}${withAi ? " + cues" : ""}`}</button>}</>}>
       {confirmReplace ? (
         <div className="col gap-2">
