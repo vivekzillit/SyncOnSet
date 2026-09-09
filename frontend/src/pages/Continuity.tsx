@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, Keyboard, Printer } from "lucide-react";
@@ -58,7 +58,7 @@ function useContinuity({ autoSelect = true }: { autoSelect?: boolean } = {}) {
  * The shooting day as wardrobe sees it: the scenes a call sheet put on this date, who is in them, and
  * whether their pieces are actually ready. Tapping a character arms the take form below for them.
  */
-function ShootDay({ c, day, onDay }: { c: ReturnType<typeof useContinuity>; day: string; onDay: (d: string) => void }) {
+function ShootDay({ c, day, onDay, detail }: { c: ReturnType<typeof useContinuity>; day: string; onDay: (d: string) => void; detail?: ReactNode }) {
   const { project } = useProject();
   const scenes = useMemo(() => (c.scenes || []).filter((s) => dateKey(s.shootDate) === day && s.status !== "OMITTED"), [c.scenes, day]);
   const rows = scenes.flatMap((s) => s.characters.map((sc) => ({ scene: s, sc, r: characterReadiness(sc) })));
@@ -103,6 +103,12 @@ function ShootDay({ c, day, onDay }: { c: ReturnType<typeof useContinuity>; day:
                         </button>
                       );
                     })}
+                  </div>
+                )}
+                {detail && c.sceneId === s.id && (
+                  <div className="mt-2">
+                    <SelectedScene c={c} />
+                    {detail}
                   </div>
                 )}
               </div>
@@ -237,15 +243,7 @@ export default function ContinuityOnSet() {
     },
   });
 
-  return (
-    <div>
-      <PageHead title="On set" sub="Record what the actor is wearing, take by take."
-        actions={<>{mayRecord && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<Link to={`/p/${c.projectId}/continuity/book`} className="btn">Continuity book →</Link></>} />
-      <ScheduleUploadModal open={callsheetOpen} kind="CALLSHEET" onClose={() => setCallsheetOpen(false)} onApplied={(d) => d && setDay(d)} />
-      <div className="mb-2" style={{ color: "var(--danger)", fontWeight: 600 }}>Click on scene number to add details on set</div>
-      <ShootDay c={c} day={day} onDay={setDay} />
-      <SelectedScene c={c} />
-      {!c.sceneId ? <Card><Empty icon="🎬" title="Click a scene number above" hint="The take form fills in as soon as you pick the scene and who is in it." /></Card> : !c.characterId ? <TagSomeone c={c} /> : !mayRecord ? <Card><Empty icon="🎬" title="You can view the continuity book" hint="Recording takes is for the continuity and costume team." /></Card> : (
+  const detail = !c.sceneId ? null : !c.characterId ? <TagSomeone c={c} /> : !mayRecord ? <Card><Empty icon="🎬" title="You can view the continuity book" hint="Recording takes is for the continuity and costume team." /></Card> : (
         <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
           <Card title={`Record take · ${c.sc?.character.name || ""} · Sc ${c.scene?.number || ""}`}
             actions={<button className="btn btn-primary" disabled={!f.takeNumber || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Saving…" : "Save take"}</button>}>
@@ -309,7 +307,16 @@ export default function ContinuityOnSet() {
             </Card>
           </div>
         </div>
-      )}
+      );
+
+  return (
+    <div>
+      <PageHead title="On set" sub="Record what the actor is wearing, take by take."
+        actions={<>{mayRecord && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<Link to={`/p/${c.projectId}/continuity/book`} className="btn">Continuity book →</Link></>} />
+      <ScheduleUploadModal open={callsheetOpen} kind="CALLSHEET" onClose={() => setCallsheetOpen(false)} onApplied={(d) => d && setDay(d)} />
+      <div className="mb-2" style={{ color: "var(--danger)", fontWeight: 600 }}>Click on scene number to add details on set</div>
+      <ShootDay c={c} day={day} onDay={setDay} detail={detail} />
+      {!c.sceneId && <Card><Empty icon="🎬" title="Click a scene number above" hint="The take form fills in as soon as you pick the scene and who is in it." /></Card>}
     </div>
   );
 }
