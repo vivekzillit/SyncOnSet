@@ -368,7 +368,7 @@ function PrepExport({ day, scenes, project }: { day: string; scenes: Scene[]; pr
   return (
     <div className="print-only">
       <div className="book-cover">
-        <div className="book-title">Continuity prep</div>
+        <div className="book-title">Continuity of prep</div>
         <h1>{project?.name || "Production"}</h1>
         <div className="subtle">{project?.shootingDay ? `Production day ${project.shootingDay} · ` : ""}{fmtDate(day, { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</div>
         <div className="subtle mt-1">{dayScenes.length} scene{dayScenes.length === 1 ? "" : "s"} · {characters} character{characters === 1 ? "" : "s"}</div>
@@ -397,7 +397,7 @@ function PrepExport({ day, scenes, project }: { day: string; scenes: Scene[]; pr
 }
 
 /**
- * Continuity prep: the day in hand as the book sees it — every scene the schedule put on it, who is in
+ * Continuity of prep: the day in hand as the book sees it — every scene the schedule put on it, who is in
  * them, the change they wear and what is still standing in the way. Recording happens on the On set page.
  */
 function PrepDay({ projectId, scenes, records, day, onDay }: { projectId: string; scenes: Scene[]; records: ContinuityRecord[]; day: string; onDay: (d: string) => void }) {
@@ -475,7 +475,7 @@ function PrepDay({ projectId, scenes, records, day, onDay }: { projectId: string
 }
 
 /**
- * Continuity shot: the days already in the can. The list of days comes from the schedule — every scene
+ * History of shoot: the days already in the can. The list of days comes from the schedule — every scene
  * shoot date that has passed, plus any day a take was recorded on — and each day opens the takes on it.
  */
 function ShotDays({ projectId, records, day, onDay, days }: { projectId: string; records: ContinuityRecord[]; day: string; onDay: (d: string) => void; days: { day: string; scenes: Scene[]; takes: number }[] }) {
@@ -605,7 +605,7 @@ export function ContinuityBook() {
       <div className="no-print">
         <PageHead title="Continuity book" sub="The day being prepared, and the days already in the can."
           actions={<><button className="btn" onClick={() => window.print()} title={`Print the ${tab === "prep" ? "prep sheet" : "book"} for ${day}`}><Printer size={16} /> Print / PDF</button><Link to={`/p/${projectId}/continuity`} className="btn btn-primary"><Plus size={16} /> Record take</Link></>} />
-        <Tabs tabs={[{ key: "prep", label: "Continuity Prep" }, { key: "shot", label: "Continuity Shot" }]} value={tab} onChange={setTab} />
+        <Tabs tabs={[{ key: "prep", label: "Continuity of prep" }, { key: "shot", label: "History of shoot" }]} value={tab} onChange={setTab} />
         {loading ? <Spinner /> : tab === "prep"
           ? <PrepDay projectId={projectId} scenes={scenes || []} records={records || []} day={prepDay} onDay={setPrepDay} />
           : <ShotDays projectId={projectId} records={records || []} day={shotDay} onDay={setShotDay} days={days} />}
