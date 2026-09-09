@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Upload } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
@@ -29,8 +29,11 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
   const [result, setResult] = useState<ParseResult | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [file, setFile] = useState<File | null>(null);
-  // A production that already has a script is asked before its breakdown is thrown away.
+  // A production that already has a script is asked the moment a new one is chosen, before it is even read.
   const [confirmReplace, setConfirmReplace] = useState(false);
+  const [replacing, setReplacing] = useState(false);
+  const { data: existing } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")), enabled: open });
+  const existingScenes = existing?.length ?? 0;
 
   const parse = useMutation({
     mutationFn: (f: File) => { const fd = new FormData(); fd.append("file", f); return api<ParseResult>(p(projectId, "/scenes/parse-script"), { formData: fd }); },
@@ -66,8 +69,16 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
     },
   });
   const [phase, setPhase] = useState<"pick" | "preview" | "cues">("pick");
-  const reset = () => { setResult(null); setFile(null); setExcluded(new Set()); setPhase("pick"); setRows([]); setTab("scenes"); setConfirmReplace(false); if (fileRef.current) fileRef.current.value = ""; };
-  const pick = (f: File | null) => { if (!f) return; setFile(f); parse.mutate(f); };
+  const reset = () => { setResult(null); setFile(null); setExcluded(new Set()); setPhase("pick"); setRows([]); setTab("scenes"); setConfirmReplace(false); setReplacing(false); if (fileRef.current) fileRef.current.value = ""; };
+  /** Choosing a file over an existing breakdown asks first; nothing is read until that is answered. */
+  const pick = (f: File | null) => {
+    if (!f) return;
+    setFile(f);
+    if (existingScenes > 0 && !replacing) { setConfirmReplace(true); return; }
+    parse.mutate(f);
+  };
+  const keepCurrent = () => { setConfirmReplace(false); setFile(null); if (fileRef.current) fileRef.current.value = ""; };
+  const goAhead = () => { setConfirmReplace(false); setReplacing(true); if (file) parse.mutate(file); };
   const toggle = (n: string) => setExcluded((s) => { const x = new Set(s); x.has(n) ? x.delete(n) : x.add(n); return x; });
   const included = (result?.scenes || []).filter((s) => !excluded.has(s.number));
   // Character summary, derived the same way the import will resolve it.
@@ -85,12 +96,12 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
       footer={phase === "cues"
         ? <button className="btn btn-primary" disabled={progress.running} onClick={() => { reset(); onClose(); }}>{progress.running ? "Working…" : "Done"}</button>
         : confirmReplace
-          ? <><button className="btn" onClick={() => setConfirmReplace(false)}>Keep the current breakdown</button><button className="btn btn-danger" disabled={importM.isPending} onClick={() => importM.mutate(true)}>{importM.isPending ? "Replacing…" : `Replace ${result?.existingScenes ?? 0} scene${result?.existingScenes === 1 ? "" : "s"}`}</button></>
-          : <><button className="btn" onClick={() => { reset(); onClose(); }}>Cancel</button>{result && <button className="btn btn-primary" disabled={!included.length || importM.isPending} onClick={() => (result.firstUpload ? importM.mutate(false) : setConfirmReplace(true))}>{importM.isPending ? "Importing…" : `Import ${included.length} scene${included.length === 1 ? "" : "s"}${withAi ? " + cues" : ""}`}</button>}</>}>
+          ? <><button className="btn" onClick={keepCurrent}>Keep the current breakdown</button><button className="btn btn-danger" onClick={goAhead}>Replace {existingScenes} scene{existingScenes === 1 ? "" : "s"}</button></>
+          : <><button className="btn" onClick={() => { reset(); onClose(); }}>Cancel</button>{result && <button className={`btn ${replacing ? "btn-danger" : "btn-primary"}`} disabled={!included.length || importM.isPending} onClick={() => importM.mutate(replacing)}>{importM.isPending ? (replacing ? "Replacing…" : "Importing…") : replacing ? `Replace with ${included.length} scene${included.length === 1 ? "" : "s"}` : `Import ${included.length} scene${included.length === 1 ? "" : "s"}${withAi ? " + cues" : ""}`}</button>}</>}>
       {confirmReplace ? (
         <div className="col gap-2">
-          <div className="notice">This production already has a script. Importing <b>{result?.file}</b> removes the {result?.existingScenes ?? 0} scene{result?.existingScenes === 1 ? "" : "s"} it holds now, along with the continuity takes and costume cues recorded against them, and puts this breakdown in their place.</div>
-          <div className="subtle">Characters, costumes, looks and fittings are kept. Keeping the current breakdown leaves everything exactly as it is; a revised draft can be imported over it instead.</div>
+          <div className="notice">This production already has a script. Reading <b>{file?.name}</b> and importing it removes the {existingScenes} scene{existingScenes === 1 ? "" : "s"} it holds now, along with the continuity takes and costume cues recorded against them, and puts that breakdown in their place.</div>
+          <div className="subtle">Characters, costumes, looks and fittings are kept. Keeping the current breakdown leaves everything exactly as it is, and nothing is written until you confirm the import on the next screen.</div>
         </div>
       ) : phase === "cues" ? (
         <div className="col gap-2">
@@ -118,6 +129,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
             <span className="subtle">{result.scenes.length} scenes · {result.characters.length} characters · {result.stats.cues} dialogue cues</span>
             <button className="btn btn-sm" style={{ marginLeft: "auto" }} onClick={reset}>Choose another file</button>
           </div>
+          {replacing && <div className="notice">Importing this replaces the {existingScenes} scene{existingScenes === 1 ? "" : "s"} already in this production.</div>}
           {result.warnings.map((w, i) => <div key={i} className="notice">{w}</div>)}
           <div className="row gap-2 wrap">
             <div className="field" style={{ minWidth: 260 }}><label>Revision name</label><Input value={revision} onChange={(e) => setRevision(e.target.value)} placeholder='e.g. "Blue 2026-09-08"' /><span className="help">Stamped on new and changed scenes. Use the colour and script date so the team can tell drafts apart.</span></div>
