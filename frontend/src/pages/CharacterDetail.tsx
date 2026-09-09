@@ -1,16 +1,17 @@
 import { Fragment, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { fmtDate, humanize } from "@/lib/format";
 import type { Actor, Character, Costume, CostumeChange, Fitting, Photo } from "@/api/types";
-import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { Badge, Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ActorSelect, Avatar, CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
 
-type Detail = Character & { actor?: Actor | null; scenes: { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string }; change?: { id: string; changeNumber: number; name: string } | null }[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
+type CharacterDetailRow = { label: string; value: string };
+type Detail = Character & { actor?: Actor | null; details?: CharacterDetailRow[]; scenes: { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string }; change?: { id: string; changeNumber: number; name: string } | null }[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
 
 export default function CharacterDetail() {
   const { id = "" } = useParams();
@@ -25,10 +26,19 @@ export default function CharacterDetail() {
   const [pick, setPick] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [ef, setEf] = useState({ name: "", type: "", actorId: "", age: "", description: "", notes: "", castNumber: "" });
+  // -1 while adding a row, the row's index while editing one, null when the dialog is closed.
+  const [detailAt, setDetailAt] = useState<number | null>(null);
+  const [df, setDf] = useState<CharacterDetailRow>({ label: "", value: "" });
 
   const createChange = useMutation({
     mutationFn: () => api<CostumeChange>(p(projectId, "/changes"), { body: { characterId: id, name: nf.name, description: nf.description || null, costumeIds: nf.costumes.map((c) => c.id) } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); setNewOpen(false); setNf({ name: "", description: "", costumes: [] }); toast.push("Change created", "ok"); },
+  });
+  /** The whole list travels with each save, so add, edit and delete are one code path. */
+  const saveDetails = useMutation({
+    mutationFn: (details: CharacterDetailRow[]) => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { details } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); setDetailAt(null); },
+    onError: (e: Error) => toast.push(e.message, "danger"),
   });
   const update = useMutation({
     mutationFn: () => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { name: ef.name, type: ef.type, actorId: ef.actorId || null, age: ef.age ? Number(ef.age) : null, description: ef.description || null, notes: ef.notes || null, castNumber: ef.castNumber ? Number(ef.castNumber) : null } }),
@@ -38,6 +48,14 @@ export default function CharacterDetail() {
   if (isLoading || !ch) return <Spinner />;
   const raw = ch.actor?.measurements as unknown;
   const m: Record<string, string | number> = typeof raw === "string" ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : (raw as Record<string, string | number>) || {};
+
+  const canEdit = can(MANAGER_ROLES);
+  const details = ch.details || [];
+  const openDetail = (at: number) => { setDf(at < 0 ? { label: "", value: "" } : details[at]); setDetailAt(at); };
+  const commitDetail = () => {
+    const row = { label: df.label.trim(), value: df.value.trim() };
+    saveDetails.mutate(detailAt === -1 ? [...details, row] : details.map((d, i) => (i === detailAt ? row : d)));
+  };
 
   return (
     <div>
@@ -101,6 +119,23 @@ export default function CharacterDetail() {
               <div className="list">{ch.fittings.map((f) => <Link key={f.id} to={`${base}/fittings/${f.id}`} className="item link"><div className="grow"><div className="title small">{fmtDate(f.scheduledAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div><div className="meta">{f.items.length} pieces{f.location ? ` · ${f.location}` : ""}</div></div><Badge status={f.status} /></Link>)}</div>
             )}
           </Card>
+          <Card title="More details" actions={canEdit && <button className="btn btn-sm" onClick={() => openDetail(-1)}><Plus size={14} /> Add more</button>} pad0>
+            {details.length === 0 ? <div className="subtle" style={{ padding: 14 }}>Nothing yet. Add any detail this production tracks — wig, tattoo cover, prop watch, dresser.</div> : (
+              <div className="list">
+                {details.map((d, i) => (
+                  <div key={`${d.label}-${i}`} className="item">
+                    <div className="grow" style={{ minWidth: 0 }}><div className="title small">{d.label}</div><div className="meta" style={{ whiteSpace: "pre-wrap" }}>{d.value}</div></div>
+                    {canEdit && (
+                      <div className="row gap-1">
+                        <button className="btn btn-ghost btn-sm" aria-label={`Edit ${d.label}`} onClick={() => openDetail(i)}><Pencil size={14} /></button>
+                        <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" onConfirm={() => saveDetails.mutate(details.filter((_, x) => x !== i))}><Trash2 size={14} /></ConfirmButton>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
           {ch.notes && <Card title="Notes"><div className="small">{ch.notes}</div></Card>}
         </div>
       </div>
@@ -117,6 +152,15 @@ export default function CharacterDetail() {
         <ErrorBox error={createChange.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setNf({ ...nf, costumes: nf.costumes.some((x) => x.id === c.id) ? nf.costumes : [...nf.costumes, c] })} characterId={ch.id} />
+
+      <Modal open={detailAt !== null} onClose={() => setDetailAt(null)} title={detailAt === -1 ? "Add detail" : "Edit detail"}
+        footer={<><button className="btn" onClick={() => setDetailAt(null)}>Cancel</button><button className="btn btn-primary" disabled={!df.label.trim() || !df.value.trim() || saveDetails.isPending} onClick={commitDetail}>Save</button></>}>
+        <div className="col">
+          <Field label="Title" help="Name the field yourself — anything the department needs to remember"><Input value={df.label} onChange={(e) => setDf({ ...df, label: e.target.value })} placeholder="e.g. Wig, Tattoo cover, Dresser" autoFocus /></Field>
+          <Field label="Description"><Textarea value={df.value} onChange={(e) => setDf({ ...df, value: e.target.value })} placeholder="e.g. Short crop, hired from Anand Wigs" /></Field>
+        </div>
+        <ErrorBox error={saveDetails.error} />
+      </Modal>
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit character" footer={<><button className="btn" onClick={() => setEditOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={update.isPending} onClick={() => update.mutate()}>Save</button></>}>
         <div className="form-grid">

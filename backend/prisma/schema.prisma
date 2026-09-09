@@ -117,6 +117,7 @@ model Character {
   age         Int?
   description String?
   notes       String?
+  details     String?  // JSON [{ label, value }] - the free-form "More details" rows added on the character page
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

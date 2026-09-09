@@ -17,6 +17,8 @@ const schema = z.object({
   age: z.number().int().min(0).max(150).optional().nullable(),
   description: zOptionalString,
   notes: zOptionalString,
+  /** free-form "More details" rows: the user names each field, so anything the department tracks fits */
+  details: z.array(z.object({ label: z.string().trim().min(1).max(120), value: z.string().trim().max(4000) })).max(100).optional(),
 });
 
 charactersRouter.get(
@@ -38,8 +40,8 @@ charactersRouter.post(
   "/",
   requireRole(MANAGER_ROLES),
   wrap(async (req, res) => {
-    const data = parse(schema, req.body);
-    const character = await prisma.character.create({ data: { ...data, projectId: req.projectId! } });
+    const { details, ...data } = parse(schema, req.body);
+    const character = await prisma.character.create({ data: { ...data, details: details ? JSON.stringify(details) : null, projectId: req.projectId! } });
     await audit(req.user, req.projectId!, "CHARACTER_CREATE", "CHARACTER", character.id);
     res.status(201).json(character);
   }),
@@ -61,7 +63,7 @@ charactersRouter.get(
     if (!character) throw notFound("Character");
     const photos = await prisma.photo.findMany({ where: { entityType: "CHARACTER", entityId: character.id }, orderBy: { createdAt: "desc" } });
     character.scenes.sort((a, b) => a.scene.sortOrder - b.scene.sortOrder);
-    res.json({ ...character, actor: character.actor ? { ...character.actor, measurements: parseJson(character.actor.measurements, {}) } : null, photos });
+    res.json({ ...character, details: parseJson<{ label: string; value: string }[]>(character.details, []), actor: character.actor ? { ...character.actor, measurements: parseJson(character.actor.measurements, {}) } : null, photos });
   }),
 );
 
@@ -69,10 +71,10 @@ charactersRouter.patch(
   "/:id",
   requireRole(MANAGER_ROLES),
   wrap(async (req, res) => {
-    const data = parse(schema.partial(), req.body);
+    const { details, ...data } = parse(schema.partial(), req.body);
     const existing = await prisma.character.findFirst({ where: { id: req.params.id, projectId: req.projectId } });
     if (!existing) throw notFound("Character");
-    const character = await prisma.character.update({ where: { id: existing.id }, data });
+    const character = await prisma.character.update({ where: { id: existing.id }, data: { ...data, ...(details === undefined ? {} : { details: JSON.stringify(details) }) } });
     await audit(req.user, req.projectId!, "CHARACTER_UPDATE", "CHARACTER", character.id);
     res.json(character);
   }),
