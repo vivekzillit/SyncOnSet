@@ -43,6 +43,8 @@ export const TIME_WORDS: Record<string, string> = {
   DUSK: "DUSK", SUNSET: "DUSK", TWILIGHT: "DUSK", "MAGIC HOUR": "DUSK",
   CONTINUOUS: "CONTINUOUS", LATER: "CONTINUOUS", SAME: "CONTINUOUS", "SAME TIME": "CONTINUOUS", "MOMENTS LATER": "CONTINUOUS",
 };
+/** A time word held on by punctuation rather than a spaced dash. Longest keys first so "LATE NIGHT" wins over "NIGHT". */
+const TRAILING_TIME_RE = new RegExp(`^(.*?)[.,\\-–—―]\\s*(${Object.keys(TIME_WORDS).sort((a, b) => b.length - a.length).join("|")})$`, "i");
 const NOT_A_NAME = new Set(["CUT TO", "FADE IN", "FADE OUT", "FADE TO BLACK", "DISSOLVE TO", "SMASH CUT TO", "MATCH CUT TO", "THE END", "END", "CONTINUED", "MORE", "BACK TO SCENE", "INTERCUT", "TITLE", "SUPER", "MONTAGE", "END MONTAGE", "END OF MONTAGE", "OMITTED", "INSERT", "BACK TO", "LATER", "FLASHBACK", "END FLASHBACK", "BEAT", "PAUSE", "SILENCE", "ANGLE ON", "CLOSE ON", "POV", "TITLE CARD", "SERIES OF SHOTS"]);
 
 /* ---------------- Final Draft ---------------- */
@@ -157,11 +159,19 @@ export function parseSlug(text: string): { intExt: string | null; location: stri
   const intExt = prefix === "INT" ? "INT" : prefix === "EXT" || prefix === "EST" ? "EXT" : "INT/EXT";
   let rest = m[3].trim();
   let timeOfDay: string | null = null;
-  const parts = rest.split(/\s+[-–—]+\s+|\s+--\s+/);
-  if (parts.length > 1) {
-    const tail = parts[parts.length - 1].toUpperCase().replace(/[.,]+$/, "").trim();
+  const parts = rest.split(/\s+[-–—―]+\s+|\s+--\s+/);
+  // Read the segments after the location from the right, so a modifier past the time ("- DAY - FLASHBACK") does not hide it.
+  // Never the first segment: that is the location, and "DAY CARE CENTRE" is not a time.
+  for (let i = parts.length - 1; i >= 1; i--) {
+    const tail = parts[i].toUpperCase().replace(/[.,]+$/, "").trim();
     const key = Object.keys(TIME_WORDS).find((k) => tail === k || tail.startsWith(k + " ") || tail.endsWith(" " + k));
-    if (key) { timeOfDay = TIME_WORDS[key]; parts.pop(); }
+    if (key) { timeOfDay = TIME_WORDS[key]; parts.length = i; break; }
+  }
+  // Sluglines that hold the time on with a bare dash, full stop or comma ("KITCHEN-DAY", "KITCHEN. DAY"), which is
+  // what a PDF flattened to text often leaves behind. A space alone does not count: "OPENING NIGHT" is a location.
+  if (!timeOfDay && parts.length) {
+    const t = TRAILING_TIME_RE.exec(parts[parts.length - 1].replace(/[.,]+$/, "").trim());
+    if (t && t[1].trim()) { timeOfDay = TIME_WORDS[t[2].toUpperCase().replace(/\s+/g, " ")]; parts[parts.length - 1] = t[1].trim(); }
   }
   const location = parts.join(" - ").replace(/\s+/g, " ").trim() || null;
   const name = [location, timeOfDay ? timeOfDay.charAt(0) + timeOfDay.slice(1).toLowerCase() : null].filter(Boolean).join(" - ") || text.trim();

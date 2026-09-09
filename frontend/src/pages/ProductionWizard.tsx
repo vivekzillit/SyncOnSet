@@ -5,7 +5,7 @@ import { Film, Tv, Upload, FileText } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useAuth } from "@/state/auth";
 import { ErrorBox, Field, Input } from "@/components/ui";
-import { CharacterConfirmation, buildCharacterImport, initialRows, type ConfirmRow, type DetectedCharacter, type ExistingCharacter } from "@/components/CharacterConfirmation";
+import { CharacterConfirmation, buildCharacterImport, initialRows, manualCharacters, type ConfirmRow, type DetectedCharacter, type ExistingCharacter } from "@/components/CharacterConfirmation";
 
 const STEPS = 5;
 
@@ -49,7 +49,7 @@ export default function ProductionWizard() {
       const id = await ensureProject();
       const fd = new FormData(); fd.append("file", file);
       const r = await api<ParseResult>(p(id, "/scenes/parse-script"), { formData: fd });
-      setParsed(r); setRows(initialRows(r.characters)); setStep(4);
+      setParsed(r); setRows(initialRows(r.characters, r.existingCharacters)); setStep(4);
     } catch (e) { setError(e); } finally { setBusy(false); }
   }
   /** Create/update the production, import the confirmed breakdown if a script was read, and open the Scenes list. */
@@ -64,6 +64,9 @@ export default function ProductionWizard() {
         const { characterMap, castNumbers } = buildCharacterImport(rows, parsed.existingCharacters);
         const scenes = parsed.scenes.map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
         await api(p(id, "/scenes/import"), { body: { scenes, revision: f.revision || null, characterMap, castNumbers } });
+        for (const c of manualCharacters(rows, parsed.existingCharacters, parsed.characters)) {
+          await api(p(id, "/characters"), { body: { name: c.name, type: "SUPPORTING", castNumber: c.castNumber } });
+        }
       }
       qc.invalidateQueries();
       nav(`/p/${id}/scenes`);
@@ -160,7 +163,7 @@ export default function ProductionWizard() {
         </>)}
         {step === 4 && parsed && (<>
           <div className="row between wrap gap-2">
-            <h2>🎭 Character Confirmation</h2>
+            <h2>🎭 List of Character</h2>
             <div className="row gap-2"><button type="button" className="btn btn-ghost" onClick={finish} disabled={busy}>Skip</button><button type="button" className="btn btn-primary" onClick={finish} disabled={busy}>{busy ? "Importing…" : "Continue"}</button></div>
           </div>
           <div className="subtle mb-2">{parsed.file} · {parsed.scenes.length} scenes · draft "{f.revision || "—"}"</div>
