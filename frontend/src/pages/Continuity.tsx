@@ -1,14 +1,14 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, Keyboard, Printer } from "lucide-react";
 import { api, ApiError, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { CONTINUITY_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, fmtDateTime, todayISO } from "@/lib/format";
-import { characterReadiness } from "@/lib/readiness";
+import { characterReadiness, itemLevel } from "@/lib/readiness";
 import type { Character, ContinuityRecord, Costume, Scene } from "@/api/types";
-import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, PageHead, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
 import { PhotoGrid, QRScanner } from "@/components/domain";
 import { ScheduleUploadModal } from "@/components/ScheduleUpload";
 
@@ -58,7 +58,7 @@ function ShootDay({ c, day, onDay, detail }: { c: ReturnType<typeof useContinuit
 
   return (
     <Card
-      title={<span className="row gap-2">Prep · {fmtDate(day, { weekday: "short", day: "2-digit", month: "short" })}{project?.shootingDay ? <span className="subtle">Day {project.shootingDay}</span> : null}</span>}
+      title={<span className="row gap-2">On set · {fmtDate(day, { weekday: "short", day: "2-digit", month: "short" })}{project?.shootingDay ? <span className="subtle">Day {project.shootingDay}</span> : null}</span>}
       actions={<Input type="date" value={day} onChange={(e) => onDay(e.target.value || todayISO())} style={{ width: "auto" }} aria-label="Shooting day" />}
       className="mb-2"
     >
@@ -159,8 +159,8 @@ function TagSomeone({ c }: { c: ReturnType<typeof useContinuity> }) {
   );
 }
 
-/** Continuity prep: the day being prepared, with the record-take form under whichever scene is open. */
-export default function ContinuityPrep() {
+/** On set: the day board, with the record-take form under whichever scene is open. */
+export default function ContinuityOnSet() {
   const c = useContinuity();
   const { can } = useProject();
   const qc = useQueryClient();
@@ -265,7 +265,7 @@ export default function ContinuityPrep() {
               {c.isLoading ? <Spinner /> : c.records.length === 0 ? <Empty icon="📖" title="No takes yet" hint="Save take 1 and the next take is pre-filled from it." /> : (
                 <div className="list">
                   {[...c.records].reverse().map((r) => (
-                    <Link key={r.id} to={`/p/${c.projectId}/continuity/shot?day=${dateKey(c.scene?.shootDate) || day}`} className="item link">
+                    <Link key={r.id} to={`/p/${c.projectId}/continuity/book?tab=shot&day=${dateKey(c.scene?.shootDate) || day}`} className="item link">
                       <span className="bold">Take {r.takeNumber}</span>
                       <span className="grow truncate subtle">{Object.entries(r.details).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}</span>
                       {c.flags.some((fl) => fl.take === r.takeNumber) && <Badge status="WARNING">flagged</Badge>}
@@ -280,8 +280,8 @@ export default function ContinuityPrep() {
 
   return (
     <div>
-      <PageHead title="Continuity prep" sub="The day you are preparing: its scenes, who is in them, and what they wear, take by take."
-        actions={<>{mayRecord && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<Link to={`/p/${c.projectId}/continuity/shot`} className="btn">Continuity shot →</Link></>} />
+      <PageHead title="On set" sub="Record what the actor is wearing, take by take."
+        actions={<>{mayRecord && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<Link to={`/p/${c.projectId}/continuity/book`} className="btn">Continuity book →</Link></>} />
       <ScheduleUploadModal open={callsheetOpen} kind="CALLSHEET" onClose={() => setCallsheetOpen(false)} onApplied={(d) => d && setDay(d)} />
       <div className="mb-2" style={{ color: "var(--danger)", fontWeight: 600 }}>Click on scene number to add details on set</div>
       <ShootDay c={c} day={day} onDay={setDay} detail={detail} />
@@ -348,19 +348,212 @@ function BookExport({ day, records, scenes, project }: { day: string; records: C
 }
 
 /**
- * Continuity shot: the days already in the can. The list of days comes from the schedule — every scene
- * shoot date that has passed, plus any day a take was recorded on — and each day opens the book for it.
+ * The prep sheet for a day, laid out for paper: every scene, who is in it, the change they wear and
+ * anything standing between that change and the floor.
  */
-export function ContinuityShot() {
-  const { projectId, project, can } = useProject();
+function PrepExport({ day, scenes, project }: { day: string; scenes: Scene[]; project: { name?: string; shootingDay?: number } | null }) {
+  const dayScenes = scenes.filter((s) => dateKey(s.shootDate) === day && s.status !== "OMITTED");
+  const characters = dayScenes.reduce((n, s) => n + s.characters.length, 0);
+  return (
+    <div className="print-only">
+      <div className="book-cover">
+        <div className="book-title">Continuity prep</div>
+        <h1>{project?.name || "Production"}</h1>
+        <div className="subtle">{project?.shootingDay ? `Production day ${project.shootingDay} · ` : ""}{fmtDate(day, { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</div>
+        <div className="subtle mt-1">{dayScenes.length} scene{dayScenes.length === 1 ? "" : "s"} · {characters} character{characters === 1 ? "" : "s"}</div>
+      </div>
+      {dayScenes.length === 0 && <div className="subtle">Nothing is scheduled for this day.</div>}
+      {dayScenes.map((s) => (
+        <section key={s.id} className="book-scene">
+          <h2>Scene {s.number}{s.name ? ` · ${s.name}` : ""}</h2>
+          <div className="subtle">{[s.intExt, s.location, s.timeOfDay, s.scriptDay, s.pages ? `${s.pages} pgs` : null].filter(Boolean).join(" · ") || "—"}</div>
+          {s.characters.length === 0 && <div className="subtle mt-1">Nobody is tagged to this scene.</div>}
+          {s.characters.map((sc) => {
+            const r = characterReadiness(sc);
+            return (
+              <div key={sc.id} className="book-char">
+                <div className="bold">{sc.character.name}{sc.character.actor?.name ? ` — ${sc.character.actor.name}` : ""}</div>
+                <div className="subtle">{sc.change ? `Change #${sc.change.changeNumber} ${sc.change.name}` : "No change assigned"}</div>
+                {(sc.change?.items || []).length > 0 && <div className="small">{(sc.change?.items || []).map((i) => `${i.costume.name}${i.wearNotes ? ` (${i.wearNotes})` : ""}`).join(" · ")}</div>}
+                {r.blockers.length > 0 && <div className="small"><b>Not ready:</b> {r.blockers.join(" · ")}</div>}
+              </div>
+            );
+          })}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Continuity prep: the day in hand as the book sees it — every scene the schedule put on it, who is in
+ * them, the change they wear and what is still standing in the way. Recording happens on the On set page.
+ */
+function PrepDay({ projectId, scenes, records, day, onDay }: { projectId: string; scenes: Scene[]; records: ContinuityRecord[]; day: string; onDay: (d: string) => void }) {
+  const dayScenes = useMemo(() => scenes.filter((s) => dateKey(s.shootDate) === day && s.status !== "OMITTED"), [scenes, day]);
+  const rows = dayScenes.flatMap((s) => s.characters.map((sc) => ({ sc, r: characterReadiness(sc) })));
+  const notReady = rows.filter((x) => x.r.level !== "READY");
+  const locations = Array.from(new Set(dayScenes.map((s) => (s.location || "").trim()).filter(Boolean)));
+  const takesOn = (sceneId: string, characterId: string) => records.filter((r) => r.sceneId === sceneId && r.characterId === characterId).length;
+
+  return (
+    <Card
+      title={<span className="row gap-2">Prep · {fmtDate(day, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</span>}
+      actions={<Input type="date" value={day} onChange={(e) => onDay(e.target.value || todayISO())} style={{ width: "auto" }} aria-label="Day to prepare" />}
+    >
+      {dayScenes.length === 0 ? (
+        <Empty icon="📋" title="Nothing scheduled for this day" hint="Upload the schedule or the call sheet and its scenes land here with the date on them." />
+      ) : (
+        <>
+          <div className="row gap-2 wrap mb-2 subtle">
+            <span><b>{dayScenes.length}</b> scene{dayScenes.length === 1 ? "" : "s"}</span>
+            <span><b>{rows.length}</b> character{rows.length === 1 ? "" : "s"}</span>
+            <span><b>{rows.length - notReady.length}</b> ready</span>
+            {notReady.length > 0 && <span className="row gap-1" style={{ color: "var(--danger)" }}><AlertTriangle size={14} /> {notReady.length} not ready</span>}
+            {locations.length > 0 && <span>{locations.join(" · ")}</span>}
+          </div>
+          <div className="col gap-2">
+            {dayScenes.map((s) => (
+              <div key={s.id} className="card flat" style={{ padding: 12 }}>
+                <div className="row between wrap gap-2">
+                  <Link to={`/p/${projectId}/scenes/${s.id}`} className="bold"><u>Sc {s.number}{s.name ? ` · ${s.name}` : ""}</u></Link>
+                  <span className="subtle">{[s.intExt, s.location, s.timeOfDay, s.scriptDay, s.pages ? `${s.pages} pgs` : null].filter(Boolean).join(" · ")}</span>
+                </div>
+                {s.characters.length === 0 ? <div className="subtle mt-1">Nobody is tagged to this scene yet.</div> : (
+                  <div className="col gap-1 mt-2">
+                    {s.characters.map((sc) => {
+                      const r = characterReadiness(sc);
+                      const taken = takesOn(s.id, sc.characterId);
+                      return (
+                        <div key={sc.id} className="card flat" style={{ padding: 10 }}>
+                          <div className="row between wrap gap-2">
+                            <span className="row gap-2 wrap">
+                              <Dot status={r.level} pulse={r.level === "MISSING"} />
+                              <b>{sc.character.name}</b>
+                              {sc.character.actor?.name && <span className="subtle">{sc.character.actor.name}</span>}
+                              {sc.change
+                                ? <Link to={`/p/${projectId}/changes/${sc.change.id}`}><span className="badge tone-info">Change #{sc.change.changeNumber} {sc.change.name}</span></Link>
+                                : <span className="badge tone-warn">No change assigned</span>}
+                              <span className="subtle">{r.total ? `${r.ready}/${r.total} pieces ready` : ""}</span>
+                              {taken > 0 && <Badge status="OK">{taken} take{taken === 1 ? "" : "s"}</Badge>}
+                            </span>
+                            <Link to={`/p/${projectId}/continuity?sceneId=${s.id}&characterId=${sc.characterId}`} className="btn btn-sm">Record take</Link>
+                          </div>
+                          {(sc.change?.items || []).length > 0 && (
+                            <div className="chips mt-1">
+                              {(sc.change?.items || []).map((i) => (
+                                <span key={i.id} className="chip" style={{ cursor: "default" }}>
+                                  <Dot status={itemLevel(i.costume.status)} /> {i.costume.name}{i.wearNotes ? <span className="subtle"> · {i.wearNotes}</span> : null}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {r.blockers.length > 0 && <div className="mt-1 small" style={{ color: "var(--danger)" }}>{r.blockers.join(" · ")}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Continuity shot: the days already in the can. The list of days comes from the schedule — every scene
+ * shoot date that has passed, plus any day a take was recorded on — and each day opens the takes on it.
+ */
+function ShotDays({ projectId, records, day, onDay, days }: { projectId: string; records: ContinuityRecord[]; day: string; onDay: (d: string) => void; days: { day: string; scenes: Scene[]; takes: number }[] }) {
+  const { can } = useProject();
   const qc = useQueryClient();
-  const [sp, setSp] = useSearchParams();
-  const { data: scenes, isLoading: loadingScenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
-  const { data: records, isLoading: loadingRecords } = useQuery({ queryKey: ["continuity", projectId, "all"], queryFn: () => api<ContinuityRecord[]>(p(projectId, "/continuity")) });
   const del = useMutation({
     mutationFn: (id: string) => api(p(projectId, `/continuity/${id}`), { method: "DELETE" }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["continuity"] }); qc.invalidateQueries({ queryKey: ["continuity-photos"] }); },
   });
+  const selected = days.find((d) => d.day === day);
+  const forScene = (sceneId: string) => records.filter((r) => r.sceneId === sceneId).sort((a, b) => a.takeNumber - b.takeNumber);
+
+  if (days.length === 0) return <Card><Empty icon="🎞️" title="No shoot days behind us yet" hint="A day lands here once the schedule puts a date on its scenes and that date has passed — takes recorded today show up straight away." /></Card>;
+
+  return (
+    <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 260px) minmax(0, 1fr)", alignItems: "start" }}>
+      <Card title={`Shoot days (${days.length})`} pad0>
+        <div className="list">
+          {days.map((d) => (
+            <button key={d.day} type="button" className="item link" style={{ width: "100%", background: d.day === day ? "var(--surface-2)" : "none", border: "none", borderLeft: `3px solid ${d.day === day ? "var(--ink)" : "transparent"}`, textAlign: "left" }} onClick={() => onDay(d.day)}>
+              <div className="grow">
+                <div className="title small">{fmtDate(d.day, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</div>
+                <div className="meta">{d.scenes.length} scene{d.scenes.length === 1 ? "" : "s"} · {d.takes} take{d.takes === 1 ? "" : "s"}</div>
+              </div>
+              {d.takes === 0 && <Badge status="MUTED">no takes</Badge>}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      <div className="col gap-2">
+        {(selected?.scenes || []).map((s) => {
+          const rows = forScene(s.id);
+          const characters = Array.from(new Set(rows.map((r) => r.characterId)));
+          return (
+            <Card key={s.id} title={`Sc ${s.number}${s.name ? ` · ${s.name}` : ""}`} actions={<Link to={`/p/${projectId}/scenes/${s.id}`} className="btn btn-sm">Open scene</Link>}>
+              <div className="subtle">{[s.intExt, s.location, s.timeOfDay, s.scriptDay, s.pages ? `${s.pages} pgs` : null].filter(Boolean).join(" · ") || "—"}</div>
+              {characters.length === 0 ? (
+                <Empty icon="📖" title="No takes recorded" hint="Nothing was logged on set against this scene." />
+              ) : characters.map((cid) => {
+                const takes = rows.filter((r) => r.characterId === cid);
+                const first = takes[0];
+                return (
+                  <div key={cid} className="mt-2">
+                    <div className="row gap-2 wrap">
+                      <b>{first.character?.name || "Character"}</b>
+                      {first.character?.actor?.name && <span className="subtle">{first.character.actor.name}</span>}
+                      {first.change && <Link to={`/p/${projectId}/changes/${first.change.id}`}><span className="badge tone-info">Change #{first.change.changeNumber} {first.change.name}</span></Link>}
+                    </div>
+                    <div className="grid grid-auto mt-1">
+                      {takes.map((r) => (
+                        <Card key={r.id} className="flat" title={`Take ${r.takeNumber}`} actions={can(CONTINUITY_ROLES) ? <button className="btn btn-ghost btn-sm" onClick={() => del.mutate(r.id)} title="Delete this take"><Trash2 size={14} /></button> : undefined}>
+                          <div className="subtle mb-2">{fmtDateTime(r.createdAt)}{r.recordedByName ? ` · ${r.recordedByName}` : ""}</div>
+                          <PhotoGrid photos={r.photos || []} entityType="CONTINUITY" entityId={r.id} kinds={["FRONT", "SIDE", "BACK", "CLOSEUP"]} compact attachments={false} />
+                          <dl className="kv mt-2" style={{ gridTemplateColumns: "100px 1fr" }}>
+                            {Object.entries(r.details).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v || "—"}</dd></Fragment>)}
+                          </dl>
+                          {r.accessories.length > 0 && <div className="chips mt-2">{r.accessories.map((a) => <span key={a.name} className={`badge tone-${a.present ? "ok" : "danger"}`}>{a.present ? "✓" : "✗"} {a.name}</span>)}</div>}
+                          {r.notes && <div className="notice mt-2">{r.notes}</div>}
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The continuity book: the day being prepared and the days already shot, both driven by the schedule.
+ * Print / PDF exports whichever of the two is open, for the day it is showing.
+ */
+export function ContinuityBook() {
+  const { projectId, project } = useProject();
+  const { pathname } = useLocation();
+  const [sp, setSp] = useSearchParams();
+  const asked = sp.get("tab");
+  const tab: "prep" | "shot" = asked === "shot" || asked === "prep" ? asked : pathname.endsWith("/shot") ? "shot" : "prep";
+  const setTab = (t: "prep" | "shot") => { const n = new URLSearchParams(sp); n.set("tab", t); setSp(n, { replace: true }); };
+  const setShotDay = (d: string) => { const n = new URLSearchParams(sp); n.set("day", d); setSp(n, { replace: true }); };
+  const [prepDay, setPrepDay] = useState(todayISO());
+
+  const { data: scenes, isLoading: loadingScenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
+  const { data: records, isLoading: loadingRecords } = useQuery({ queryKey: ["continuity", projectId, "all"], queryFn: () => api<ContinuityRecord[]>(p(projectId, "/continuity")) });
 
   /** One entry per shoot day the schedule has put behind us, newest first, with what was shot on it. */
   const days = useMemo(() => {
@@ -380,77 +573,23 @@ export function ContinuityShot() {
     return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
   }, [scenes, records]);
 
-  const asked = sp.get("day") || "";
-  const selected = days.find((d) => d.day === asked) || days[0];
-  const day = selected?.day || asked || todayISO();
-  const pickDay = (d: string) => { const n = new URLSearchParams(sp); n.set("day", d); setSp(n, { replace: true }); };
-  const forScene = (sceneId: string) => (records || []).filter((r) => r.sceneId === sceneId).sort((a, b) => a.takeNumber - b.takeNumber);
+  const askedDay = sp.get("day") || "";
+  const shotDay = (days.find((d) => d.day === askedDay) || days[0])?.day || askedDay || todayISO();
+  const day = tab === "prep" ? prepDay : shotDay;
+  const loading = loadingScenes || loadingRecords;
 
   return (
     <div>
-      <BookExport day={day} records={records || []} scenes={scenes || []} project={project} />
+      {tab === "prep"
+        ? <PrepExport day={prepDay} scenes={scenes || []} project={project} />
+        : <BookExport day={shotDay} records={records || []} scenes={scenes || []} project={project} />}
       <div className="no-print">
-        <PageHead title="Continuity shot" sub="Shoot days already in the can: every scene the schedule put on that day and the takes recorded against it."
-          actions={<><button className="btn" onClick={() => window.print()} title={`Print the book for ${day}`}><Printer size={16} /> Print / PDF</button><Link to={`/p/${projectId}/continuity`} className="btn btn-primary"><Plus size={16} /> Record take</Link></>} />
-        {loadingScenes || loadingRecords ? <Spinner /> : days.length === 0 ? (
-          <Card><Empty icon="🎞️" title="No shoot days behind us yet" hint="A day lands here once the schedule puts a date on its scenes and that date has passed — takes recorded today show up straight away." /></Card>
-        ) : (
-          <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 260px) minmax(0, 1fr)", alignItems: "start" }}>
-            <Card title={`Shoot days (${days.length})`} pad0>
-              <div className="list">
-                {days.map((d) => (
-                  <button key={d.day} type="button" className="item link" style={{ width: "100%", background: d.day === day ? "var(--surface-2)" : "none", border: "none", borderLeft: `3px solid ${d.day === day ? "var(--ink)" : "transparent"}`, textAlign: "left" }} onClick={() => pickDay(d.day)}>
-                    <div className="grow">
-                      <div className="title small">{fmtDate(d.day, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</div>
-                      <div className="meta">{d.scenes.length} scene{d.scenes.length === 1 ? "" : "s"} · {d.takes} take{d.takes === 1 ? "" : "s"}</div>
-                    </div>
-                    {d.takes === 0 && <Badge status="MUTED">no takes</Badge>}
-                  </button>
-                ))}
-              </div>
-            </Card>
-
-            <div className="col gap-2">
-              {(selected?.scenes || []).map((s) => {
-                const rows = forScene(s.id);
-                const characters = Array.from(new Set(rows.map((r) => r.characterId)));
-                return (
-                  <Card key={s.id} title={`Sc ${s.number}${s.name ? ` · ${s.name}` : ""}`} actions={<Link to={`/p/${projectId}/scenes/${s.id}`} className="btn btn-sm">Open scene</Link>}>
-                    <div className="subtle">{[s.intExt, s.location, s.timeOfDay, s.scriptDay, s.pages ? `${s.pages} pgs` : null].filter(Boolean).join(" · ") || "—"}</div>
-                    {characters.length === 0 ? (
-                      <Empty icon="📖" title="No takes recorded" hint="Nothing was logged on set against this scene." />
-                    ) : characters.map((cid) => {
-                      const takes = rows.filter((r) => r.characterId === cid);
-                      const first = takes[0];
-                      return (
-                        <div key={cid} className="mt-2">
-                          <div className="row gap-2 wrap">
-                            <b>{first.character?.name || "Character"}</b>
-                            {first.character?.actor?.name && <span className="subtle">{first.character.actor.name}</span>}
-                            {first.change && <Link to={`/p/${projectId}/changes/${first.change.id}`}><span className="badge tone-info">Change #{first.change.changeNumber} {first.change.name}</span></Link>}
-                          </div>
-                          <div className="grid grid-auto mt-1">
-                            {takes.map((r) => (
-                              <Card key={r.id} className="flat" title={`Take ${r.takeNumber}`} actions={can(CONTINUITY_ROLES) ? <button className="btn btn-ghost btn-sm" onClick={() => del.mutate(r.id)} title="Delete this take"><Trash2 size={14} /></button> : undefined}>
-                                <div className="subtle mb-2">{fmtDateTime(r.createdAt)}{r.recordedByName ? ` · ${r.recordedByName}` : ""}</div>
-                                <PhotoGrid photos={r.photos || []} entityType="CONTINUITY" entityId={r.id} kinds={["FRONT", "SIDE", "BACK", "CLOSEUP"]} compact attachments={false} />
-                                <dl className="kv mt-2" style={{ gridTemplateColumns: "100px 1fr" }}>
-                                  {Object.entries(r.details).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v || "—"}</dd></Fragment>)}
-                                </dl>
-                                {r.accessories.length > 0 && <div className="chips mt-2">{r.accessories.map((a) => <span key={a.name} className={`badge tone-${a.present ? "ok" : "danger"}`}>{a.present ? "✓" : "✗"} {a.name}</span>)}</div>}
-                                {r.notes && <div className="notice mt-2">{r.notes}</div>}
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <PageHead title="Continuity book" sub="The day being prepared, and the days already in the can."
+          actions={<><button className="btn" onClick={() => window.print()} title={`Print the ${tab === "prep" ? "prep sheet" : "book"} for ${day}`}><Printer size={16} /> Print / PDF</button><Link to={`/p/${projectId}/continuity`} className="btn btn-primary"><Plus size={16} /> Record take</Link></>} />
+        <Tabs tabs={[{ key: "prep", label: "Continuity Prep" }, { key: "shot", label: "Continuity Shot" }]} value={tab} onChange={setTab} />
+        {loading ? <Spinner /> : tab === "prep"
+          ? <PrepDay projectId={projectId} scenes={scenes || []} records={records || []} day={prepDay} onDay={setPrepDay} />
+          : <ShotDays projectId={projectId} records={records || []} day={shotDay} onDay={setShotDay} days={days} />}
       </div>
     </div>
   );
