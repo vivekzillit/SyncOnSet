@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
@@ -14,7 +14,8 @@ type CharacterDetailRow = { label: string; value: string };
 type Detail = Character & { actor?: Actor | null; details?: CharacterDetailRow[]; scenes: { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string }; change?: { id: string; changeNumber: number; name: string } | null }[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
 
 export default function CharacterDetail() {
-  const { id = "" } = useParams();
+  const { id = "", sceneId = "" } = useParams();
+  const { pathname } = useLocation();
   const { projectId, can } = useProject();
   const { meta } = useAuth();
   const qc = useQueryClient();
@@ -58,6 +59,10 @@ export default function CharacterDetail() {
 
   const canEdit = can(MANAGER_ROLES);
   const canFit = can(OPS_ROLES);
+  const viaScene = ch.scenes.find((s) => s.scene.id === sceneId);
+  // With one scene there is nothing to choose, so the character opens straight onto their details.
+  // "…/all" is the way past the picker for anyone who wants the whole character rather than one scene.
+  const pickScene = !sceneId && !pathname.endsWith("/all") && ch.scenes.length > 1;
   const details = ch.details || [];
   const openDetail = (at: number) => { setDf(at < 0 ? { label: "", value: "" } : details[at]); setDetailAt(at); };
   const commitDetail = () => {
@@ -65,21 +70,56 @@ export default function CharacterDetail() {
     saveDetails.mutate(detailAt === -1 ? [...details, row] : details.map((d, i) => (i === detailAt ? row : d)));
   };
 
+  const head = (
+    <span className="row gap-2"><Avatar name={ch.name} lg /><span>{ch.castNumber != null && <span className="mono muted">{ch.castNumber}. </span>}{ch.name} <Badge status={ch.type}>{humanize(ch.type)}</Badge></span></span>
+  );
+  const played = <>{ch.actor ? <>Played by <b>{ch.actor.name}</b></> : "No actor assigned"}{ch.age ? ` · age ${ch.age}` : ""}</>;
+
+  // Step one for a character in several scenes: which scene are you dressing?
+  if (pickScene) {
+    return (
+      <div>
+        <PageHead crumbs={<><Link to={`${base}/characters`}>Characters</Link> / {ch.name}</>} title={head}
+          sub={<>{played} · in {ch.scenes.length} scenes</>}
+          actions={<Link to={`${base}/characters/${id}/all`} className="btn">Skip to full character</Link>} />
+        <Card title="Pick a scene" pad0>
+          <div className="list">
+            {ch.scenes.map((sc) => (
+              <Link key={sc.scene.id} to={`${base}/characters/${id}/scenes/${sc.scene.id}`} className="item link">
+                <div className="avatar">{sc.scene.number}</div>
+                <div className="grow"><div className="title">{sc.scene.name || `Scene ${sc.scene.number}`}</div><div className="meta">{sc.change ? `Change #${sc.change.changeNumber} ${sc.change.name}` : "No change assigned"}</div></div>
+                <div className="end subtle">{sc.scene.shootDate ? fmtDate(sc.scene.shootDate) : ""}<Badge status={sc.scene.status} /></div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHead
-        crumbs={<><Link to={`${base}/characters`}>Characters</Link> / {ch.name}</>}
+        crumbs={<><Link to={`${base}/characters`}>Characters</Link> / {ch.scenes.length > 1 ? <><Link to={`${base}/characters/${id}`}>{ch.name}</Link> / {viaScene ? `Sc ${viaScene.scene.number}` : "All scenes"}</> : ch.name}</>}
         title={<span className="row gap-2"><Avatar name={ch.name} lg /><span>{ch.castNumber != null && <span className="mono muted">{ch.castNumber}. </span>}{ch.name} <Badge status={ch.type}>{humanize(ch.type)}</Badge></span></span>}
         sub={<>{ch.actor ? <>Played by <b>{ch.actor.name}</b></> : "No actor assigned"}{ch.age ? ` · age ${ch.age}` : ""}{ch.description ? ` · ${ch.description}` : ""}</>}
         actions={can(MANAGER_ROLES) && <><button className="btn" onClick={() => { setEf({ name: ch.name, type: ch.type, actorId: ch.actorId || "", age: ch.age ? String(ch.age) : "", description: ch.description || "", notes: ch.notes || "", castNumber: ch.castNumber != null ? String(ch.castNumber) : "" }); setEditOpen(true); }}><Pencil size={16} /> Edit</button><button className="btn btn-primary" onClick={() => setNewOpen(true)}><Plus size={16} /> Change</button></>}
       />
+      {viaScene && (
+        <Card className="mb-2">
+          <div className="row between wrap gap-2">
+            <div><div className="bold">Scene {viaScene.scene.number} · {viaScene.scene.name || "Untitled"}</div><div className="subtle">{viaScene.change ? `Wears change #${viaScene.change.changeNumber} ${viaScene.change.name}` : "No change assigned for this scene"}</div></div>
+            <Link to={`${base}/scenes/${viaScene.scene.id}`} className="btn btn-sm">Open scene</Link>
+          </div>
+        </Card>
+      )}
       <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
         <div className="col gap-2">
           <Card title="List of Scenes" pad0>
             {ch.scenes.length === 0 ? <Empty icon="🎬" title="Not in any scene yet" /> : (
               <div className="list">
                 {ch.scenes.map((s) => (
-                  <Link key={s.scene.id} to={`${base}/scenes/${s.scene.id}`} className="item link">
+                  <Link key={s.scene.id} to={`${base}/characters/${id}/scenes/${s.scene.id}`} className="item link" style={s.scene.id === sceneId ? { background: "var(--surface-2)" } : undefined}>
                     <div className="avatar">{s.scene.number}</div>
                     <div className="grow"><div className="title">{s.scene.name || `Scene ${s.scene.number}`}</div><div className="meta">{s.change ? `Change #${s.change.changeNumber} ${s.change.name}` : "No change assigned"}</div></div>
                     <div className="end subtle">{s.scene.shootDate ? fmtDate(s.scene.shootDate) : ""}<Badge status={s.scene.status} /></div>

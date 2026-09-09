@@ -115,7 +115,7 @@ export default function Breakdown() {
                     <td className="nowrap">{r.scene.timeOfDay || ""}</td>
                     <td className="nowrap">{r.scene.scriptDay || ""}</td>
                     <td className="nowrap">{r.scene.pages || ""}</td>
-                    <td className="nowrap"><Link to={`${base}/characters/${r.sc.characterId}`}>{r.sc.character.castNumber != null && <span className="mono muted">{r.sc.character.castNumber}. </span>}{r.sc.character.name}</Link></td>
+                    <td className="nowrap"><Link to={`${base}/characters/${r.sc.characterId}/scenes/${r.scene.id}`}>{r.sc.character.castNumber != null && <span className="mono muted">{r.sc.character.castNumber}. </span>}{r.sc.character.name}</Link></td>
                     <td>{r.sc.change ? <Link to={`${base}/changes/${r.sc.change.id}`}>#{r.sc.change.changeNumber} {r.sc.change.name}</Link> : <span className="subtle">No change assigned</span>}</td>
                     <td className="nowrap">{r.scene.shootDate ? fmtDate(r.scene.shootDate, SHOOT_DATE) : ""}</td>
                     {canEdit && (

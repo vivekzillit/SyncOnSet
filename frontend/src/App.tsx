@@ -58,6 +58,8 @@ export default function App() {
         <Route path="sides" element={<Sides />} />
         <Route path="characters" element={<Characters />} />
         <Route path="characters/:id" element={<CharacterDetail />} />
+        <Route path="characters/:id/all" element={<CharacterDetail />} />
+        <Route path="characters/:id/scenes/:sceneId" element={<CharacterDetail />} />
         <Route path="actors" element={<Actors />} />
         <Route path="gallery" element={<Gallery />} />
         <Route path="changes/:id" element={<ChangeDetail />} />
