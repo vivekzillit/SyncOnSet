@@ -66,7 +66,7 @@ Notification (per user)  AuditLog
 ```
 
 Key fields
-- **Project**: `type` (FEATURE | EPISODIC, shown as Feature / Feature TV series), `studio`, `prepStartDate`/`prepEndDate` (prep), `startDate`/`endDate` (shoot), plus status, shooting day, currency; `budgetBand`, `country` and `city` remain in the schema but the wizard no longer asks for them.
+- **Project**: `type` (FEATURE | EPISODIC, shown as Feature / TV Series), `studio`, `prepStartDate`/`prepEndDate`/`prepWrapDate` (prep), `startDate`/`endDate`/`wrapDate` (shoot; every date optional), plus status, shooting day, currency; `budgetBand`, `country` and `city` remain in the schema but the wizard no longer asks for them.
 - **Actor**: `name`, `gender`, `age`, `phone`, `phone2`, `email`, `email2`, `agency`, `startWorkDate`, `nextFittingAt`, `fittingComment`, measurements JSON; `characterIds` on create/update relinks characters.
 - **Character**: `castNumber` (call-sheet number), type, actor link.
 - **Scene**: slugline fields, `pages` (eighths), `scriptDay`, `shootDate`, `status`, `scriptText`, `revision`, `revisedAt`.

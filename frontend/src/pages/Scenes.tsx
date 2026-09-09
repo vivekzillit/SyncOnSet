@@ -5,7 +5,7 @@ import { Plus, Upload, FileUp, CalendarDays, ClipboardList, MoreVertical, MoreHo
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
-import { dateKey, fmtDate, humanize, todayISO } from "@/lib/format";
+import { dateKey, fmtDate, hasEpisodes, humanize, todayISO } from "@/lib/format";
 import type { Character, Scene } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ScriptUploadModal } from "@/components/ScriptUpload";
@@ -30,14 +30,16 @@ function menuPosition(el: HTMLElement): MenuPos {
 }
 
 export default function Scenes() {
-  const { projectId, can } = useProject();
+  const { projectId, can, project } = useProject();
   const { meta } = useAuth();
+  const episodes = hasEpisodes(project?.type);
   const qc = useQueryClient();
   const toast = useToast();
   const canEdit = can(MANAGER_ROLES);
 
   const [when, setWhen] = useState<"today" | "upcoming" | "all" | "">("all");
   const [rev, setRev] = useState("");
+  const [ep, setEp] = useState("");
   const [q, setQ] = useState("");
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [editAll, setEditAll] = useState(false);
@@ -55,6 +57,7 @@ export default function Scenes() {
   const sceneById = useMemo(() => new Map((data || []).map((s) => [s.id, s])), [data]);
   const locations = useMemo(() => Array.from(new Set((data || []).map((s) => (s.location || "").trim()).filter(Boolean))).sort(), [data]);
   const revisions = useMemo(() => Array.from(new Set((data || []).map((s) => s.revision || "").filter(Boolean))).sort(), [data]);
+  const episodeList = useMemo(() => Array.from(new Set((data || []).map((s) => (s.episode || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [data]);
   const latestRevision = useMemo(() => (data || []).filter((s) => s.revision).sort((a, b) => (b.revisedAt || "").localeCompare(a.revisedAt || ""))[0]?.revision || "", [data]);
 
   const today = todayISO();
@@ -63,12 +66,13 @@ export default function Scenes() {
     const pinned = (s: Scene) => !!drafts[s.id];
     let items = data || [];
     if (rev) items = items.filter((s) => pinned(s) || (s.revision || "") === rev);
+    if (ep) items = items.filter((s) => pinned(s) || (s.episode || "").trim() === ep);
     if (when === "today") items = items.filter((s) => pinned(s) || dateKey(s.shootDate) === today);
     if (when === "upcoming") items = items.filter((s) => pinned(s) || (s.shootDate && dateKey(s.shootDate) >= today));
     const needle = q.trim().toLowerCase();
-    if (needle) items = items.filter((s) => pinned(s) || [s.number, s.name, s.location, s.synopsis, s.scriptDay, s.intExt, ...s.characters.flatMap((c) => [c.character.name, String(c.character.castNumber ?? charById.get(c.characterId)?.castNumber ?? "")])].some((v) => (v || "").toLowerCase().includes(needle)));
+    if (needle) items = items.filter((s) => pinned(s) || [s.number, s.episode, s.name, s.location, s.synopsis, s.scriptDay, s.intExt, ...s.characters.flatMap((c) => [c.character.name, String(c.character.castNumber ?? charById.get(c.characterId)?.castNumber ?? "")])].some((v) => (v || "").toLowerCase().includes(needle)));
     return items;
-  }, [data, drafts, rev, when, q, today, charById]);
+  }, [data, drafts, rev, ep, when, q, today, charById]);
 
   // Every draft (the add row first, then edited rows in table order); drafts of scenes deleted elsewhere drop out.
   const draftKeys = useMemo(() => [...(drafts[NEW] ? [NEW] : []), ...list.filter((s) => drafts[s.id]).map((s) => s.id)], [drafts, list]);
@@ -172,6 +176,7 @@ export default function Scenes() {
 
       <div className="filters">
         <SearchBox value={q} onChange={setQ} placeholder="Search scene, location, description, character…" />
+        {episodes && episodeList.length > 0 && <Select value={ep} onChange={(e) => setEp(e.target.value)} options={episodeList.map((n) => ({ value: n, label: `Episode ${n}` }))} placeholder="All episodes" humanizeLabels={false} aria-label="Episode" style={{ width: "auto", minWidth: 150 }} />}
         <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "all", label: "All" }]} value={when} onChange={(v) => setWhen(v || "all")} />
         {canEdit && (
           <div className="row gap-1" style={{ marginLeft: "auto" }}>
@@ -194,17 +199,18 @@ export default function Scenes() {
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th><th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Principals</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
+              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Principals</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
-                {drafts[NEW] && <EditRow d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={principalsText(drafts[NEW].principals, charById)} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => dropDraft(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
+                {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={principalsText(drafts[NEW].principals, charById)} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => dropDraft(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
                 {list.map((s) => {
                   const d = drafts[s.id];
-                  if (d) return <EditRow key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={principalsText(d.principals, charById)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => dropDraft(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
+                  if (d) return <EditRow episodes={episodes} key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={principalsText(d.principals, charById)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => dropDraft(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
                   const pr = principalsOf(s.characters, charById);
                   const readiness = humanize(s.readiness);
                   return (
                     <tr key={s.id} style={s.status === "OMITTED" ? { opacity: 0.55 } : undefined}>
                       <td><span title={readiness} aria-label={readiness} role="img"><Dot status={s.readiness} pulse={s.readiness === "MISSING"} /></span></td>
+                      {episodes && <td className="nowrap">{s.episode || ""}</td>}
                       <td className="nowrap"><Link to={`/p/${projectId}/scenes/${s.id}`} className="bold" title={s.name || `Scene ${s.number}`}>{s.number}</Link>{s.status !== "PLANNED" && <span className="hide-mobile" style={{ marginLeft: 8 }}><Badge status={s.status} /></span>}</td>
                       <td className="nowrap">{s.scriptDay || ""}</td>
                       <td className="nowrap">{scriptLoc(s)}</td>

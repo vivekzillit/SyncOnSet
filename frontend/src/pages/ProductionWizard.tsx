@@ -12,7 +12,7 @@ const STEPS = 6;
 
 interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; synopsis: string | null; status?: string; characters: string[]; text?: string; pages?: string | null }
 interface ParseResult { format: string; file: string; scenes: ParsedScene[]; characters: DetectedCharacter[]; existingCharacters: ExistingCharacter[]; warnings: string[] }
-type DateKey = "prepStartDate" | "prepEndDate" | "startDate" | "endDate";
+type DateKey = "prepStartDate" | "prepEndDate" | "prepWrapDate" | "startDate" | "endDate" | "wrapDate";
 
 /** SyncOnSet-style production setup: type → title → studio → prep & shoot dates → script upload (optional) → character confirmation. */
 export default function ProductionWizard() {
@@ -20,7 +20,7 @@ export default function ProductionWizard() {
   const qc = useQueryClient();
   const { user, refresh } = useAuth();
   const [step, setStep] = useState(0);
-  const [f, setF] = useState({ type: "", name: "", studio: "", studioOther: "", prepStartDate: "", prepEndDate: "", startDate: "", endDate: "", revision: "White" });
+  const [f, setF] = useState({ type: "", name: "", studio: "", studioOther: "", prepStartDate: "", prepEndDate: "", prepWrapDate: "", startDate: "", endDate: "", wrapDate: "", revision: "White" });
   const [projectId, setProjectId] = useState<string | null>(null);
   const [parsed, setParsed] = useState<ParseResult | null>(null);
   const [rows, setRows] = useState<ConfirmRow[]>([]);
@@ -31,7 +31,7 @@ export default function ProductionWizard() {
   const kind = f.type === "EPISODIC" ? "series" : "feature";
 
   const code = () => (f.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase() || "PROD") + String(Math.floor(Math.random() * 900) + 100);
-  const projectBody = () => ({ name: f.name.trim(), type: f.type || "FEATURE", studio: f.studio === "Other" ? f.studioOther || null : f.studio || null, prepStartDate: f.prepStartDate || null, prepEndDate: f.prepEndDate || null, startDate: f.startDate || null, endDate: f.endDate || null });
+  const projectBody = () => ({ name: f.name.trim(), type: f.type || "FEATURE", studio: f.studio === "Other" ? f.studioOther || null : f.studio || null, prepStartDate: f.prepStartDate || null, prepEndDate: f.prepEndDate || null, prepWrapDate: f.prepWrapDate || null, startDate: f.startDate || null, endDate: f.endDate || null, wrapDate: f.wrapDate || null });
 
   /** The project is created the first time a script is read (the parser needs a project); later steps reuse it. */
   async function ensureProject(): Promise<string> {
@@ -82,12 +82,17 @@ export default function ProductionWizard() {
       <button type="button" className="btn btn-primary" onClick={next} disabled={!canNext || busy}>{busy ? "Working…" : "Continue"}</button>
     </div>
   );
-  const dateRange = (title: string, start: DateKey, end: DateKey) => (
+  const dateField = (label: string, key: DateKey, min?: string) => (
+    <Field label={label}><Input type="date" value={f[key]} min={min || undefined} onChange={(e) => setF({ ...f, [key]: e.target.value })} /></Field>
+  );
+  /** Every one of these is optional — a production is often set up before the calendar is settled. */
+  const dateRange = (title: string, start: DateKey, end: DateKey, wrap: DateKey) => (
     <div>
       <div className="bold" style={{ marginBottom: 6 }}>{title}</div>
-      <div className="grid grid-2 keep">
-        <Field label="Start date"><Input type="date" value={f[start]} onChange={(e) => setF({ ...f, [start]: e.target.value })} /></Field>
-        <Field label="End date"><Input type="date" value={f[end]} min={f[start] || undefined} onChange={(e) => setF({ ...f, [end]: e.target.value })} /></Field>
+      <div className="grid grid-3 keep">
+        {dateField("Start date", start)}
+        {dateField("End date", end, f[start])}
+        {dateField("Wrap date", wrap, f[start])}
       </div>
     </div>
   );
@@ -99,7 +104,7 @@ export default function ProductionWizard() {
         {step === 0 && (<>
           <h2 className="center">What are you working on{firstName ? `, ${firstName}` : ""}?</h2>
           <div className="grid grid-2 keep mt-3">
-            {[["FEATURE", "Feature", <Film key="f" size={40} />], ["EPISODIC", "Feature TV series", <Tv key="t" size={40} />]].map(([v, label, icon]) => (
+            {[["FEATURE", "Feature", <Film key="f" size={40} />], ["EPISODIC", "TV Series", <Tv key="t" size={40} />]].map(([v, label, icon]) => (
               <button key={v as string} type="button" className="card flat" style={{ padding: 22, textAlign: "center", cursor: "pointer", borderColor: f.type === v ? "var(--ink)" : undefined, borderWidth: f.type === v ? 2 : 1 }} onClick={() => setF({ ...f, type: v as string })}>
                 <div style={{ color: "var(--text-2)" }}>{icon}</div><div className="bold mt-1">{label}</div>
               </button>
@@ -123,8 +128,8 @@ export default function ProductionWizard() {
         {step === 3 && (<>
           <h2 className="center">What are the estimated shoot dates?</h2>
           <div className="col mt-3" style={{ gap: 18 }}>
-            {dateRange("Prep dates", "prepStartDate", "prepEndDate")}
-            {dateRange("Shoot dates", "startDate", "endDate")}
+            {dateRange("Prep dates", "prepStartDate", "prepEndDate", "prepWrapDate")}
+            {dateRange("Shoot dates", "startDate", "endDate", "wrapDate")}
           </div>
           {navRow(() => setStep(4))}
         </>)}

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { useAuth, MANAGER_ROLES } from "@/state/auth";
+import { useAuth, MANAGER_ROLES, OPS_ROLES } from "@/state/auth";
 import { fmtDate, humanize } from "@/lib/format";
 import type { Actor, Character, Costume, CostumeChange, Fitting, Photo } from "@/api/types";
 import { Badge, Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
@@ -26,6 +26,9 @@ export default function CharacterDetail() {
   const [pick, setPick] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [ef, setEf] = useState({ name: "", type: "", actorId: "", age: "", description: "", notes: "", castNumber: "" });
+  const [fitOpen, setFitOpen] = useState(false);
+  const [fitPick, setFitPick] = useState(false);
+  const [ff, setFf] = useState<{ scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] });
   // -1 while adding a row, the row's index while editing one, null when the dialog is closed.
   const [detailAt, setDetailAt] = useState<number | null>(null);
   const [df, setDf] = useState<CharacterDetailRow>({ label: "", value: "" });
@@ -33,6 +36,10 @@ export default function CharacterDetail() {
   const createChange = useMutation({
     mutationFn: () => api<CostumeChange>(p(projectId, "/changes"), { body: { characterId: id, name: nf.name, description: nf.description || null, costumeIds: nf.costumes.map((c) => c.id) } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); setNewOpen(false); setNf({ name: "", description: "", costumes: [] }); toast.push("Change created", "ok"); },
+  });
+  const createFitting = useMutation({
+    mutationFn: () => api<Fitting>(p(projectId, "/fittings"), { body: { characterId: id, scheduledAt: ff.scheduledAt || new Date().toISOString(), location: ff.location || null, notes: ff.notes || null, costumeIds: ff.costumes.map((c) => c.id) } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["fittings", projectId] }); setFitOpen(false); setFf({ scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
   /** The whole list travels with each save, so add, edit and delete are one code path. */
   const saveDetails = useMutation({
@@ -50,6 +57,7 @@ export default function CharacterDetail() {
   const m: Record<string, string | number> = typeof raw === "string" ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : (raw as Record<string, string | number>) || {};
 
   const canEdit = can(MANAGER_ROLES);
+  const canFit = can(OPS_ROLES);
   const details = ch.details || [];
   const openDetail = (at: number) => { setDf(at < 0 ? { label: "", value: "" } : details[at]); setDetailAt(at); };
   const commitDetail = () => {
@@ -115,8 +123,13 @@ export default function CharacterDetail() {
           </Card>
           <Card title="References"><PhotoGrid photos={ch.photos} entityType="CHARACTER" entityId={ch.id} kinds={["REFERENCE", "FRONT", "SIDE", "BACK", "DETAIL", "DOCUMENT", "OTHER"]} /></Card>
           <Card title="Fittings" pad0>
-            {ch.fittings.length === 0 ? <div className="subtle" style={{ padding: 14 }}>No fittings.</div> : (
-              <div className="list">{ch.fittings.map((f) => <Link key={f.id} to={`${base}/fittings/${f.id}`} className="item link"><div className="grow"><div className="title small">{fmtDate(f.scheduledAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div><div className="meta">{f.items.length} pieces{f.location ? ` · ${f.location}` : ""}</div></div><Badge status={f.status} /></Link>)}</div>
+            {ch.fittings.length === 0 ? (
+              <div style={{ padding: 14 }}>
+                <div className="subtle">No fittings.</div>
+                {canFit && <button className="btn btn-sm mt-2" onClick={() => setFitOpen(true)}><Plus size={14} /> Schedule fitting</button>}
+              </div>
+            ) : (
+              <div className="list">{ch.fittings.map((f) => <Link key={f.id} to={`${base}/fittings/${f.id}`} className="item link"><div className="grow"><div className="title small">{fmtDate(f.scheduledAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div><div className="meta">{f.items.length} piece{f.items.length === 1 ? "" : "s"}{f.location ? ` · ${f.location}` : ""}</div></div><Badge status={f.status} /></Link>)}</div>
             )}
           </Card>
           <Card title="More details" actions={canEdit && <button className="btn btn-sm" onClick={() => openDetail(-1)}><Plus size={14} /> Add more</button>} pad0>
@@ -161,6 +174,20 @@ export default function CharacterDetail() {
         </div>
         <ErrorBox error={saveDetails.error} />
       </Modal>
+
+      <Modal open={fitOpen} onClose={() => setFitOpen(false)} title={`Schedule fitting for ${ch.name}`} footer={<><button className="btn" onClick={() => setFitOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={createFitting.isPending} onClick={() => createFitting.mutate()}>Schedule</button></>}>
+        <div className="form-grid">
+          <Field label="When" help="Leave empty to book it for now"><Input type="datetime-local" value={ff.scheduledAt} onChange={(e) => setFf({ ...ff, scheduledAt: e.target.value })} /></Field>
+          <Field label="Where"><Input value={ff.location} onChange={(e) => setFf({ ...ff, location: e.target.value })} /></Field>
+          <Field label="Pieces to try" span2>
+            <div className="list card flat pad-0">{ff.costumes.map((c) => <CostumeRow key={c.id} c={c} onClick={() => setFf({ ...ff, costumes: ff.costumes.filter((x) => x.id !== c.id) })} end={<span className="subtle">remove</span>} />)}</div>
+            <button type="button" className="btn btn-sm mt-1" onClick={() => setFitPick(true)}><Plus size={14} /> Add piece</button>
+          </Field>
+          <Field label="Notes" span2><Textarea value={ff.notes} onChange={(e) => setFf({ ...ff, notes: e.target.value })} /></Field>
+        </div>
+        <ErrorBox error={createFitting.error} />
+      </Modal>
+      <CostumePicker open={fitPick} onClose={() => setFitPick(false)} onPick={(c) => setFf({ ...ff, costumes: ff.costumes.some((x) => x.id === c.id) ? ff.costumes : [...ff.costumes, c] })} characterId={ch.id} />
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit character" footer={<><button className="btn" onClick={() => setEditOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={update.isPending} onClick={() => update.mutate()}>Save</button></>}>
         <div className="form-grid">

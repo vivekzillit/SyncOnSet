@@ -1,5 +1,7 @@
-/** User-facing label for Project.type: the stored value stays FEATURE | EPISODIC, the UI says Feature / Feature TV series. */
-export const projectTypeLabel = (t?: string | null) => (t === "EPISODIC" ? "Feature TV series" : "Feature");
+/** User-facing label for Project.type: the stored value stays FEATURE | EPISODIC, the UI says Feature / TV Series. */
+export const projectTypeLabel = (t?: string | null) => (t === "EPISODIC" ? "TV Series" : "Feature");
+/** TV series carry episodes; features do not, so episode columns and fields stay hidden for them. */
+export const hasEpisodes = (t?: string | null) => t === "EPISODIC";
 export const humanize = (s?: string | null) => (s ? s.replace(/_/g, " ").toLowerCase().replace(/(^|\s)\S/g, (t) => t.toUpperCase()) : "");
 
 export function fmtDate(d?: string | Date | null, opts: Intl.DateTimeFormatOptions = { day: "2-digit", month: "short" }) {

@@ -5,7 +5,7 @@ import { Pencil, Plus, Trash2, BookOpen, Sparkles, Check, X } from "lucide-react
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
-import { fmtDateLong, humanize, toLocalInput } from "@/lib/format";
+import { fmtDateLong, hasEpisodes, humanize, toLocalInput } from "@/lib/format";
 import type { Character, CostumeChange, Readiness, Scene } from "@/api/types";
 import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ReadinessLine } from "@/components/domain";
@@ -14,8 +14,9 @@ import { OPS_ROLES } from "@/state/auth";
 
 export default function SceneDetail() {
   const { id = "" } = useParams();
-  const { projectId, can } = useProject();
+  const { projectId, can, project } = useProject();
   const { meta } = useAuth();
+  const episodes = hasEpisodes(project?.type);
   const qc = useQueryClient();
   const toast = useToast();
   const base = `/p/${projectId}`;
@@ -54,7 +55,7 @@ export default function SceneDetail() {
 
   if (isLoading || !scene) return <Spinner />;
   const openEdit = () => {
-    setForm({ number: scene.number, name: scene.name || "", location: scene.location || "", intExt: scene.intExt || "", timeOfDay: scene.timeOfDay || "", scriptDay: scene.scriptDay || "", pages: scene.pages || "", shootDate: scene.shootDate ? toLocalInput(scene.shootDate).slice(0, 10) : "", status: scene.status, synopsis: scene.synopsis || "" });
+    setForm({ number: scene.number, episode: scene.episode || "", name: scene.name || "", location: scene.location || "", intExt: scene.intExt || "", timeOfDay: scene.timeOfDay || "", scriptDay: scene.scriptDay || "", pages: scene.pages || "", shootDate: scene.shootDate ? toLocalInput(scene.shootDate).slice(0, 10) : "", status: scene.status, synopsis: scene.synopsis || "" });
     setEditOpen(true);
   };
   const continuityByChar = new Map<string, NonNullable<Scene["continuity"]>>();
@@ -65,7 +66,7 @@ export default function SceneDetail() {
       <PageHead
         crumbs={<><Link to={`${base}/scenes`}>Scenes</Link> / Sc {scene.number}</>}
         title={<span className="row gap-2 wrap"><span>Sc {scene.number}{scene.name ? ` · ${scene.name}` : ""}</span>{readiness && <Badge status={readiness.overall} lg>{readiness.overall === "READY" ? "Costume ready" : humanize(readiness.overall)}</Badge>}</span>}
-        sub={[scene.intExt, scene.location, scene.timeOfDay, scene.scriptDay, scene.pages ? `${scene.pages} pgs` : null, scene.revision ? `Rev. ${scene.revision}` : null, scene.shootDate ? fmtDateLong(scene.shootDate) : "Unscheduled"].filter(Boolean).join(" · ")}
+        sub={[episodes && scene.episode ? `Episode ${scene.episode}` : null, scene.intExt, scene.location, scene.timeOfDay, scene.scriptDay, scene.pages ? `${scene.pages} pgs` : null, scene.revision ? `Rev. ${scene.revision}` : null, scene.shootDate ? fmtDateLong(scene.shootDate) : "Unscheduled"].filter(Boolean).join(" · ")}
         actions={<><Link to={`${base}/continuity?sceneId=${scene.id}`} className="btn"><BookOpen size={16} /> Continuity</Link>{can(MANAGER_ROLES) && <button className="btn" onClick={openEdit}><Pencil size={16} /> Edit</button>}</>}
       />
       {scene.synopsis && <div className="notice info mb-2">{scene.synopsis}</div>}
@@ -188,6 +189,7 @@ export default function SceneDetail() {
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit scene" footer={<><button className="btn" onClick={() => setEditOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={update.isPending} onClick={() => update.mutate()}>Save</button></>}>
         <div className="form-grid">
           <Field label="Scene number"><Input value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} /></Field>
+          {episodes && <Field label="Episode"><Input value={form.episode || ""} onChange={(e) => setForm({ ...form, episode: e.target.value })} placeholder="101" /></Field>}
           <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
           <Field label="Location"><Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
           <Field label="Script day"><Input value={form.scriptDay} onChange={(e) => setForm({ ...form, scriptDay: e.target.value })} /></Field>

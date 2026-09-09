@@ -39,8 +39,10 @@ const projectSchema = z.object({
   currency: z.string().length(3).optional(),
   prepStartDate: zDate,
   prepEndDate: zDate,
+  prepWrapDate: zDate,
   startDate: zDate,
   endDate: zDate,
+  wrapDate: zDate,
   notes: zOptionalString,
 });
 

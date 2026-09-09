@@ -43,8 +43,10 @@ model Project {
   currency        String    @default("INR")
   prepStartDate   DateTime? // prep (pre-production) window
   prepEndDate     DateTime?
+  prepWrapDate    DateTime? // last day of prep, when it differs from the planned end
   startDate       DateTime? // shoot window
   endDate         DateTime?
+  wrapDate        DateTime? // last day of principal photography
   notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -142,6 +144,7 @@ model Scene {
   location  String?
   intExt    String?   // INT | EXT | INT/EXT
   timeOfDay String?   // DAY | NIGHT | DAWN | DUSK
+  episode   String?   // TV series only: the episode this scene belongs to, e.g. "101"
   scriptDay String?   // story day, e.g. "Day 3"
   synopsis  String?
   pages     String?   // e.g. "2 3/8"

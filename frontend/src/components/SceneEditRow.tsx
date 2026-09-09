@@ -5,7 +5,7 @@ import { Input, Select, initials } from "@/components/ui";
 import { castLabel, sortByCast } from "@/components/PrincipalsModal";
 
 /* ---------- Inline row drafts ---------- */
-export interface Draft { number: string; dayPrefix: string; dayN: string; intExt: string; location: string; synopsis: string; shootDate: string; principals: string[] }
+export interface Draft { number: string; episode: string; dayPrefix: string; dayN: string; intExt: string; location: string; synopsis: string; shootDate: string; principals: string[] }
 export const NEW = "new";
 export const LOCATION_LIST_ID = "scene-locations";
 const DAY_PREFIXES = ["Day", "Night"];
@@ -24,10 +24,10 @@ const joinScriptDay = (d: Draft) => (d.dayN.trim() ? [d.dayPrefix, d.dayN.trim()
 /** A date-only input ("YYYY-MM-DD") is sent as the viewer's local midnight so it round-trips to the same calendar day in every timezone. */
 const localDateISO = (ymd: string) => { const [y, m, d] = ymd.split("-").map(Number); return new Date(y, m - 1, d).toISOString(); };
 
-export const emptyDraft = (): Draft => ({ number: "", dayPrefix: "Day", dayN: "", intExt: "INT", location: "", synopsis: "", shootDate: "", principals: [] });
-export const toDraft = (s: Scene): Draft => ({ number: s.number, ...parseScriptDay(s.scriptDay), intExt: s.intExt || "", location: s.location || "", synopsis: s.synopsis || "", shootDate: dateKey(s.shootDate), principals: s.characters.map((c) => c.characterId) });
-type Body = { number: string; scriptDay: string | null; intExt: string | null; location: string | null; synopsis: string | null; shootDate: string | null };
-const toBody = (d: Draft): Body => ({ number: d.number.trim(), scriptDay: joinScriptDay(d) || null, intExt: d.intExt || null, location: d.location.trim() || null, synopsis: d.synopsis.trim() || null, shootDate: d.shootDate ? localDateISO(d.shootDate) : null });
+export const emptyDraft = (): Draft => ({ number: "", episode: "", dayPrefix: "Day", dayN: "", intExt: "INT", location: "", synopsis: "", shootDate: "", principals: [] });
+export const toDraft = (s: Scene): Draft => ({ number: s.number, episode: s.episode || "", ...parseScriptDay(s.scriptDay), intExt: s.intExt || "", location: s.location || "", synopsis: s.synopsis || "", shootDate: dateKey(s.shootDate), principals: s.characters.map((c) => c.characterId) });
+type Body = { number: string; episode: string | null; scriptDay: string | null; intExt: string | null; location: string | null; synopsis: string | null; shootDate: string | null };
+const toBody = (d: Draft): Body => ({ number: d.number.trim(), episode: d.episode.trim() || null, scriptDay: joinScriptDay(d) || null, intExt: d.intExt || null, location: d.location.trim() || null, synopsis: d.synopsis.trim() || null, shootDate: d.shootDate ? localDateISO(d.shootDate) : null });
 /** Keys of `next` whose value differs from `prev` — so a PATCH only touches what the user changed. */
 function diffBody(next: Body, prev: Body): Partial<Body> {
   const out: Partial<Body> = {};
@@ -96,7 +96,7 @@ export function principalsOf(chars: Pick<SceneCharacter, "characterId" | "charac
 export const principalsText = (ids: string[], byId: Map<string, Character>) => principalsOf(ids.map((id) => byId.get(id)).filter((c): c is Character => !!c).map((c) => ({ characterId: c.id, character: c })), byId);
 
 /* ---------- Inline edit row (add + edit share it) ---------- */
-export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, error }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; error?: string }) {
+export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, error, episodes }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; error?: string; episodes?: boolean }) {
   const set = (patch: Partial<Draft>) => onChange({ ...d, ...patch });
   const canSave = !!d.number.trim() && !error && !busy;
   // Enter saves / Escape cancels only from a text or date input: a focused button (Cancel, Add/Remove) must not also trigger Save.
@@ -111,6 +111,7 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
   return (
     <tr style={{ background: "var(--surface-2)" }} onKeyDown={onKey} aria-busy={busy || undefined}>
       <td />
+      {episodes && <td><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} placeholder="Ep" disabled={busy} style={{ minWidth: 64, maxWidth: 84 }} /></td>}
       <td>
         <Input value={d.number} onChange={(e) => set({ number: e.target.value })} placeholder="Scene #" autoFocus={isNew} disabled={busy} aria-invalid={!!error} title={error} style={{ minWidth: 84, maxWidth: 110, borderColor: error ? "var(--danger)" : undefined }} />
         {error && <div className="tiny" style={{ color: "var(--danger)", marginTop: 2 }}>{error}</div>}

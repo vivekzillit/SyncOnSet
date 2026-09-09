@@ -21,6 +21,7 @@ const schema = z.object({
   location: zOptionalString,
   intExt: z.enum(INT_EXT).optional().nullable(),
   timeOfDay: z.enum(TIMES_OF_DAY).optional().nullable(),
+  episode: zOptionalString,
   scriptDay: zOptionalString,
   synopsis: zOptionalString,
   pages: zOptionalString,
