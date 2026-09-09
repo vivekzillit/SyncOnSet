@@ -102,6 +102,14 @@ export function characterNames(chars: Pick<SceneCharacter, "characterId" | "char
 }
 export const characterNamesOf = (ids: string[], byId: Map<string, Character>) => characterNames(ids.map((id) => byId.get(id)).filter((c): c is Character => !!c).map((c) => ({ characterId: c.id, character: c })), byId);
 
+/** Their cast numbers, in the same order. A character without one is left out. */
+export function castNumbers(chars: Pick<SceneCharacter, "characterId" | "character">[], byId: Map<string, Character>) {
+  const sorted = sortByCast(chars.map((c) => ({ name: c.character.name, castNumber: c.character.castNumber ?? byId.get(c.characterId)?.castNumber ?? null })));
+  const numbered = sorted.filter((c) => c.castNumber != null);
+  return { text: numbered.map((c) => c.castNumber).join(", "), title: numbered.map(castLabel).join("\n"), missing: sorted.length - numbered.length };
+}
+export const castNumbersOf = (ids: string[], byId: Map<string, Character>) => castNumbers(ids.map((id) => byId.get(id)).filter((c): c is Character => !!c).map((c) => ({ characterId: c.id, character: c })), byId);
+
 /** The actors playing them, in the same order. A character with nobody cast yet is left out. */
 export function castMembers(chars: Pick<SceneCharacter, "characterId" | "character">[], byId: Map<string, Character>) {
   const sorted = sortByCast(chars.map((c) => {
@@ -114,7 +122,7 @@ export function castMembers(chars: Pick<SceneCharacter, "characterId" | "charact
 export const castMembersOf = (ids: string[], byId: Map<string, Character>) => castMembers(ids.map((id) => byId.get(id)).filter((c): c is Character => !!c).map((c) => ({ characterId: c.id, character: c })), byId);
 
 /* ---------- Inline edit row (add + edit share it) ---------- */
-export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, cast, error, episodes }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; cast?: { text: string; title: string }; error?: string; episodes?: boolean }) {
+export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, numbers, cast, error, episodes }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; numbers?: { text: string; title: string }; cast?: { text: string; title: string }; error?: string; episodes?: boolean }) {
   const set = (patch: Partial<Draft>) => onChange({ ...d, ...patch });
   const canSave = !!d.number.trim() && !error && !busy;
   // Enter saves / Escape cancels only from a text or date input: a focused button (Cancel, Add/Remove) must not also trigger Save.
@@ -153,6 +161,7 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
           <button type="button" className="btn btn-sm" disabled={busy} onClick={onPrincipals}>Add/Remove</button>
         </div>
       </td>
+      <td className="small subtle mono" title={numbers?.title}>{numbers?.text || "—"}</td>
       <td className="small subtle" title={cast?.title}>{cast?.text || "—"}</td>
       <td><Input type="date" value={d.shootDate} onChange={(e) => set({ shootDate: e.target.value })} disabled={busy} style={{ minWidth: 150 }} /></td>
       <td className="right nowrap">

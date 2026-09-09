@@ -12,7 +12,7 @@ import { ScriptUploadModal } from "@/components/ScriptUpload";
 import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
 import { PrincipalsModal } from "@/components/PrincipalsModal";
 import { FixedMenu } from "@/components/FixedMenu";
-import { EditRow, LOCATION_LIST_ID, NEW, PersistError, castMembers, castMembersOf, characterNames, characterNamesOf, emptyDraft, persistDraft, planSaveOrder, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
+import { EditRow, LOCATION_LIST_ID, NEW, PersistError, castMembers, castMembersOf, castNumbers, castNumbersOf, characterNames, characterNamesOf, emptyDraft, persistDraft, planSaveOrder, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
 
 const MENU_H = 188; // approx height of a 5-item menu, used to flip it upward near the bottom of the viewport
 const MENU_W = 176;
@@ -206,13 +206,14 @@ export default function Scenes() {
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast member</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
+              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast number</th><th>Cast member</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
-                {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={characterNamesOf(drafts[NEW].principals, charById)} cast={castMembersOf(drafts[NEW].principals, charById)} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => dropDraft(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
+                {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={characterNamesOf(drafts[NEW].principals, charById)} numbers={castNumbersOf(drafts[NEW].principals, charById)} cast={castMembersOf(drafts[NEW].principals, charById)} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => dropDraft(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
                 {list.map((s) => {
                   const d = drafts[s.id];
-                  if (d) return <EditRow episodes={episodes} key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={characterNamesOf(d.principals, charById)} cast={castMembersOf(d.principals, charById)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => dropDraft(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
+                  if (d) return <EditRow episodes={episodes} key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={characterNamesOf(d.principals, charById)} numbers={castNumbersOf(d.principals, charById)} cast={castMembersOf(d.principals, charById)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => dropDraft(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
                   const names = characterNames(s.characters, charById);
+                  const numbers = castNumbers(s.characters, charById);
                   const cast = castMembers(s.characters, charById);
                   const readiness = humanize(s.readiness);
                   return (
@@ -224,6 +225,7 @@ export default function Scenes() {
                       <td className="nowrap">{scriptLoc(s)}</td>
                       <td title={s.synopsis || undefined}><div className="truncate" style={{ maxWidth: 340 }}>{truncate(s.synopsis)}</div></td>
                       <td title={names.title || undefined}>{names.text}</td>
+                      <td className="subtle mono nowrap" title={numbers.title || undefined}>{numbers.text || "—"}</td>
                       <td className="subtle" title={cast.title || undefined}>{cast.text || "—"}</td>
                       <td className="nowrap">{s.shootDate ? fmtDate(s.shootDate, SHOOT_DATE) : ""}</td>
                       <td className="right">
