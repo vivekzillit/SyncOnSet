@@ -4,23 +4,22 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Film, Tv, Upload, FileText } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useAuth } from "@/state/auth";
-import { ErrorBox, Field, Input, Select } from "@/components/ui";
+import { ErrorBox, Field, Input } from "@/components/ui";
 import { CharacterConfirmation, buildCharacterImport, initialRows, type ConfirmRow, type DetectedCharacter, type ExistingCharacter } from "@/components/CharacterConfirmation";
 
-const STUDIOS = ["Yash Raj Films", "Dharma Productions", "Excel Entertainment", "Red Chillies Entertainment", "T-Series", "Eros International", "Netflix", "Amazon Studios", "Disney+ Hotstar", "Sony Pictures", "Warner Bros.", "Universal", "Paramount", "BBC", "Independent", "Other"];
-const STEPS = 6;
+const STEPS = 5;
 
 interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; synopsis: string | null; status?: string; characters: string[]; text?: string; pages?: string | null }
 interface ParseResult { format: string; file: string; scenes: ParsedScene[]; characters: DetectedCharacter[]; existingCharacters: ExistingCharacter[]; warnings: string[] }
 type DateKey = "prepStartDate" | "prepEndDate" | "prepWrapDate" | "startDate" | "endDate" | "wrapDate";
 
-/** SyncOnSet-style production setup: type → title → studio → prep & shoot dates → script upload (optional) → character confirmation. */
+/** SyncOnSet-style production setup: type → title → prep & shoot dates → script upload (optional) → character confirmation. */
 export default function ProductionWizard() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const { user, refresh } = useAuth();
   const [step, setStep] = useState(0);
-  const [f, setF] = useState({ type: "", name: "", studio: "", studioOther: "", prepStartDate: "", prepEndDate: "", prepWrapDate: "", startDate: "", endDate: "", wrapDate: "", revision: "White" });
+  const [f, setF] = useState({ type: "", name: "", prepStartDate: "", prepEndDate: "", prepWrapDate: "", startDate: "", endDate: "", wrapDate: "", revision: "White" });
   const [projectId, setProjectId] = useState<string | null>(null);
   const [parsed, setParsed] = useState<ParseResult | null>(null);
   const [rows, setRows] = useState<ConfirmRow[]>([]);
@@ -31,7 +30,7 @@ export default function ProductionWizard() {
   const kind = f.type === "EPISODIC" ? "series" : "feature";
 
   const code = () => (f.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase() || "PROD") + String(Math.floor(Math.random() * 900) + 100);
-  const projectBody = () => ({ name: f.name.trim(), type: f.type || "FEATURE", studio: f.studio === "Other" ? f.studioOther || null : f.studio || null, prepStartDate: f.prepStartDate || null, prepEndDate: f.prepEndDate || null, prepWrapDate: f.prepWrapDate || null, startDate: f.startDate || null, endDate: f.endDate || null, wrapDate: f.wrapDate || null });
+  const projectBody = () => ({ name: f.name.trim(), type: f.type || "FEATURE", prepStartDate: f.prepStartDate || null, prepEndDate: f.prepEndDate || null, prepWrapDate: f.prepWrapDate || null, startDate: f.startDate || null, endDate: f.endDate || null, wrapDate: f.wrapDate || null });
 
   /** The project is created the first time a script is read (the parser needs a project); later steps reuse it. */
   async function ensureProject(): Promise<string> {
@@ -48,7 +47,7 @@ export default function ProductionWizard() {
       const id = await ensureProject();
       const fd = new FormData(); fd.append("file", file);
       const r = await api<ParseResult>(p(id, "/scenes/parse-script"), { formData: fd });
-      setParsed(r); setRows(initialRows(r.characters)); setStep(5);
+      setParsed(r); setRows(initialRows(r.characters)); setStep(4);
     } catch (e) { setError(e); } finally { setBusy(false); }
   }
   /** Create/update the production, import the confirmed breakdown if a script was read, and open the Scenes list. */
@@ -57,7 +56,7 @@ export default function ProductionWizard() {
     try {
       const existed = !!projectId;
       const id = await ensureProject();
-      // Anything edited after going Back (title, studio, dates) is saved before the import.
+      // Anything edited after going Back (title, dates) is saved before the import.
       if (existed) await api(`/projects/${id}`, { method: "PATCH", body: projectBody() });
       if (parsed) {
         const { characterMap, castNumbers } = buildCharacterImport(rows, parsed.existingCharacters);
@@ -99,7 +98,7 @@ export default function ProductionWizard() {
 
   return (
     <div className="login" style={{ alignItems: "start", paddingTop: 48 }}>
-      <div className="card" style={{ width: "100%", maxWidth: step >= 5 ? 900 : 560, padding: 28 }}>
+      <div className="card" style={{ width: "100%", maxWidth: step >= 4 ? 900 : 560, padding: 28 }}>
         <div className="row gap-2 mb-2"><div className="brand-mark">C&amp;S</div><div className="subtle">Create a production · step {Math.min(step + 1, STEPS)} of {STEPS}</div></div>
         {step === 0 && (<>
           <h2 className="center">What are you working on{firstName ? `, ${firstName}` : ""}?</h2>
@@ -118,22 +117,14 @@ export default function ProductionWizard() {
           {navRow(() => setStep(2), !!f.name.trim())}
         </>)}
         {step === 2 && (<>
-          <h2 className="center">Which studio are you working with?</h2>
-          <div className="col mt-3">
-            <Select value={f.studio} onChange={(e) => setF({ ...f, studio: e.target.value })} options={STUDIOS} placeholder="Select a studio" humanizeLabels={false} />
-            {f.studio === "Other" && <Input value={f.studioOther} onChange={(e) => setF({ ...f, studioOther: e.target.value })} placeholder="Other Studio" autoFocus />}
-          </div>
-          {navRow(() => setStep(3))}
-        </>)}
-        {step === 3 && (<>
           <h2 className="center">What are the estimated shoot dates?</h2>
           <div className="col mt-3" style={{ gap: 18 }}>
             {dateRange("Prep dates", "prepStartDate", "prepEndDate", "prepWrapDate")}
             {dateRange("Shoot dates", "startDate", "endDate", "wrapDate")}
           </div>
-          {navRow(() => setStep(4))}
+          {navRow(() => setStep(3))}
         </>)}
-        {step === 4 && (<>
+        {step === 3 && (<>
           <h2 className="center row gap-1" style={{ justifyContent: "center" }}><FileText size={20} /> Upload script for breakdown</h2>
           <div className="col mt-3">
             <Input value={f.revision} onChange={(e) => setF({ ...f, revision: e.target.value })} placeholder="Draft (ex. Blue)" style={{ maxWidth: 260, alignSelf: "center" }} />
@@ -146,9 +137,9 @@ export default function ProductionWizard() {
           </div>
           <ErrorBox error={error} />
           {/* The script is optional: with one read, Continue goes to Character Confirmation; without, it creates the production as is. */}
-          {navRow(() => (parsed ? setStep(5) : finish()))}
+          {navRow(() => (parsed ? setStep(4) : finish()))}
         </>)}
-        {step === 5 && parsed && (<>
+        {step === 4 && parsed && (<>
           <div className="row between wrap gap-2">
             <h2>🎭 Character Confirmation</h2>
             <div className="row gap-2"><button type="button" className="btn btn-ghost" onClick={finish} disabled={busy}>Skip</button><button type="button" className="btn btn-primary" onClick={finish} disabled={busy}>{busy ? "Importing…" : "Continue"}</button></div>
