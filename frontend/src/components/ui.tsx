@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { X, Search } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, X, Search } from "lucide-react";
 import { humanize, tone } from "@/lib/format";
 
 /* ---------- Badges & dots ---------- */
@@ -11,9 +12,31 @@ export function Dot({ status, pulse }: { status?: string | null; pulse?: boolean
 }
 
 /* ---------- Page chrome ---------- */
-export function PageHead({ title, sub, actions, crumbs }: { title: ReactNode; sub?: ReactNode; actions?: ReactNode; crumbs?: ReactNode }) {
+/**
+ * Back to wherever you came from. Opened straight from a link or a refresh there is no history to step
+ * back through, so it falls back to the production's dashboard, or the productions list outside one.
+ */
+export function BackButton() {
+  const nav = useNavigate();
+  const { pathname } = useLocation();
+  const inProject = /^\/p\/[^/]+/.exec(pathname);
+  const isRoot = pathname === (inProject ? inProject[0] : "/projects");
+  const goBack = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) nav(-1);
+    else nav(inProject ? inProject[0] : "/projects");
+  };
+  return (
+    <button type="button" className="iconbtn back" onClick={goBack} aria-label={isRoot ? "Back to productions" : "Go back"} title={isRoot ? "Back to productions" : "Back"}>
+      <ArrowLeft size={18} />
+    </button>
+  );
+}
+
+export function PageHead({ title, sub, actions, crumbs, back = true }: { title: ReactNode; sub?: ReactNode; actions?: ReactNode; crumbs?: ReactNode; back?: boolean }) {
   return (
     <div className="page-head">
+      {back && <BackButton />}
       <div className="grow">
         {crumbs && <div className="crumbs">{crumbs}</div>}
         <h1>{title}</h1>
