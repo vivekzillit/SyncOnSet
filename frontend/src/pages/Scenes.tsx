@@ -206,7 +206,7 @@ export default function Scenes() {
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast number</th><th>Cast member</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
+              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast number</th><th>Cast Name</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={characterNamesOf(drafts[NEW].principals, charById)} numbers={castNumbersOf(drafts[NEW].principals, charById)} cast={castMembersOf(drafts[NEW].principals, charById)} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => dropDraft(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
                 {list.map((s) => {
@@ -221,7 +221,8 @@ export default function Scenes() {
                       <td><span title={readiness} aria-label={readiness} role="img"><Dot status={s.readiness} pulse={s.readiness === "MISSING"} /></span></td>
                       {episodes && <td className="nowrap">{s.episode || ""}</td>}
                       <td className="nowrap"><Link to={`/p/${projectId}/scenes/${s.id}`} className="bold" title={s.name || `Scene ${s.number}`}>{s.number}</Link>{s.status !== "PLANNED" && <span className="hide-mobile" style={{ marginLeft: 8 }}><Badge status={s.status} /></span>}</td>
-                      <td className="nowrap">{s.scriptDay || ""}{s.timeOfDay && <div className="subtle tiny">{humanize(s.timeOfDay)}</div>}</td>
+                      {/* Day or Night only — the story day ("Day 3") is still edited here and shown on Breakdown and scene detail. */}
+                      <td className="nowrap">{humanize(s.timeOfDay) || ""}</td>
                       <td className="nowrap">{scriptLoc(s)}</td>
                       <td title={s.synopsis || undefined}><div className="truncate" style={{ maxWidth: 340 }}>{truncate(s.synopsis)}</div></td>
                       <td title={names.title || undefined}>{names.text}</td>
