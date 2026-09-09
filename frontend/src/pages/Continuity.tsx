@@ -15,8 +15,11 @@ import { ScheduleUploadModal } from "@/components/ScheduleUpload";
 const DEFAULT_DETAILS = ["Shirt", "Sleeves", "Collar", "Trousers", "Hair", "Accessories"];
 type Draft = { takeNumber: string; details: { k: string; v: string }[]; accessories: { name: string; present: boolean }[]; notes: string };
 
-/** Scene and character pickers, the change in play, and the takes already recorded: shared by both continuity views. */
-function useContinuity() {
+/**
+ * Scene and character pickers, the change in play, and the takes already recorded: shared by both continuity views.
+ * `autoSelect` opens on a sensible scene, which suits the book; on set nothing is chosen until a scene is clicked.
+ */
+function useContinuity({ autoSelect = true }: { autoSelect?: boolean } = {}) {
   const { projectId } = useProject();
   const [sp, setSp] = useSearchParams();
   const { data: scenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
@@ -27,7 +30,7 @@ function useContinuity() {
   const goTo = (scene: string, character: string) => { const n = new URLSearchParams(sp); n.set("sceneId", scene); n.set("characterId", character); setSp(n, { replace: true }); };
 
   useEffect(() => {
-    if (!sceneId && scenes?.length) {
+    if (autoSelect && !sceneId && scenes?.length) {
       const today = todayISO();
       const pick = scenes.find((s) => s.status === "SHOOTING") || scenes.find((s) => dateKey(s.shootDate) === today) || scenes[0];
       set("sceneId", pick.id);
@@ -37,7 +40,7 @@ function useContinuity() {
 
   const { data: scene } = useQuery({ queryKey: ["scene", sceneId], queryFn: () => api<Scene>(p(projectId, `/scenes/${sceneId}`)), enabled: !!sceneId });
   useEffect(() => {
-    if (scene && !characterId && scene.characters.length) set("characterId", scene.characters[0].characterId);
+    if (autoSelect && scene && !characterId && scene.characters.length) set("characterId", scene.characters[0].characterId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, characterId]);
 
@@ -81,9 +84,11 @@ function ShootDay({ c, day, onDay }: { c: ReturnType<typeof useContinuity>; day:
           </div>
           <div className="col gap-2">
             {scenes.map((s) => (
-              <div key={s.id} className="card flat" style={{ padding: 12 }}>
+              <div key={s.id} className="card flat" style={{ padding: 12, borderColor: c.sceneId === s.id ? "var(--ink)" : undefined }}>
                 <div className="row between wrap gap-2">
-                  <div className="bold">Sc {s.number}{s.name ? ` · ${s.name}` : ""}</div>
+                  <button type="button" className="btn btn-ghost btn-sm bold" style={{ padding: "2px 6px", marginLeft: -6 }} onClick={() => c.goTo(s.id, s.characters[0]?.characterId || "")} title="Open the take form for this scene">
+                    Sc {s.number}{s.name ? ` · ${s.name}` : ""}
+                  </button>
                   <span className="subtle">{[s.intExt, s.location, s.timeOfDay].filter(Boolean).join(" · ")}</span>
                 </div>
                 {s.characters.length === 0 ? <div className="subtle mt-1">No characters tagged to this scene.</div> : (
@@ -106,6 +111,24 @@ function ShootDay({ c, day, onDay }: { c: ReturnType<typeof useContinuity>; day:
         </>
       )}
     </Card>
+  );
+}
+
+/** What the chosen character is wearing in the chosen scene, shown once a scene has been clicked. */
+function SelectedScene({ c }: { c: ReturnType<typeof useContinuity> }) {
+  const { projectId } = useProject();
+  const base = `/p/${projectId}`;
+  if (!c.scene || !c.sc) return null;
+  return (
+    <>
+      <div className="notice info mb-2">
+        <b>{c.sc.character.name}</b> in Sc {c.scene.number}: {c.sc.change ? <Link to={`${base}/changes/${c.sc.change.id}`}><u>Change #{c.sc.change.changeNumber} {c.sc.change.name}</u></Link> : "no change assigned"}
+        {c.sc.change?.items?.length ? <> — {c.sc.change.items.map((i) => `${i.costume.name}${i.wearNotes ? ` (${i.wearNotes})` : ""}`).join(", ")}</> : null}
+      </div>
+      {c.flags.length > 0 && (
+        <div className="notice mb-2"><div className="row gap-1 bold"><AlertTriangle size={16} /> Continuity flags</div><ul style={{ margin: "6px 0 0 18px" }}>{c.flags.map((fl, i) => <li key={i}>Take {fl.take}: {fl.message}</li>)}</ul></div>
+      )}
+    </>
   );
 }
 
@@ -133,7 +156,7 @@ function Pickers({ c }: { c: ReturnType<typeof useContinuity> }) {
 
 /** On Set: the record-take form itself, ready to fill, with the QR scanner to hand. */
 export default function ContinuityOnSet() {
-  const c = useContinuity();
+  const c = useContinuity({ autoSelect: false });
   const { can } = useProject();
   const qc = useQueryClient();
   const toast = useToast();
@@ -189,9 +212,10 @@ export default function ContinuityOnSet() {
       <PageHead title="On set" sub="Record what the actor is wearing, take by take."
         actions={<>{mayRecord && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<Link to={`/p/${c.projectId}/continuity/book`} className="btn">Continuity book →</Link></>} />
       <ScheduleUploadModal open={callsheetOpen} kind="CALLSHEET" onClose={() => setCallsheetOpen(false)} onApplied={(d) => d && setDay(d)} />
+      <div className="mb-2" style={{ color: "var(--danger)", fontWeight: 600 }}>Click on scene number to add details on set</div>
       <ShootDay c={c} day={day} onDay={setDay} />
-      <Pickers c={c} />
-      {!c.sceneId || !c.characterId ? <Card><Empty icon="🎬" title="Pick a scene and character" hint="The take form fills in as soon as you choose who is on set." /></Card> : !mayRecord ? <Card><Empty icon="🎬" title="You can view the continuity book" hint="Recording takes is for the continuity and costume team." /></Card> : (
+      <SelectedScene c={c} />
+      {!c.sceneId || !c.characterId ? <Card><Empty icon="🎬" title="Click a scene number above" hint="The take form fills in as soon as you pick the scene and who is in it." /></Card> : !mayRecord ? <Card><Empty icon="🎬" title="You can view the continuity book" hint="Recording takes is for the continuity and costume team." /></Card> : (
         <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
           <Card title={`Record take · ${c.sc?.character.name || ""} · Sc ${c.scene?.number || ""}`}
             actions={<button className="btn btn-primary" disabled={!f.takeNumber || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Saving…" : "Save take"}</button>}>
@@ -322,7 +346,6 @@ export function ContinuityBook() {
   const c = useContinuity();
   const { can } = useProject();
   const qc = useQueryClient();
-  const [callsheetOpen, setCallsheetOpen] = useState(false);
   const [day, setDay] = useState(todayISO());
   const { project } = useProject();
   // The export covers the whole day, not just the pair on screen, so it fetches the project's records once.
@@ -336,8 +359,7 @@ export function ContinuityBook() {
       <BookExport day={day} records={dayRecords || []} scenes={c.scenes || []} project={project} />
       <div className="no-print">
       <PageHead title="Continuity book" sub="Per scene, per character, per take: what they wore and how."
-        actions={<>{can(CONTINUITY_ROLES) && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<button className="btn" onClick={() => window.print()} title={`Print the book for ${day}`}><Printer size={16} /> Print / PDF</button><Link to={`/p/${c.projectId}/continuity`} className="btn btn-primary"><Plus size={16} /> Record take</Link></>} />
-      <ScheduleUploadModal open={callsheetOpen} kind="CALLSHEET" onClose={() => setCallsheetOpen(false)} onApplied={(d) => d && setDay(d)} />
+        actions={<><button className="btn" onClick={() => window.print()} title={`Print the book for ${day}`}><Printer size={16} /> Print / PDF</button><Link to={`/p/${c.projectId}/continuity`} className="btn btn-primary"><Plus size={16} /> Record take</Link></>} />
       <ShootDay c={c} day={day} onDay={setDay} />
       <Pickers c={c} />
       {!c.sceneId || !c.characterId ? <Empty icon="📖" title="Pick a scene and character" /> : c.isLoading ? <Spinner /> : c.records.length === 0 ? <Card><Empty icon="📖" title="No takes recorded yet" hint="Record take 1 on the On set tab; later takes are pre-filled and compared automatically." /></Card> : (
