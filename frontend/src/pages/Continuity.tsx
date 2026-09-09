@@ -174,6 +174,14 @@ export default function ContinuityOnSet() {
   const [callsheetOpen, setCallsheetOpen] = useState(false);
   const [day, setDay] = useState(todayISO());
 
+  // The book and the scene pages link straight to a scene, which may sit on another day. The form lives
+  // inside that scene's card on the day board, so the board has to follow the link in or nothing opens.
+  useEffect(() => {
+    const d = dateKey(c.scene?.shootDate);
+    if (d) setDay(d);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.scene?.id]);
+
   // The form starts on the next take, pre-filled from the last one, until the user edits it.
   const fill = useMemo(() => {
     const details = c.last ? Object.entries(c.last.details).map(([k, v]) => ({ k, v })) : DEFAULT_DETAILS.map((k) => ({ k, v: "" }));
@@ -212,6 +220,7 @@ export default function ContinuityOnSet() {
     },
   });
 
+  const onBoard = !!c.scene && dateKey(c.scene.shootDate) === day && c.scene.status !== "OMITTED";
   const detail = !c.sceneId ? null : !c.characterId ? <TagSomeone c={c} /> : !mayRecord ? <Card><Empty icon="🎬" title="You can view the continuity book" hint="Recording takes is for the continuity and costume team." /></Card> : (
         <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
           <Card title={`Record take · ${c.sc?.character.name || ""} · Sc ${c.scene?.number || ""}`}
@@ -286,6 +295,8 @@ export default function ContinuityOnSet() {
       <div className="mb-2" style={{ color: "var(--danger)", fontWeight: 600 }}>Click on scene number to add details on set</div>
       <ShootDay c={c} day={day} onDay={setDay} detail={detail} />
       {!c.sceneId && <Card><Empty icon="🎬" title="Click a scene number above" hint="The take form fills in as soon as you pick the scene and who is in it." /></Card>}
+      {/* A scene with no shoot date never appears on a day board, so its form opens on its own. */}
+      {c.sceneId && !onBoard && <div className="col gap-2"><SelectedScene c={c} />{detail}</div>}
     </div>
   );
 }
@@ -375,7 +386,7 @@ function PrepExport({ day, scenes, project }: { day: string; scenes: Scene[]; pr
                 <div className="bold">{sc.character.name}{sc.character.actor?.name ? ` — ${sc.character.actor.name}` : ""}</div>
                 <div className="subtle">{sc.change ? `Change #${sc.change.changeNumber} ${sc.change.name}` : "No change assigned"}</div>
                 {(sc.change?.items || []).length > 0 && <div className="small">{(sc.change?.items || []).map((i) => `${i.costume.name}${i.wearNotes ? ` (${i.wearNotes})` : ""}`).join(" · ")}</div>}
-                {r.blockers.length > 0 && <div className="small"><b>Not ready:</b> {r.blockers.join(" · ")}</div>}
+                {sc.change && r.blockers.length > 0 && <div className="small"><b>Not ready:</b> {r.blockers.join(" · ")}</div>}
               </div>
             );
           })}
@@ -448,7 +459,7 @@ function PrepDay({ projectId, scenes, records, day, onDay }: { projectId: string
                               ))}
                             </div>
                           )}
-                          {r.blockers.length > 0 && <div className="mt-1 small" style={{ color: "var(--danger)" }}>{r.blockers.join(" · ")}</div>}
+                          {sc.change && r.blockers.length > 0 && <div className="mt-1 small" style={{ color: "var(--danger)" }}>{r.blockers.join(" · ")}</div>}
                         </div>
                       );
                     })}
@@ -480,11 +491,11 @@ function ShotDays({ projectId, records, day, onDay, days }: { projectId: string;
   if (days.length === 0) return <Card><Empty icon="🎞️" title="No shoot days behind us yet" hint="A day lands here once the schedule puts a date on its scenes and that date has passed — takes recorded today show up straight away." /></Card>;
 
   return (
-    <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 260px) minmax(0, 1fr)", alignItems: "start" }}>
+    <div className="grid grid-split">
       <Card title={`Shoot days (${days.length})`} pad0>
         <div className="list">
           {days.map((d) => (
-            <button key={d.day} type="button" className="item link" style={{ width: "100%", background: d.day === day ? "var(--surface-2)" : "none", border: "none", borderLeft: `3px solid ${d.day === day ? "var(--ink)" : "transparent"}`, textAlign: "left" }} onClick={() => onDay(d.day)}>
+            <button key={d.day} type="button" className="item link" aria-current={d.day === day ? "true" : undefined} style={{ width: "100%", background: d.day === day ? "var(--surface-2)" : "none", border: "none", borderLeft: `3px solid ${d.day === day ? "var(--ink)" : "transparent"}`, textAlign: "left" }} onClick={() => onDay(d.day)}>
               <div className="grow">
                 <div className="title small">{fmtDate(d.day, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</div>
                 <div className="meta">{d.scenes.length} scene{d.scenes.length === 1 ? "" : "s"} · {d.takes} take{d.takes === 1 ? "" : "s"}</div>
@@ -550,7 +561,7 @@ export function ContinuityBook() {
   const tab: "prep" | "shot" = asked === "shot" || asked === "prep" ? asked : pathname.endsWith("/shot") ? "shot" : "prep";
   const setTab = (t: "prep" | "shot") => { const n = new URLSearchParams(sp); n.set("tab", t); setSp(n, { replace: true }); };
   const setShotDay = (d: string) => { const n = new URLSearchParams(sp); n.set("day", d); setSp(n, { replace: true }); };
-  const [prepDay, setPrepDay] = useState(todayISO());
+  const [pickedPrepDay, setPrepDay] = useState("");
 
   const { data: scenes, isLoading: loadingScenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
   const { data: records, isLoading: loadingRecords } = useQuery({ queryKey: ["continuity", projectId, "all"], queryFn: () => api<ContinuityRecord[]>(p(projectId, "/continuity")) });
@@ -572,6 +583,14 @@ export function ContinuityBook() {
     }
     return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
   }, [scenes, records]);
+
+  /** Prep opens on today, or — when nothing is scheduled today — on the next day the schedule does hold. */
+  const nextPrepDay = useMemo(() => {
+    const today = todayISO();
+    const dates = (scenes || []).filter((s) => s.status !== "OMITTED").map((s) => dateKey(s.shootDate)).filter(Boolean).sort();
+    return dates.includes(today) ? today : dates.find((d) => d > today) || today;
+  }, [scenes]);
+  const prepDay = pickedPrepDay || nextPrepDay;
 
   const askedDay = sp.get("day") || "";
   const shotDay = (days.find((d) => d.day === askedDay) || days[0])?.day || askedDay || todayISO();
