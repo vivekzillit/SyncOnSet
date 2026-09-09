@@ -7,7 +7,7 @@ import { useProject } from "@/state/project";
 import { CONTINUITY_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, fmtDateTime, todayISO } from "@/lib/format";
 import { characterReadiness } from "@/lib/readiness";
-import type { ContinuityRecord, Costume, Scene } from "@/api/types";
+import type { Character, ContinuityRecord, Costume, Scene } from "@/api/types";
 import { Badge, Card, Chips, Dot, Empty, ErrorBox, Field, Input, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { PhotoGrid, QRScanner } from "@/components/domain";
 import { ScheduleUploadModal } from "@/components/ScheduleUpload";
@@ -154,6 +154,36 @@ function Pickers({ c }: { c: ReturnType<typeof useContinuity> }) {
   );
 }
 
+/** A scene nobody is tagged to yet: pick who is in it, which both tags them and opens the take form. */
+function TagSomeone({ c }: { c: ReturnType<typeof useContinuity> }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [pick, setPick] = useState("");
+  const { data: characters } = useQuery({ queryKey: ["characters", c.projectId], queryFn: () => api<Character[]>(p(c.projectId, "/characters")) });
+  const add = useMutation({
+    mutationFn: (characterId: string) => api(p(c.projectId, `/scenes/${c.sceneId}/characters/${characterId}`), { method: "PUT", body: {} }),
+    onSuccess: async (_r, characterId) => {
+      await Promise.all([qc.invalidateQueries({ queryKey: ["scene", c.sceneId] }), qc.invalidateQueries({ queryKey: ["scenes", c.projectId] })]);
+      c.goTo(c.sceneId, characterId);
+      toast.push("Added to the scene", "ok");
+    },
+    onError: (e: Error) => toast.push(e.message, "danger"),
+  });
+  return (
+    <Card title={`Sc ${c.scene?.number || ""} · nobody is tagged to this scene yet`}>
+      <div className="col gap-2">
+        <div className="subtle">A take is recorded against a character. Pick who is in this scene and the form opens; they are added to the scene at the same time.</div>
+        <div className="row gap-2 wrap">
+          <Select value={pick} onChange={(e) => setPick(e.target.value)} options={(characters || []).map((ch) => ({ value: ch.id, label: `${ch.castNumber != null ? `${ch.castNumber}. ` : ""}${ch.name}` }))} placeholder="Choose a character" style={{ minWidth: 240 }} />
+          <button className="btn btn-primary" disabled={!pick || add.isPending} onClick={() => add.mutate(pick)}>{add.isPending ? "Adding…" : "Add to scene"}</button>
+          <Link to={`/p/${c.projectId}/scenes/${c.sceneId}`} className="btn btn-ghost">Open the scene</Link>
+        </div>
+        {!characters?.length && <div className="notice">This production has no characters yet. Upload the script, or add them on the Characters page.</div>}
+      </div>
+    </Card>
+  );
+}
+
 /** On Set: the record-take form itself, ready to fill, with the QR scanner to hand. */
 export default function ContinuityOnSet() {
   const c = useContinuity({ autoSelect: false });
@@ -215,7 +245,7 @@ export default function ContinuityOnSet() {
       <div className="mb-2" style={{ color: "var(--danger)", fontWeight: 600 }}>Click on scene number to add details on set</div>
       <ShootDay c={c} day={day} onDay={setDay} />
       <SelectedScene c={c} />
-      {!c.sceneId || !c.characterId ? <Card><Empty icon="🎬" title="Click a scene number above" hint="The take form fills in as soon as you pick the scene and who is in it." /></Card> : !mayRecord ? <Card><Empty icon="🎬" title="You can view the continuity book" hint="Recording takes is for the continuity and costume team." /></Card> : (
+      {!c.sceneId ? <Card><Empty icon="🎬" title="Click a scene number above" hint="The take form fills in as soon as you pick the scene and who is in it." /></Card> : !c.characterId ? <TagSomeone c={c} /> : !mayRecord ? <Card><Empty icon="🎬" title="You can view the continuity book" hint="Recording takes is for the continuity and costume team." /></Card> : (
         <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
           <Card title={`Record take · ${c.sc?.character.name || ""} · Sc ${c.scene?.number || ""}`}
             actions={<button className="btn btn-primary" disabled={!f.takeNumber || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Saving…" : "Save take"}</button>}>
