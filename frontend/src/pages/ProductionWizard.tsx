@@ -20,6 +20,8 @@ export default function ProductionWizard() {
   const { user, refresh } = useAuth();
   const [step, setStep] = useState(0);
   const [f, setF] = useState({ type: "", name: "", prepStartDate: "", prepEndDate: "", prepWrapDate: "", startDate: "", endDate: "", wrapDate: "", revision: "White" });
+  const [withPrep, setWithPrep] = useState(false);
+  const [withWrap, setWithWrap] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [parsed, setParsed] = useState<ParseResult | null>(null);
   const [rows, setRows] = useState<ConfirmRow[]>([]);
@@ -85,16 +87,20 @@ export default function ProductionWizard() {
     <Field label={label}><Input type="date" value={f[key]} min={min || undefined} onChange={(e) => setF({ ...f, [key]: e.target.value })} /></Field>
   );
   /** Every one of these is optional — a production is often set up before the calendar is settled. */
-  const dateRange = (title: string, start: DateKey, end: DateKey, wrap: DateKey) => (
+  const dateRange = (title: string, start: DateKey, end: DateKey) => (
     <div>
       <div className="bold" style={{ marginBottom: 6 }}>{title}</div>
-      <div className="grid grid-3 keep">
+      <div className="grid grid-2 keep">
         {dateField("Start date", start)}
         {dateField("End date", end, f[start])}
-        {dateField("Wrap date", wrap, f[start])}
       </div>
     </div>
   );
+  /** Turning a section off clears its dates, so nothing hidden is saved. */
+  const toggleDates = (on: boolean, keys: DateKey[], set: (v: boolean) => void) => {
+    set(on);
+    if (!on) setF((prev) => ({ ...prev, ...Object.fromEntries(keys.map((k) => [k, ""])) }));
+  };
 
   return (
     <div className="login" style={{ alignItems: "start", paddingTop: 48 }}>
@@ -119,8 +125,21 @@ export default function ProductionWizard() {
         {step === 2 && (<>
           <h2 className="center">What are the estimated shoot dates?</h2>
           <div className="col mt-3" style={{ gap: 18 }}>
-            {dateRange("Prep dates", "prepStartDate", "prepEndDate", "prepWrapDate")}
-            {dateRange("Shoot dates", "startDate", "endDate", "wrapDate")}
+            {dateRange("Shoot dates", "startDate", "endDate")}
+            <div className="row gap-3 wrap">
+              <label className="check"><input type="checkbox" checked={withPrep} onChange={(e) => toggleDates(e.target.checked, ["prepStartDate", "prepEndDate", "prepWrapDate"], setWithPrep)} /> Add prep dates</label>
+              <label className="check"><input type="checkbox" checked={withWrap} onChange={(e) => toggleDates(e.target.checked, ["wrapDate", "prepWrapDate"], setWithWrap)} /> Add wrap dates</label>
+            </div>
+            {withPrep && dateRange("Prep dates", "prepStartDate", "prepEndDate")}
+            {withWrap && (
+              <div>
+                <div className="bold" style={{ marginBottom: 6 }}>Wrap dates</div>
+                <div className="grid grid-2 keep">
+                  {dateField("Shoot wrap", "wrapDate", f.startDate)}
+                  {withPrep && dateField("Prep wrap", "prepWrapDate", f.prepStartDate)}
+                </div>
+              </div>
+            )}
           </div>
           {navRow(() => setStep(3))}
         </>)}
