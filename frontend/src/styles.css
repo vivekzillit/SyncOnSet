@@ -281,12 +281,28 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .qr-label .l-asset { font-family: var(--mono); font-weight: 800; font-size: 15px; }
 .qr-label .l-name { font-size: 12px; font-weight: 600; }
 .qr-label .l-meta { font-size: 11px; color: #444; }
+/* Blocks that exist only to be printed (the continuity book export). */
+.print-only { display: none; }
+
 @media print {
-  .sidebar, .topbar, .bottom-nav, .no-print { display: none !important; }
+  .sidebar, .topbar, .topnav, .bottom-nav, .no-print { display: none !important; }
   .main { margin: 0; } .content { padding: 0; max-width: none; }
   body { background: #fff; }
   .card { box-shadow: none; }
+  .print-only { display: block !important; }
 }
+
+/* ---------- Continuity book export ---------- */
+.book-cover { text-align: center; padding: 40px 0 24px; }
+.book-cover h1 { font-size: 30px; letter-spacing: 0.04em; margin: 0 0 4px; }
+.book-cover .book-title { font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-2); }
+.book-scene { border-top: 2px solid var(--ink); padding-top: 10px; margin-top: 20px; break-inside: auto; }
+.book-scene > h2 { font-size: 17px; margin: 0 0 2px; }
+.book-char { break-inside: avoid; margin-top: 14px; padding-left: 2px; }
+.book-take { break-inside: avoid; border-left: 3px solid var(--border); padding: 4px 0 4px 10px; margin-top: 8px; }
+.book-photos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.book-photos img { width: 128px; height: 128px; object-fit: cover; border: 1px solid var(--border); border-radius: 6px; }
+@media print { .book-scene { break-before: page; } .book-scene:first-of-type { break-before: auto; } }
 
 /* Top-tab shell (SyncOnSet-style) */
 .shell-top { min-height: 100%; display: flex; flex-direction: column; }

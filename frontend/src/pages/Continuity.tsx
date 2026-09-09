@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, Keyboard } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, Keyboard, Printer } from "lucide-react";
 import { api, ApiError, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { CONTINUITY_ROLES } from "@/state/auth";
@@ -260,6 +260,63 @@ export default function ContinuityOnSet() {
   );
 }
 
+/**
+ * The printable book for one shooting day: every scene shot that day, each character in it, and every take
+ * recorded against them. Hidden on screen, laid out for paper — "Print / PDF" is the export, as on Reports and Sides.
+ */
+function BookExport({ day, records, scenes, project }: { day: string; records: ContinuityRecord[]; scenes: Scene[]; project: { name?: string; shootingDay?: number } | null }) {
+  const dayScenes = scenes.filter((s) => dateKey(s.shootDate) === day && s.status !== "OMITTED");
+  const forScene = (sceneId: string) => records.filter((r) => r.sceneId === sceneId);
+
+  return (
+    <div className="print-only">
+      <div className="book-cover">
+        <div className="book-title">Continuity book</div>
+        <h1>{project?.name || "Production"}</h1>
+        <div className="subtle">{project?.shootingDay ? `Production day ${project.shootingDay} · ` : ""}{fmtDate(day, { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</div>
+        <div className="subtle mt-1">{dayScenes.length} scene{dayScenes.length === 1 ? "" : "s"} · {records.filter((r) => dayScenes.some((s) => s.id === r.sceneId)).length} take{records.filter((r) => dayScenes.some((s) => s.id === r.sceneId)).length === 1 ? "" : "s"}</div>
+      </div>
+      {dayScenes.length === 0 && <div className="subtle">No scenes were scheduled for this day.</div>}
+      {dayScenes.map((s) => {
+        const rows = forScene(s.id);
+        const byCharacter = Array.from(new Set(rows.map((r) => r.characterId)));
+        return (
+          <section key={s.id} className="book-scene">
+            <h2>Scene {s.number}{s.name ? ` · ${s.name}` : ""}</h2>
+            <div className="subtle">{[s.intExt, s.location, s.timeOfDay, s.scriptDay, s.pages ? `${s.pages} pgs` : null].filter(Boolean).join(" · ") || "—"}</div>
+            {byCharacter.length === 0 && <div className="subtle mt-1">No takes recorded for this scene.</div>}
+            {byCharacter.map((cid) => {
+              const takes = rows.filter((r) => r.characterId === cid).sort((a, b) => a.takeNumber - b.takeNumber);
+              const first = takes[0];
+              return (
+                <div key={cid} className="book-char">
+                  <div className="bold">{first.character?.name || "Character"}{first.character?.actor?.name ? ` — ${first.character.actor.name}` : ""}</div>
+                  <div className="subtle">{first.change ? `Change #${first.change.changeNumber} ${first.change.name}` : "No change assigned"}</div>
+                  {takes.map((r) => (
+                    <div key={r.id} className="book-take">
+                      <div className="bold small">Take {r.takeNumber} <span className="subtle">{fmtDateTime(r.createdAt)}{r.recordedByName ? ` · ${r.recordedByName}` : ""}</span></div>
+                      <dl className="kv" style={{ gridTemplateColumns: "110px 1fr" }}>
+                        {Object.entries(r.details).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v || "—"}</dd></Fragment>)}
+                      </dl>
+                      {r.accessories.length > 0 && <div className="small">{r.accessories.map((a) => `${a.present ? "\u2713" : "\u2717"} ${a.name}`).join(" · ")}</div>}
+                      {r.notes && <div className="small mt-1"><i>{r.notes}</i></div>}
+                      {(r.photos || []).filter((ph) => !ph.mediaType || ph.mediaType === "IMAGE").length > 0 && (
+                        <div className="book-photos">
+                          {(r.photos || []).filter((ph) => !ph.mediaType || ph.mediaType === "IMAGE").map((ph) => <img key={ph.id} src={ph.url} alt={ph.caption || ph.kind} />)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Book: every take recorded for this scene and character, with photos and flags. */
 export function ContinuityBook() {
   const c = useContinuity();
@@ -267,14 +324,19 @@ export function ContinuityBook() {
   const qc = useQueryClient();
   const [callsheetOpen, setCallsheetOpen] = useState(false);
   const [day, setDay] = useState(todayISO());
+  const { project } = useProject();
+  // The export covers the whole day, not just the pair on screen, so it fetches the project's records once.
+  const { data: dayRecords } = useQuery({ queryKey: ["continuity", c.projectId, "all"], queryFn: () => api<ContinuityRecord[]>(p(c.projectId, "/continuity")) });
   const { data: photosAll } = useQuery({ queryKey: ["continuity-photos", c.projectId, c.sceneId, c.characterId], queryFn: () => api<ContinuityRecord[]>(p(c.projectId, `/continuity?sceneId=${c.sceneId}&characterId=${c.characterId}`)), enabled: !!c.sceneId && !!c.characterId });
   const photosByRecord = useMemo(() => new Map((photosAll || []).map((r) => [r.id, r.photos || []])), [photosAll]);
   const del = useMutation({ mutationFn: (id: string) => api(p(c.projectId, `/continuity/${id}`), { method: "DELETE" }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["continuity"] }); qc.invalidateQueries({ queryKey: ["continuity-photos"] }); } });
 
   return (
     <div>
+      <BookExport day={day} records={dayRecords || []} scenes={c.scenes || []} project={project} />
+      <div className="no-print">
       <PageHead title="Continuity book" sub="Per scene, per character, per take: what they wore and how."
-        actions={<>{can(CONTINUITY_ROLES) && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<Link to={`/p/${c.projectId}/continuity`} className="btn btn-primary"><Plus size={16} /> Record take</Link></>} />
+        actions={<>{can(CONTINUITY_ROLES) && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<button className="btn" onClick={() => window.print()} title={`Print the book for ${day}`}><Printer size={16} /> Print / PDF</button><Link to={`/p/${c.projectId}/continuity`} className="btn btn-primary"><Plus size={16} /> Record take</Link></>} />
       <ScheduleUploadModal open={callsheetOpen} kind="CALLSHEET" onClose={() => setCallsheetOpen(false)} onApplied={(d) => d && setDay(d)} />
       <ShootDay c={c} day={day} onDay={setDay} />
       <Pickers c={c} />
@@ -293,6 +355,7 @@ export function ContinuityBook() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
