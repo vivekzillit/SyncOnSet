@@ -40,7 +40,8 @@ export default function Breakdown() {
   const [addOpen, setAddOpen] = useState(false);
   const [locked, setLocked] = useState(false); // editing an existing row: scene and character are fixed, only the change moves
   const [af, setAf] = useState({ sceneId: "", characterId: "", changeId: "" });
-  const { data: allCharacters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")), enabled: addOpen });
+  const { data: allCharacters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
+  const charById = useMemo(() => new Map((allCharacters || []).map((ch) => [ch.id, ch])), [allCharacters]);
   const { data: afChanges } = useQuery({ queryKey: ["changes", projectId, af.characterId], queryFn: () => api<CostumeChange[]>(p(projectId, `/changes?characterId=${af.characterId}`)), enabled: addOpen && !!af.characterId });
   const putRow = useMutation({
     mutationFn: () => api(p(projectId, `/scenes/${af.sceneId}/characters/${af.characterId}`), { method: "PUT", body: { changeId: af.changeId || null } }),
@@ -82,7 +83,8 @@ export default function Breakdown() {
     if (ep && (r.scene.episode || "").trim() !== ep) return false;
     if (when === "scheduled" && !r.scene.shootDate) return false;
     if (!needle) return true;
-    return [r.scene.number, r.scene.episode, r.scene.name, r.scene.location, r.scene.scriptDay, r.scene.intExt, r.sc.character.name, r.sc.change?.name].some((v) => (v || "").toLowerCase().includes(needle));
+    const full = charById.get(r.sc.characterId);
+    return [r.scene.number, r.scene.episode, r.scene.name, r.scene.location, r.scene.scriptDay, r.scene.intExt, r.sc.character.name, full?.actor?.name, String(r.sc.character.castNumber ?? full?.castNumber ?? ""), r.sc.change?.name].some((v) => (v || "").toLowerCase().includes(needle));
   });
 
   if (isLoading || !scenes) return <Spinner />;
@@ -104,7 +106,7 @@ export default function Breakdown() {
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Sc</th><th>Script Loc.</th><th>D/N</th><th>Story Day</th><th>Pgs</th><th>Character</th><th>Change</th><th>Shoot Date</th>{canEdit && <th style={{ width: 78 }}><span className="sr-only">Actions</span></th>}</tr></thead>
+              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Sc</th><th>Script Loc.</th><th>D/N</th><th>Story Day</th><th>Pgs</th><th>Character Name</th><th>Cast number</th><th>Cast Name</th><th>Change</th><th>Shoot Date</th>{canEdit && <th style={{ width: 78 }}><span className="sr-only">Actions</span></th>}</tr></thead>
               <tbody>
                 {list.map((r) => (
                   <tr key={r.sc.id} style={r.scene.status === "OMITTED" ? { opacity: 0.55 } : undefined}>
@@ -115,8 +117,10 @@ export default function Breakdown() {
                     <td className="nowrap">{r.scene.timeOfDay || ""}</td>
                     <td className="nowrap">{r.scene.scriptDay || ""}</td>
                     <td className="nowrap">{r.scene.pages || ""}</td>
-                    <td className="nowrap"><Link to={`${base}/characters/${r.sc.characterId}/scenes/${r.scene.id}`}>{r.sc.character.castNumber != null && <span className="mono muted">{r.sc.character.castNumber}. </span>}{r.sc.character.name}</Link></td>
-                    <td>{r.sc.change ? <Link to={`${base}/changes/${r.sc.change.id}`}>#{r.sc.change.changeNumber} {r.sc.change.name}</Link> : <span className="subtle">No change assigned</span>}</td>
+                    <td className="nowrap"><Link to={`${base}/characters/${r.sc.characterId}/scenes/${r.scene.id}`}>{r.sc.character.name}</Link></td>
+                    <td className="subtle mono nowrap">{r.sc.character.castNumber ?? charById.get(r.sc.characterId)?.castNumber ?? "—"}</td>
+                    <td className="subtle nowrap">{charById.get(r.sc.characterId)?.actor?.name || "—"}</td>
+                    <td className="nowrap">{r.sc.change ? <Link to={`${base}/changes/${r.sc.change.id}`}>#{r.sc.change.changeNumber} {r.sc.change.name}</Link> : <span className="subtle">No change assigned</span>}</td>
                     <td className="nowrap">{r.scene.shootDate ? fmtDate(r.scene.shootDate, SHOOT_DATE) : ""}</td>
                     {canEdit && (
                       <td className="right nowrap">
