@@ -37,7 +37,7 @@ export default function Scenes() {
   const toast = useToast();
   const canEdit = can(MANAGER_ROLES);
 
-  const [when, setWhen] = useState<"today" | "upcoming" | "all" | "">("all");
+  const [when, setWhen] = useState<"today" | "upcoming" | "scheduled" | "all" | "">("all");
   const [rev, setRev] = useState("");
   const [ep, setEp] = useState("");
   const [q, setQ] = useState("");
@@ -69,6 +69,8 @@ export default function Scenes() {
     if (ep) items = items.filter((s) => pinned(s) || (s.episode || "").trim() === ep);
     if (when === "today") items = items.filter((s) => pinned(s) || dateKey(s.shootDate) === today);
     if (when === "upcoming") items = items.filter((s) => pinned(s) || (s.shootDate && dateKey(s.shootDate) >= today));
+    // "Scheduled" means the scene has a shoot date at all, past or future — the same rule the Breakdown page uses.
+    if (when === "scheduled") items = items.filter((s) => pinned(s) || !!s.shootDate);
     const needle = q.trim().toLowerCase();
     if (needle) items = items.filter((s) => pinned(s) || [s.number, s.episode, s.name, s.location, s.synopsis, s.scriptDay, s.intExt, ...s.characters.flatMap((c) => [c.character.name, String(c.character.castNumber ?? charById.get(c.characterId)?.castNumber ?? "")])].some((v) => (v || "").toLowerCase().includes(needle)));
     return items;
@@ -184,7 +186,7 @@ export default function Scenes() {
       <div className="filters">
         <SearchBox value={q} onChange={setQ} placeholder="Search scene, location, description, character…" />
         {episodes && episodeList.length > 0 && <Select value={ep} onChange={(e) => setEp(e.target.value)} options={episodeList.map((n) => ({ value: n, label: `Episode ${n}` }))} placeholder="All episodes" humanizeLabels={false} aria-label="Episode" style={{ width: "auto", minWidth: 150 }} />}
-        <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "all", label: "All" }]} value={when} onChange={(v) => setWhen(v || "all")} />
+        <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "scheduled", label: "Scheduled" }, { key: "all", label: "All scenes" }]} value={when} onChange={(v) => setWhen((v || "all") as "today" | "upcoming" | "scheduled" | "all")} />
         {canEdit && (
           <div className="row gap-1" style={{ marginLeft: "auto" }}>
             {editAll ? (
