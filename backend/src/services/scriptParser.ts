@@ -21,6 +21,10 @@ export interface ParsedScene {
   /** Estimated length in script pages, in eighths (e.g. "1 3/8"), from ~55 lines per page. */
   pages: string | null;
   lines: number;
+  /** Story day, e.g. "Day 3": read from the heading when the script numbers them, otherwise worked out from the day/night flow. */
+  scriptDay: string | null;
+  /** Where scriptDay came from, so the client can say whether it is stated or inferred. */
+  scriptDaySource?: "script" | "derived";
 }
 export interface ParsedCharacter { name: string; scenes: number; lines: number }
 export interface ParseResult {
@@ -189,6 +193,63 @@ export function linesToEighths(lines: number): string | null {
   return `${rem}/8`;
 }
 
+/** A story day the script states outright: "D3", "N2", "STORY DAY 4", "DAY 1" used as a marker rather than a time. */
+const STATED_DAY_RES = [
+  /\bstory\s*day\s*#?\s*(\d{1,3})\b/i,
+  /(?:^|[\s\-–—(])([DN])\s?(\d{1,3})(?=[\s)\-–—]|$)/,
+  /\bday\s*#\s*(\d{1,3})\b/i,
+];
+/** Heading language that keeps a scene on the story day before it. */
+const SAME_DAY_RE = /\b(?:continuous|contd|same\s+(?:time|day|night|scene)|moments?\s+later|later\s+that\s+(?:day|night|morning|evening|afternoon)|later|seconds?\s+later|minutes?\s+later|intercut)\b/i;
+/** Heading language that starts a new one. */
+const NEXT_DAY_RE = /\b(?:next\s+(?:day|morning|night|evening)|following\s+(?:day|morning)|another\s+day|the\s+next\s+\w+|days?\s+later|weeks?\s+later|months?\s+later|years?\s+later)\b/i;
+/** Scenes outside the running story: they get no day of their own and do not move the count on. */
+const ASIDE_RE = /\b(?:flashback|flash\s*forward|dream|fantasy|montage|insert|archive|stock\s+footage|titles?\s+sequence|end\s+credits)\b/i;
+const NIGHTISH = new Set(["NIGHT", "DUSK"]);
+const DAYISH = new Set(["DAY", "DAWN"]);
+
+/**
+ * Give every scene its story day. A script that numbers its days is read as written; one that does not — most
+ * shooting scripts — has them worked out from the headings: "SAME TIME" or "LATER" stays on the day, "NEXT MORNING"
+ * moves on, and so does the first daylight scene after a night. Flashbacks and inserts sit outside the count.
+ */
+function storyDays(scenes: { _lines: string[]; timeOfDay: string | null; scriptDay: string | null; scriptDaySource?: "script" | "derived" }[]) {
+  let stated = 0;
+  for (const s of scenes) {
+    const heading = s._lines[0] || "";
+    for (const re of STATED_DAY_RES) {
+      const m = re.exec(heading);
+      if (!m) continue;
+      const num = Number(m[m.length - 1]);
+      if (!num) continue;
+      const night = m.length > 2 && m[1]?.toUpperCase() === "N";
+      s.scriptDay = `${night ? "Night" : "Day"} ${num}`;
+      s.scriptDaySource = "script";
+      stated += 1;
+      break;
+    }
+  }
+  if (stated) return { stated, derived: 0 };
+
+  let day = 1;
+  let previous: string | null = null;
+  let derived = 0;
+  for (const s of scenes) {
+    const heading = s._lines[0] || "";
+    if (ASIDE_RE.test(heading)) continue; // a flashback belongs to no day in the running story
+    const time = s.timeOfDay;
+    if (previous !== null && !SAME_DAY_RE.test(heading)) {
+      if (NEXT_DAY_RE.test(heading)) day += 1;
+      else if (NIGHTISH.has(previous) && time && DAYISH.has(time)) day += 1;
+    }
+    s.scriptDay = `Day ${day}`;
+    s.scriptDaySource = "derived";
+    derived += 1;
+    if (time) previous = time;
+  }
+  return { stated: 0, derived };
+}
+
 export function buildScenes(elements: Element[], format: ScriptFormat): ParseResult {
   const scenes: (ParsedScene & { _chars: Set<string>; _lines: string[] })[] = [];
   const warnings: string[] = [];
@@ -205,7 +266,7 @@ export function buildScenes(elements: Element[], format: ScriptFormat): ParseRes
       const omitted = /\bOMITTED\b/i.test(el.text);
       let number = (el.number || "").trim();
       if (!number) { missingNumbers += 1; number = String(scenes.length + 1); }
-      current = { number, name: omitted ? "Omitted" : slug.name, location: slug.location, intExt: slug.intExt, timeOfDay: slug.timeOfDay, synopsis: null, status: omitted ? "OMITTED" : undefined, characters: [], dialogueLines: 0, text: "", pages: null, lines: 0, _chars: new Set(), _lines: [el.text] };
+      current = { number, name: omitted ? "Omitted" : slug.name, location: slug.location, intExt: slug.intExt, timeOfDay: slug.timeOfDay, synopsis: null, status: omitted ? "OMITTED" : undefined, characters: [], dialogueLines: 0, text: "", pages: null, lines: 0, scriptDay: null, _chars: new Set(), _lines: [el.text] };
       scenes.push(current);
       firstAction = true;
       continue;
@@ -245,6 +306,8 @@ export function buildScenes(elements: Element[], format: ScriptFormat): ParseRes
   if (cues === 0 && headings > 0) warnings.push("No character cues detected; characters will not be attached to scenes.");
   const characters = [...charIndex.values()].sort((a, b) => b.lines - a.lines || a.name.localeCompare(b.name));
   const estimateLines = (ls: string[]) => ls.reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 60)), 0) + Math.floor(ls.length / 3);
+  const days = storyDays(scenes);
+  if (days.derived) warnings.push(`This script does not number its story days, so they were worked out from the headings (${new Set(scenes.map((s) => s.scriptDay).filter(Boolean)).size} day(s)). Check them before importing.`);
   return { format, scenes: scenes.map(({ _chars, _lines, ...s }) => { const lines = estimateLines(_lines); return { ...s, text: _lines.join("\n").slice(0, 40000), lines, pages: linesToEighths(lines) }; }), characters, warnings, stats: { elements: elements.length, headings, cues } };
 }
 

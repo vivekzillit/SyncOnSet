@@ -9,7 +9,7 @@ import { CharacterConfirmation, buildCharacterImport, initialRows, manualCharact
 
 const STEPS = 5;
 
-interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; synopsis: string | null; status?: string; characters: string[]; text?: string; pages?: string | null }
+interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; scriptDay?: string | null; synopsis: string | null; status?: string; characters: string[]; text?: string; pages?: string | null }
 interface ParseResult { format: string; file: string; scenes: ParsedScene[]; characters: DetectedCharacter[]; existingCharacters: ExistingCharacter[]; warnings: string[] }
 type DateKey = "prepStartDate" | "prepEndDate" | "prepWrapDate" | "startDate" | "endDate" | "wrapDate";
 
@@ -62,7 +62,7 @@ export default function ProductionWizard() {
       if (existed) await api(`/projects/${id}`, { method: "PATCH", body: projectBody() });
       if (parsed) {
         const { characterMap, castNumbers } = buildCharacterImport(rows, parsed.existingCharacters);
-        const scenes = parsed.scenes.map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
+        const scenes = parsed.scenes.map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, scriptDay: s.scriptDay || null, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
         await api(p(id, "/scenes/import"), { body: { scenes, revision: f.revision || null, characterMap, castNumbers } });
         for (const c of manualCharacters(rows, parsed.existingCharacters, parsed.characters)) {
           await api(p(id, "/characters"), { body: { name: c.name, type: "SUPPORTING", castNumber: c.castNumber } });

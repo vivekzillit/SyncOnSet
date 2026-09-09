@@ -10,7 +10,7 @@ import { CueProgress, engineLabel, useCueExtraction } from "./AiCues";
 import type { Scene } from "@/api/types";
 import { CharacterConfirmation, buildCharacterImport, initialRows, type ConfirmRow, type DetectedCharacter, type ExistingCharacter } from "./CharacterConfirmation";
 
-interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; synopsis: string | null; status?: string; characters: string[]; dialogueLines: number; text?: string; pages?: string | null; lines?: number; exists: boolean; change: "new" | "updated" | "unchanged"; previousRevision?: string | null }
+interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; scriptDay: string | null; scriptDaySource?: "script" | "derived"; synopsis: string | null; status?: string; characters: string[]; dialogueLines: number; text?: string; pages?: string | null; lines?: number; exists: boolean; change: "new" | "updated" | "unchanged"; previousRevision?: string | null }
 type ParsedCharacter = DetectedCharacter;
 interface ParseResult { format: string; file: string; firstUpload: boolean; existingScenes: number; existingCharacters: ExistingCharacter[]; scenes: ParsedScene[]; characters: ParsedCharacter[]; warnings: string[]; stats: { elements: number; headings: number; cues: number } }
 
@@ -44,7 +44,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
   });
   const importM = useMutation({
     mutationFn: (replace: boolean) => {
-      const scenes = (result?.scenes || []).filter((s) => !excluded.has(s.number)).map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
+      const scenes = (result?.scenes || []).filter((s) => !excluded.has(s.number)).map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, scriptDay: s.scriptDay, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
       const { characterMap, castNumbers } = buildCharacterImport(rows, result?.existingCharacters || []);
       return api<{ scenes: number; created: number; updated: number; unchanged: number; removed: number; charactersCreated: number }>(p(projectId, "/scenes/import"), { body: { scenes, revision: revision || null, characterMap, castNumbers, replace } });
     },
@@ -130,12 +130,13 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
           {tab === "scenes" ? (
             <div className="table-wrap card flat pad-0" style={{ maxHeight: "46vh", overflowY: "auto" }}>
               <table className="table">
-                <thead><tr><th></th><th>Sc</th><th>Slugline</th><th>Pages</th><th>Characters</th><th>Status</th></tr></thead>
+                <thead><tr><th></th><th>Sc</th><th>Script Day</th><th>Slugline</th><th>Pages</th><th>Characters</th><th>Status</th></tr></thead>
                 <tbody>
                   {result.scenes.map((s) => (
                     <tr key={s.number} style={{ opacity: excluded.has(s.number) ? 0.45 : 1 }}>
                       <td><input type="checkbox" checked={!excluded.has(s.number)} onChange={() => toggle(s.number)} /></td>
                       <td className="mono bold nowrap">{s.number}</td>
+                      <td className="nowrap">{s.scriptDay || "—"}{s.timeOfDay && <div className="subtle tiny">{humanize(s.timeOfDay)}</div>}</td>
                       <td><div className="bold">{[s.intExt, s.location].filter(Boolean).join(". ") || s.name}</div><div className="subtle">{[s.timeOfDay ? humanize(s.timeOfDay) : null, s.status === "OMITTED" ? "Omitted" : null, s.synopsis].filter(Boolean).join(" · ")}</div></td>
                       <td className="nowrap mono">{s.pages || "—"}</td>
                       <td><div className="chips">{s.characters.map((c) => <span key={c} className="chip" style={{ padding: "2px 8px", fontSize: 12, opacity: charPlan[c] === null ? 0.4 : 1 }}>{displayName(c)}</span>)}{!s.characters.length && <span className="subtle">—</span>}</div></td>

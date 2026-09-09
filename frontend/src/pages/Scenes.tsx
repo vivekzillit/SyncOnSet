@@ -221,7 +221,7 @@ export default function Scenes() {
                       <td><span title={readiness} aria-label={readiness} role="img"><Dot status={s.readiness} pulse={s.readiness === "MISSING"} /></span></td>
                       {episodes && <td className="nowrap">{s.episode || ""}</td>}
                       <td className="nowrap"><Link to={`/p/${projectId}/scenes/${s.id}`} className="bold" title={s.name || `Scene ${s.number}`}>{s.number}</Link>{s.status !== "PLANNED" && <span className="hide-mobile" style={{ marginLeft: 8 }}><Badge status={s.status} /></span>}</td>
-                      <td className="nowrap">{s.scriptDay || ""}</td>
+                      <td className="nowrap">{s.scriptDay || ""}{s.timeOfDay && <div className="subtle tiny">{humanize(s.timeOfDay)}</div>}</td>
                       <td className="nowrap">{scriptLoc(s)}</td>
                       <td title={s.synopsis || undefined}><div className="truncate" style={{ maxWidth: 340 }}>{truncate(s.synopsis)}</div></td>
                       <td title={names.title || undefined}>{names.text}</td>
