@@ -48,7 +48,7 @@ scenesRouter.get(
     const scenes = await prisma.scene.findMany({
       where,
       orderBy: [{ sortOrder: "asc" }],
-      include: { characters: { include: { character: { select: { id: true, name: true, castNumber: true } }, change: { select: { id: true, changeNumber: true, name: true, items: { select: { costume: { select: { status: true } } } } } } } } },
+      include: { characters: { include: { character: { select: { id: true, name: true, castNumber: true } }, change: { select: { id: true, changeNumber: true, name: true, items: { select: { costume: { select: { status: true, name: true, assetNumber: true } } } } } } } } },
     });
     const withReadiness = scenes.map((s) => {
       const statuses = s.characters.flatMap((sc) => sc.change?.items.map((i) => i.costume.status) || []);
@@ -91,6 +91,8 @@ scenesRouter.post(
         characterMap: z.record(z.string().nullable()).optional(),
         /** character name → cast number for characters created by this import */
         castNumbers: z.record(z.number().int().min(0)).optional(),
+        /** Start again: delete the scenes this production already has before importing. Characters are kept. */
+        replace: z.boolean().optional(),
       }),
       req.body,
     );
@@ -98,6 +100,13 @@ scenesRouter.post(
     let created = 0;
     let updated = 0;
     let unchanged = 0;
+    let removed = 0;
+    if (body.replace) {
+      // Everything hanging off a scene goes with it (scene-character links, continuity, cues); characters, costumes and changes stay.
+      const { count } = await prisma.scene.deleteMany({ where: { projectId } });
+      removed = count;
+      await audit(req.user, projectId, "SCENE_REPLACE", "SCENE", "bulk", { removed });
+    }
     let charactersCreated = 0;
     const norm = (t: string | null | undefined) => (t || "").replace(/\s+/g, " ").trim().toLowerCase();
     const known = new Map((await prisma.character.findMany({ where: { projectId }, select: { id: true, name: true, castNumber: true } })).map((c) => [c.name.trim().toLowerCase(), c]));
@@ -142,8 +151,8 @@ scenesRouter.post(
         await prisma.sceneCharacter.upsert({ where: { sceneId_characterId: { sceneId: scene.id, characterId: ch.id } }, create: { sceneId: scene.id, characterId: ch.id }, update: {} });
       }
     }
-    await audit(req.user, projectId, "SCENE_IMPORT", "SCENE", "bulk", { created, updated, unchanged, charactersCreated, revision: body.revision || null });
-    res.status(201).json({ scenes: created + updated + unchanged, created, updated, unchanged, charactersCreated, revision: body.revision || null });
+    await audit(req.user, projectId, "SCENE_IMPORT", "SCENE", "bulk", { created, updated, unchanged, charactersCreated, removed, revision: body.revision || null });
+    res.status(201).json({ scenes: created + updated + unchanged, created, updated, unchanged, removed, charactersCreated, revision: body.revision || null });
   }),
 );
 
@@ -178,6 +187,7 @@ scenesRouter.post(
       ...result,
       file: req.file.originalname,
       firstUpload: stored.size === 0,
+      existingScenes: stored.size,
       existingCharacters: existingList,
       characters: result.characters.map((c) => ({ ...c, exists: existingNames.has(c.name.toLowerCase()) })),
       scenes: result.scenes.map((sc) => {

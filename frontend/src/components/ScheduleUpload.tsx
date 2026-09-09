@@ -22,7 +22,7 @@ const localMidnightISO = (ymd: string) => { const [y, m, d] = ymd.split("-").map
 const slug = (f: SceneFields | null) => (f ? [f.intExt, f.location].filter(Boolean).join(". ") || f.name || "" : "");
 
 /** Upload a schedule or call sheet, review what it says about each scene, then apply. Nothing is saved until Apply. */
-export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: boolean; kind: DocKind; onClose: () => void; onApplied?: () => void }) {
+export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: boolean; kind: DocKind; onClose: () => void; onApplied?: (shootDate?: string | null) => void }) {
   const { projectId } = useProject();
   const qc = useQueryClient();
   const toast = useToast();
@@ -69,7 +69,8 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
       const bits = [r.created ? `${r.created} scene${r.created === 1 ? "" : "s"} added` : "", r.updated ? `${r.updated} updated` : "", r.filled ? `${r.filled} detail${r.filled === 1 ? "" : "s"} filled in` : "", r.linked ? `${r.linked} cast link${r.linked === 1 ? "" : "s"}` : ""].filter(Boolean);
       toast.push(`${bits.join(", ") || "Nothing to change"} from the ${LABEL[kind]}`, "ok");
-      onApplied?.(); reset(); onClose();
+      const applied = included.map((sc) => dates[sc.number]).filter(Boolean).sort()[0] || result?.date || null;
+      onApplied?.(applied); reset(); onClose();
     },
   });
   const reset = () => { setFile(null); setResult(null); setDates({}); setExcluded(new Set()); if (fileRef.current) fileRef.current.value = ""; };

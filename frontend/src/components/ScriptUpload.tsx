@@ -12,7 +12,7 @@ import { CharacterConfirmation, buildCharacterImport, initialRows, type ConfirmR
 
 interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; synopsis: string | null; status?: string; characters: string[]; dialogueLines: number; text?: string; pages?: string | null; lines?: number; exists: boolean; change: "new" | "updated" | "unchanged"; previousRevision?: string | null }
 type ParsedCharacter = DetectedCharacter;
-interface ParseResult { format: string; file: string; firstUpload: boolean; existingCharacters: ExistingCharacter[]; scenes: ParsedScene[]; characters: ParsedCharacter[]; warnings: string[]; stats: { elements: number; headings: number; cues: number } }
+interface ParseResult { format: string; file: string; firstUpload: boolean; existingScenes: number; existingCharacters: ExistingCharacter[]; scenes: ParsedScene[]; characters: ParsedCharacter[]; warnings: string[]; stats: { elements: number; headings: number; cues: number } }
 
 /** Upload a screenplay, preview the breakdown, then import scenes + characters. */
 export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean; onClose: () => void; onImported?: () => void }) {
@@ -29,6 +29,8 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
   const [result, setResult] = useState<ParseResult | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [file, setFile] = useState<File | null>(null);
+  // A production that already has a script is asked before its breakdown is thrown away.
+  const [confirmReplace, setConfirmReplace] = useState(false);
 
   const parse = useMutation({
     mutationFn: (f: File) => { const fd = new FormData(); fd.append("file", f); return api<ParseResult>(p(projectId, "/scenes/parse-script"), { formData: fd }); },
@@ -41,14 +43,15 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
     },
   });
   const importM = useMutation({
-    mutationFn: () => {
+    mutationFn: (replace: boolean) => {
       const scenes = (result?.scenes || []).filter((s) => !excluded.has(s.number)).map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
       const { characterMap, castNumbers } = buildCharacterImport(rows, result?.existingCharacters || []);
-      return api<{ scenes: number; created: number; updated: number; unchanged: number; charactersCreated: number }>(p(projectId, "/scenes/import"), { body: { scenes, revision: revision || null, characterMap, castNumbers } });
+      return api<{ scenes: number; created: number; updated: number; unchanged: number; removed: number; charactersCreated: number }>(p(projectId, "/scenes/import"), { body: { scenes, revision: revision || null, characterMap, castNumbers, replace } });
     },
     onSuccess: async (r) => {
       qc.invalidateQueries();
-      toast.push(`${r.created} new, ${r.updated} updated, ${r.unchanged} unchanged scene${r.scenes === 1 ? "" : "s"}; ${r.charactersCreated} new character${r.charactersCreated === 1 ? "" : "s"}`, "ok");
+      setConfirmReplace(false);
+      toast.push(r.removed ? `${r.removed} old scene${r.removed === 1 ? "" : "s"} replaced by ${r.created}; ${r.charactersCreated} new character${r.charactersCreated === 1 ? "" : "s"}` : `${r.created} new, ${r.updated} updated, ${r.unchanged} unchanged scene${r.scenes === 1 ? "" : "s"}; ${r.charactersCreated} new character${r.charactersCreated === 1 ? "" : "s"}`, "ok");
       onImported?.();
       if (withAi && result) {
         const numbers = new Set(result.scenes.filter((s) => !excluded.has(s.number)).map((s) => s.number));
@@ -63,7 +66,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
     },
   });
   const [phase, setPhase] = useState<"pick" | "preview" | "cues">("pick");
-  const reset = () => { setResult(null); setFile(null); setExcluded(new Set()); setPhase("pick"); setRows([]); setTab("scenes"); if (fileRef.current) fileRef.current.value = ""; };
+  const reset = () => { setResult(null); setFile(null); setExcluded(new Set()); setPhase("pick"); setRows([]); setTab("scenes"); setConfirmReplace(false); if (fileRef.current) fileRef.current.value = ""; };
   const pick = (f: File | null) => { if (!f) return; setFile(f); parse.mutate(f); };
   const toggle = (n: string) => setExcluded((s) => { const x = new Set(s); x.has(n) ? x.delete(n) : x.add(n); return x; });
   const included = (result?.scenes || []).filter((s) => !excluded.has(s.number));
@@ -78,9 +81,18 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
   const newScenes = included.filter((s) => s.change === "new").length;
 
   return (
-    <Modal open={open} onClose={() => { reset(); onClose(); }} title="Upload script" wide
-      footer={phase === "cues" ? <button className="btn btn-primary" disabled={progress.running} onClick={() => { reset(); onClose(); }}>{progress.running ? "Working…" : "Done"}</button> : <><button className="btn" onClick={() => { reset(); onClose(); }}>Cancel</button>{result && <button className="btn btn-primary" disabled={!included.length || importM.isPending} onClick={() => importM.mutate()}>{importM.isPending ? "Importing…" : `Import ${included.length} scene${included.length === 1 ? "" : "s"}${withAi ? " + cues" : ""}`}</button>}</>}>
-      {phase === "cues" ? (
+    <Modal open={open} onClose={() => { reset(); onClose(); }} title={confirmReplace ? "Replace the breakdown?" : "Upload script"} wide
+      footer={phase === "cues"
+        ? <button className="btn btn-primary" disabled={progress.running} onClick={() => { reset(); onClose(); }}>{progress.running ? "Working…" : "Done"}</button>
+        : confirmReplace
+          ? <><button className="btn" onClick={() => setConfirmReplace(false)}>Keep the current breakdown</button><button className="btn btn-danger" disabled={importM.isPending} onClick={() => importM.mutate(true)}>{importM.isPending ? "Replacing…" : `Replace ${result?.existingScenes ?? 0} scene${result?.existingScenes === 1 ? "" : "s"}`}</button></>
+          : <><button className="btn" onClick={() => { reset(); onClose(); }}>Cancel</button>{result && <button className="btn btn-primary" disabled={!included.length || importM.isPending} onClick={() => (result.firstUpload ? importM.mutate(false) : setConfirmReplace(true))}>{importM.isPending ? "Importing…" : `Import ${included.length} scene${included.length === 1 ? "" : "s"}${withAi ? " + cues" : ""}`}</button>}</>}>
+      {confirmReplace ? (
+        <div className="col gap-2">
+          <div className="notice">This production already has a script. Importing <b>{result?.file}</b> removes the {result?.existingScenes ?? 0} scene{result?.existingScenes === 1 ? "" : "s"} it holds now, along with the continuity takes and costume cues recorded against them, and puts this breakdown in their place.</div>
+          <div className="subtle">Characters, costumes, looks and fittings are kept. Keeping the current breakdown leaves everything exactly as it is; a revised draft can be imported over it instead.</div>
+        </div>
+      ) : phase === "cues" ? (
         <div className="col gap-2">
           <div className="notice ok">Scenes imported. Now reading each scene for costume cues…</div>
           <CueProgress progress={progress} />

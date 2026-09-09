@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, FileUp, CalendarDays, ClipboardList, MoreVertical, MoreHorizontal } from "lucide-react";
+import { Plus, Upload, FileUp, CalendarDays, MoreVertical, MoreHorizontal } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
@@ -12,7 +12,7 @@ import { ScriptUploadModal } from "@/components/ScriptUpload";
 import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
 import { PrincipalsModal } from "@/components/PrincipalsModal";
 import { FixedMenu } from "@/components/FixedMenu";
-import { EditRow, LOCATION_LIST_ID, NEW, PersistError, emptyDraft, persistDraft, planSaveOrder, principalsOf, principalsText, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
+import { EditRow, LOCATION_LIST_ID, NEW, PersistError, castMembers, castMembersOf, characterNames, characterNamesOf, emptyDraft, persistDraft, planSaveOrder, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
 
 const MENU_H = 188; // approx height of a 5-item menu, used to flip it upward near the bottom of the viewport
 const MENU_W = 176;
@@ -169,7 +169,14 @@ export default function Scenes() {
         actions={(revisions.length > 0 || canEdit) && (
           <>
             {revisions.length > 0 && <Select value={rev} onChange={(e) => setRev(e.target.value)} options={revisions} placeholder="All drafts" humanizeLabels={false} title="Script draft / revision" aria-label="Script draft" style={{ width: "auto", minWidth: 140 }} />}
-            {canEdit && <><button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button><button className="btn" onClick={() => setDocOpen("CALLSHEET")} title="Read a call sheet: its scenes get that shoot date"><ClipboardList size={16} /> Upload callsheet</button><button className="btn" onClick={() => setDocOpen("SCHEDULE")} title="Read a shooting schedule: every scene gets its shoot date"><CalendarDays size={16} /> Upload schedule</button><button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button></>}
+            {canEdit && <>
+              <button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button>
+              <div className="col" style={{ gap: 2 }}>
+                <button className="btn" onClick={() => setDocOpen("SCHEDULE")}><CalendarDays size={16} /> Upload schedule</button>
+                <span className="tiny" style={{ color: "var(--danger)" }}>Upload schedule to add characters and shoot date</span>
+              </div>
+              <button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button>
+            </>}
           </>
         )}
       />
@@ -199,13 +206,14 @@ export default function Scenes() {
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Principals</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
+              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast member</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
-                {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={principalsText(drafts[NEW].principals, charById)} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => dropDraft(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
+                {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={characterNamesOf(drafts[NEW].principals, charById)} cast={castMembersOf(drafts[NEW].principals, charById)} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => dropDraft(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
                 {list.map((s) => {
                   const d = drafts[s.id];
-                  if (d) return <EditRow episodes={episodes} key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={principalsText(d.principals, charById)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => dropDraft(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
-                  const pr = principalsOf(s.characters, charById);
+                  if (d) return <EditRow episodes={episodes} key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={characterNamesOf(d.principals, charById)} cast={castMembersOf(d.principals, charById)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => dropDraft(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
+                  const names = characterNames(s.characters, charById);
+                  const cast = castMembers(s.characters, charById);
                   const readiness = humanize(s.readiness);
                   return (
                     <tr key={s.id} style={s.status === "OMITTED" ? { opacity: 0.55 } : undefined}>
@@ -215,7 +223,8 @@ export default function Scenes() {
                       <td className="nowrap">{s.scriptDay || ""}</td>
                       <td className="nowrap">{scriptLoc(s)}</td>
                       <td title={s.synopsis || undefined}><div className="truncate" style={{ maxWidth: 340 }}>{truncate(s.synopsis)}</div></td>
-                      <td title={pr.title || undefined}>{pr.text}</td>
+                      <td title={names.title || undefined}>{names.text}</td>
+                      <td className="subtle" title={cast.title || undefined}>{cast.text || "—"}</td>
                       <td className="nowrap">{s.shootDate ? fmtDate(s.shootDate, SHOOT_DATE) : ""}</td>
                       <td className="right">
                         {canEdit && <button className="btn btn-ghost btn-sm" aria-label="Scene actions" aria-haspopup="menu" aria-expanded={menu?.id === s.id} onClick={(e) => { e.stopPropagation(); setMore(null); setMenu(menu?.id === s.id ? null : { id: s.id, ...menuPosition(e.currentTarget) }); }}><MoreVertical size={16} /></button>}
@@ -243,7 +252,6 @@ export default function Scenes() {
       {more && canEdit && (
         <FixedMenu top={more.top} left={more.left} width={MENU_W} anchor={more.anchor} label="More scene actions" onClose={() => setMore(null)}>
           <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setScriptOpen(true); setMore(null); }}><FileUp size={14} /> Upload script</button>
-          <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setDocOpen("CALLSHEET"); setMore(null); }}><ClipboardList size={14} /> Upload callsheet</button>
           <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setDocOpen("SCHEDULE"); setMore(null); }}><CalendarDays size={14} /> Upload schedule</button>
           <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setImportOpen(true); setMore(null); }}><Upload size={14} /> Import breakdown</button>
         </FixedMenu>
