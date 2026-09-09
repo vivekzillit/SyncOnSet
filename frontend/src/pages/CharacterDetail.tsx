@@ -9,6 +9,7 @@ import { fmtDate, humanize } from "@/lib/format";
 import type { Actor, Character, Costume, CostumeChange, Fitting, Photo } from "@/api/types";
 import { Badge, Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ActorSelect, Avatar, CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
+import { ActorModal } from "@/components/ActorModal";
 
 type CharacterDetailRow = { label: string; value: string };
 type Detail = Character & { actor?: Actor | null; details?: CharacterDetailRow[]; scenes: { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string }; change?: { id: string; changeNumber: number; name: string } | null }[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
@@ -27,6 +28,7 @@ export default function CharacterDetail() {
   const [pick, setPick] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [ef, setEf] = useState({ name: "", type: "", actorId: "", age: "", description: "", notes: "", castNumber: "" });
+  const [actorOpen, setActorOpen] = useState(false);
   const [fitOpen, setFitOpen] = useState(false);
   const [fitPick, setFitPick] = useState(false);
   const [ff, setFf] = useState<{ scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] });
@@ -37,6 +39,12 @@ export default function CharacterDetail() {
   const createChange = useMutation({
     mutationFn: () => api<CostumeChange>(p(projectId, "/changes"), { body: { characterId: id, name: nf.name, description: nf.description || null, costumeIds: nf.costumes.map((c) => c.id) } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); setNewOpen(false); setNf({ name: "", description: "", costumes: [] }); toast.push("Change created", "ok"); },
+  });
+  /** An actor created from this card is cast in the part on the spot — that is why it was opened. */
+  const assignActor = useMutation({
+    mutationFn: (actorId: string) => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { actorId } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["characters", projectId] }); },
+    onError: (e: Error) => toast.push(e.message, "danger"),
   });
   const createFitting = useMutation({
     mutationFn: () => api<Fitting>(p(projectId, "/fittings"), { body: { characterId: id, scheduledAt: ff.scheduledAt || new Date().toISOString(), location: ff.location || null, notes: ff.notes || null, costumeIds: ff.costumes.map((c) => c.id) } }),
@@ -159,7 +167,12 @@ export default function CharacterDetail() {
                 {Object.keys(m).length ? <dl className="kv">{Object.entries(m).map(([k, v]) => <Fragment key={k}><dt>{humanize(k)}</dt><dd>{String(v)}</dd></Fragment>)}</dl> : <div className="subtle">No measurements recorded.</div>}
                 {ch.actor.notes && <div className="notice mt-2">{ch.actor.notes}</div>}
               </>
-            ) : <div className="subtle">No actor assigned.</div>}
+            ) : (
+              <>
+                <div className="subtle">No actor assigned.</div>
+                {canEdit && <button className="btn btn-sm mt-2" onClick={() => setActorOpen(true)}><Plus size={14} /> Add actor</button>}
+              </>
+            )}
           </Card>
           <Card title="References"><PhotoGrid photos={ch.photos} entityType="CHARACTER" entityId={ch.id} kinds={["REFERENCE", "FRONT", "SIDE", "BACK", "DETAIL", "DOCUMENT", "OTHER"]} /></Card>
           <Card title="Fittings" pad0>
@@ -214,6 +227,8 @@ export default function CharacterDetail() {
         </div>
         <ErrorBox error={saveDetails.error} />
       </Modal>
+
+      <ActorModal open={actorOpen} onClose={() => setActorOpen(false)} onSaved={(a) => assignActor.mutate(a.id)} allowAddAnother={false} saveLabel="Create & cast" />
 
       <Modal open={fitOpen} onClose={() => setFitOpen(false)} title={`Schedule fitting for ${ch.name}`} footer={<><button className="btn" onClick={() => setFitOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={createFitting.isPending} onClick={() => createFitting.mutate()}>Schedule</button></>}>
         <div className="form-grid">
