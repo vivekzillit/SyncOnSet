@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Film, Tv, Upload, FileText } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useAuth } from "@/state/auth";
-import { ErrorBox, Field, Input, discardIfDirty, useUnsavedGuard } from "@/components/ui";
+import { ErrorBox, Field, Input, useUnsavedGuard } from "@/components/ui";
 import { CharacterConfirmation, buildCharacterImport, initialRows, manualCharacters, type ConfirmRow, type DetectedCharacter, type ExistingCharacter } from "@/components/CharacterConfirmation";
 
 const STEPS = 4;
@@ -78,8 +78,9 @@ export default function ProductionWizard() {
 
   // Anything picked or typed so far counts: Cancel asks before throwing the setup away.
   const started = !!f.type || !!parsed || [f.prepStartDate, f.prepEndDate, f.prepWrapDate, f.startDate, f.endDate, f.wrapDate].some(Boolean);
-  useUnsavedGuard(started && !busy);
-  const cancel = async () => { if (await discardIfDirty(started, "Leave production setup? What you have entered so far will be lost.")) nav("/projects"); };
+  // Cancel, the browser's Back and closing the tab all go through this guard, which asks before leaving.
+  useUnsavedGuard(started && !busy, "Leave production setup? What you have entered so far will be lost.");
+  const cancel = () => nav("/projects");
 
   // Plain render helpers (not nested components): a component type created per render would remount its inputs on every keystroke.
   const backAndCancel = (

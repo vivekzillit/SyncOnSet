@@ -7,7 +7,7 @@ import { useProject } from "@/state/project";
 import { OPS_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { fmtDate } from "@/lib/format";
 import type { Costume, CostumeChange } from "@/api/types";
-import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Spinner, Textarea, useToast, discardIfDirty } from "@/components/ui";
+import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Spinner, Textarea, useToast, discardIfDirty, useUnsavedGuard } from "@/components/ui";
 import { CostumePicker, PhotoGrid } from "@/components/domain";
 
 export default function ChangeDetail() {
@@ -26,6 +26,8 @@ export default function ChangeDetail() {
   const setWearNotes = useMutation({ mutationFn: (v: { costumeId: string; text: string }) => api(p(projectId, `/changes/${id}/items`), { body: { costumeId: v.costumeId, wearNotes: v.text } }), onSuccess: () => { inv(); setWear(null); } });
   const removeItem = useMutation({ mutationFn: (costumeId: string) => api(p(projectId, `/changes/${id}/items/${costumeId}`), { method: "DELETE" }), onSuccess: inv });
   const update = useMutation({ mutationFn: () => api(p(projectId, `/changes/${id}`), { method: "PATCH", body: ef }), onSuccess: () => { inv(); setEditOpen(false); toast.push("Saved", "ok"); } });
+
+  useUnsavedGuard(!!wear && wear.text !== (ch?.items.find((i) => i.costumeId === wear.costumeId)?.wearNotes || ""));
 
   if (isLoading || !ch) return <Spinner />;
   return (

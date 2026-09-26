@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, X, Search } from "lucide-react";
 import { humanize, tone } from "@/lib/format";
 
@@ -165,14 +165,31 @@ export function confirmDiscard(message = "You have unsaved changes. Discard them
 /** Asks only when `dirty`; resolves true straight away when there is nothing to lose. */
 export const discardIfDirty = (dirty: boolean, message?: string) => (dirty ? confirmDiscard(message) : Promise.resolve(true));
 
-/** Closing or reloading the browser tab while `dirty` gets the browser's own "Leave site?" prompt. */
-export function useUnsavedGuard(dirty: boolean) {
+/**
+ * Pages and modals holding unsaved input register here while they do. One <LeaveGuard> then asks before any
+ * in-app navigation (links, tabs, Back) leaves the page, and closing or reloading the tab gets the browser's own prompt.
+ */
+const unsaved = new Map<symbol, string | undefined>();
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", (e) => { if (unsaved.size) { e.preventDefault(); e.returnValue = ""; } });
+}
+export function useUnsavedGuard(dirty: boolean, message?: string) {
   useEffect(() => {
     if (!dirty) return;
-    const onUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
-    window.addEventListener("beforeunload", onUnload);
-    return () => window.removeEventListener("beforeunload", onUnload);
-  }, [dirty]);
+    const key = Symbol("unsaved");
+    unsaved.set(key, message);
+    return () => { unsaved.delete(key); };
+  }, [dirty, message]);
+}
+/** Rendered once inside the router. Only a change of page counts; filters kept in the query string never ask. */
+export function LeaveGuard() {
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => unsaved.size > 0 && currentLocation.pathname !== nextLocation.pathname);
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    const message = [...unsaved.values()].find(Boolean) ?? "You have unsaved changes. Leave this page and discard them?";
+    confirmDiscard(message).then((ok) => (ok ? blocker.proceed() : blocker.reset()));
+  }, [blocker]);
+  return null;
 }
 
 function DiscardHost() {
@@ -211,13 +228,14 @@ function DiscardHost() {
  * Saving closes it through the caller's own state, which never asks. Pass `dirty` to override the detection.
  */
 export function Modal({ open, onClose, title, children, footer, wide, dirty }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean; dirty?: boolean }) {
-  const touched = useRef(false);
+  const [touched, setTouched] = useState(false);
   const bypass = useRef(false);
-  useEffect(() => { if (open) touched.current = false; }, [open]);
-  const isDirty = () => dirty ?? touched.current;
+  useEffect(() => { if (!open) setTouched(false); }, [open]);
+  const isDirty = () => dirty ?? touched;
+  useUnsavedGuard(open && isDirty());
   const requestClose = useCallback(async () => {
-    if (await discardIfDirty(dirty ?? touched.current)) onClose();
-  }, [dirty, onClose]);
+    if (await discardIfDirty(dirty ?? touched)) onClose();
+  }, [dirty, touched, onClose]);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !discardOpen && requestClose();
@@ -229,7 +247,7 @@ export function Modal({ open, onClose, title, children, footer, wide, dirty }: {
     };
   }, [open, requestClose]);
   if (!open) return null;
-  const markTouched = () => { touched.current = true; };
+  const markTouched = () => { if (!touched) setTouched(true); };
   /** A footer Cancel keeps its own handler (some reset state first); it is only held back until the discard is confirmed. */
   const guardCancel = (e: React.MouseEvent) => {
     const btn = (e.target as HTMLElement).closest("button");

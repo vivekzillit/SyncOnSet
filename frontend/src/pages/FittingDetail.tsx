@@ -7,7 +7,7 @@ import { useProject } from "@/state/project";
 import { OPS_ROLES } from "@/state/auth";
 import { fmtDateLong, fmtTime, humanize } from "@/lib/format";
 import type { Costume, Fitting } from "@/api/types";
-import { Badge, Card, ErrorBox, Field, Input, Modal, PageHead, Spinner, useToast, discardIfDirty } from "@/components/ui";
+import { Badge, Card, ErrorBox, Field, Input, Modal, PageHead, Spinner, useToast, discardIfDirty, useUnsavedGuard } from "@/components/ui";
 import { Avatar, CostumePicker, PhotoGrid } from "@/components/domain";
 
 export default function FittingDetail() {
@@ -28,6 +28,8 @@ export default function FittingDetail() {
   const addItem = useMutation({ mutationFn: (c: Costume) => api(p(projectId, `/fittings/${id}/items`), { body: { costumeId: c.id } }), onSuccess: inv });
   const removeItem = useMutation({ mutationFn: (costumeId: string) => api(p(projectId, `/fittings/${id}/items/${costumeId}`), { method: "DELETE" }), onSuccess: inv });
   const setStatus = useMutation({ mutationFn: (status: string) => api(p(projectId, `/fittings/${id}`), { method: "PATCH", body: { status } }), onSuccess: () => { inv(); toast.push("Fitting updated", "ok"); } });
+
+  useUnsavedGuard(!!noteEdit && noteEdit.text !== (f?.items.find((i) => i.costumeId === noteEdit.costumeId)?.notes || ""));
 
   if (isLoading || !f) return <Spinner />;
   const raw = f.character.actor?.measurements as unknown;

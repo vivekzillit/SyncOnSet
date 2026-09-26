@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "@/state/auth";
-import { Spinner } from "@/components/ui";
+import { LeaveGuard, Spinner } from "@/components/ui";
 import { ProjectShell } from "@/components/Layout";
 import Login from "@/pages/Login";
 import Projects from "@/pages/Projects";
@@ -45,46 +45,49 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/projects" element={<RequireAuth><Projects /></RequireAuth>} />
-      <Route path="/projects/new" element={<RequireAuth><ProductionWizard /></RequireAuth>} />
-      <Route path="/p/:projectId" element={<RequireAuth><ProjectShell /></RequireAuth>}>
-        <Route index element={<Dashboard />} />
-        <Route path="scan" element={<Scan />} />
-        <Route path="scenes" element={<Scenes />} />
-        <Route path="scenes/:id" element={<SceneDetail />} />
-        <Route path="breakdown" element={<Breakdown />} />
-        <Route path="sides" element={<Sides />} />
-        <Route path="characters" element={<Characters />} />
-        <Route path="characters/:id" element={<CharacterDetail />} />
-        <Route path="characters/:id/all" element={<CharacterDetail />} />
-        <Route path="characters/:id/scenes/:sceneId" element={<CharacterDetail />} />
-        <Route path="actors" element={<Actors />} />
-        <Route path="gallery" element={<Gallery />} />
-        <Route path="changes/:id" element={<ChangeDetail />} />
-        <Route path="costumes" element={<Costumes />} />
-        <Route path="costumes/:id" element={<CostumeDetail />} />
-        <Route path="cleaning" element={<Cleaning />} />
-        <Route path="cleaning/:id" element={<CleaningDetail />} />
-        <Route path="fittings" element={<Fittings />} />
-        <Route path="fittings/:id" element={<FittingDetail />} />
-        <Route path="continuity" element={<ContinuityOnSet />} />
-        <Route path="continuity/book" element={<ContinuityBook />} />
-        <Route path="continuity/shot" element={<ContinuityBook />} />
-        <Route path="alterations" element={<Alterations />} />
-        <Route path="damages" element={<Damages />} />
-        <Route path="missing" element={<Missing />} />
-        <Route path="vendors" element={<Vendors />} />
-        <Route path="budget" element={<Budget />} />
-        <Route path="reports" element={<Reports />} />
-        <Route path="labels" element={<Labels />} />
-        <Route path="notifications" element={<Notifications />} />
-        <Route path="team" element={<Team />} />
-        <Route path="settings" element={<ProjectSettings />} />
-        <Route path="more" element={<More />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/projects" replace />} />
-    </Routes>
+    <>
+      <LeaveGuard />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/projects" element={<RequireAuth><Projects /></RequireAuth>} />
+        <Route path="/projects/new" element={<RequireAuth><ProductionWizard /></RequireAuth>} />
+        <Route path="/p/:projectId" element={<RequireAuth><ProjectShell /></RequireAuth>}>
+          <Route index element={<Dashboard />} />
+          <Route path="scan" element={<Scan />} />
+          <Route path="scenes" element={<Scenes />} />
+          <Route path="scenes/:id" element={<SceneDetail />} />
+          <Route path="breakdown" element={<Breakdown />} />
+          <Route path="sides" element={<Sides />} />
+          <Route path="characters" element={<Characters />} />
+          <Route path="characters/:id" element={<CharacterDetail />} />
+          <Route path="characters/:id/all" element={<CharacterDetail />} />
+          <Route path="characters/:id/scenes/:sceneId" element={<CharacterDetail />} />
+          <Route path="actors" element={<Actors />} />
+          <Route path="gallery" element={<Gallery />} />
+          <Route path="changes/:id" element={<ChangeDetail />} />
+          <Route path="costumes" element={<Costumes />} />
+          <Route path="costumes/:id" element={<CostumeDetail />} />
+          <Route path="cleaning" element={<Cleaning />} />
+          <Route path="cleaning/:id" element={<CleaningDetail />} />
+          <Route path="fittings" element={<Fittings />} />
+          <Route path="fittings/:id" element={<FittingDetail />} />
+          <Route path="continuity" element={<ContinuityOnSet />} />
+          <Route path="continuity/book" element={<ContinuityBook />} />
+          <Route path="continuity/shot" element={<ContinuityBook />} />
+          <Route path="alterations" element={<Alterations />} />
+          <Route path="damages" element={<Damages />} />
+          <Route path="missing" element={<Missing />} />
+          <Route path="vendors" element={<Vendors />} />
+          <Route path="budget" element={<Budget />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="labels" element={<Labels />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="team" element={<Team />} />
+          <Route path="settings" element={<ProjectSettings />} />
+          <Route path="more" element={<More />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/projects" replace />} />
+      </Routes>
+    </>
   );
 }
