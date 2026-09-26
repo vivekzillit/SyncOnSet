@@ -280,7 +280,7 @@ export function ReadinessLine({ level, name, sub }: { level: string; name: React
 const NEW_ACTOR = "__new_actor__";
 
 /** Actor dropdown that also offers "+ New actor", opening the same Create Actor form the Actors page uses. */
-export function ActorSelect({ value, onChange }: { value: string; onChange: (actorId: string) => void }) {
+export function ActorSelect({ value, onChange, disabled }: { value: string; onChange: (actorId: string) => void; disabled?: boolean }) {
   const { projectId, can } = useProject();
   const [open, setOpen] = useState(false);
   const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<Actor[]>(p(projectId, "/actors")) });
@@ -289,7 +289,7 @@ export function ActorSelect({ value, onChange }: { value: string; onChange: (act
 
   return (
     <>
-      <Select value={value} onChange={(e) => (e.target.value === NEW_ACTOR ? setOpen(true) : onChange(e.target.value))} options={options} placeholder="— unassigned —" />
+      <Select value={value} onChange={(e) => (e.target.value === NEW_ACTOR ? setOpen(true) : onChange(e.target.value))} options={options} placeholder="— unassigned —" disabled={disabled} />
       {/* Created from a character, so the new actor is assigned straight back to it — no "Create +". */}
       <ActorModal open={open} onClose={() => setOpen(false)} onSaved={(a) => onChange(a.id)} allowAddAnother={false} saveLabel="Create & assign" />
     </>

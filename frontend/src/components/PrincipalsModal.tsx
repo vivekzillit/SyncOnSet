@@ -15,7 +15,7 @@ export function sortByCast<T extends CastLike>(list: T[]): T[] {
 }
 
 /**
- * "Add & Remove Principals": tag-style multi-select of characters for a scene.
+ * "Principals in this scene": tag-style multi-select of characters for a scene.
  * `value` is the list of selected character ids; `onChange` receives the new list when Save is pressed.
  */
 export function PrincipalsModal({ open, onClose, characters, value, onChange }: { open: boolean; onClose: () => void; characters: Character[]; value: string[]; onChange: (ids: string[]) => void }) {
@@ -45,11 +45,11 @@ export function PrincipalsModal({ open, onClose, characters, value, onChange }: 
     <Modal
       open={open}
       onClose={onClose}
-      title="Add & Remove Principals"
+      title="Principals in this scene"
       footer={<><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn btn-primary" onClick={() => { onChange(sel); onClose(); }}>Save</button></>}
     >
       <div className="field">
-        <label>Principals in this scene</label>
+        <label style={{ fontWeight: 700, color: "var(--text)" }}>Add & Remove Principals</label>
         <div className="chips" style={{ minHeight: 44, padding: 6, border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-2)" }}>
           {selected.length === 0 && <span className="subtle" style={{ padding: "5px 6px" }}>No principals yet — pick characters from the list below.</span>}
           {selected.map((c) => (

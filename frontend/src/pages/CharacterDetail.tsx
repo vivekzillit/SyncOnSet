@@ -88,8 +88,7 @@ export default function CharacterDetail() {
     return (
       <div>
         <PageHead crumbs={<><Link to={`${base}/characters`}>Characters</Link> / {ch.name}</>} title={head}
-          sub={<>{played} · in {ch.scenes.length} scenes</>}
-          actions={<Link to={`${base}/characters/${id}/all`} className="btn">Skip to full character</Link>} />
+          sub={<>{played} · in {ch.scenes.length} scenes</>} />
         <Card title="Pick a scene" pad0>
           <div className="list">
             {ch.scenes.map((sc) => (
