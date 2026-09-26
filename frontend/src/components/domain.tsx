@@ -208,7 +208,8 @@ export function Pipeline({ steps, current }: { steps: readonly string[]; current
 }
 
 /* ---------- Costume list row ---------- */
-export function CostumeRow({ c, extra, onClick, end }: { c: Costume; extra?: ReactNode; onClick?: () => void; end?: ReactNode }) {
+/** `noStatus` drops the status tag, for lists that only need to say which pieces there are. */
+export function CostumeRow({ c, extra, onClick, end, noStatus }: { c: Costume; extra?: ReactNode; onClick?: () => void; end?: ReactNode; noStatus?: boolean }) {
   const { projectId } = useProject();
   const inner = (
     <>
@@ -225,7 +226,7 @@ export function CostumeRow({ c, extra, onClick, end }: { c: Costume; extra?: Rea
       </div>
       <div className="end">
         <span className="subtle hide-mobile">{c.location}</span>
-        <Badge status={c.status} />
+        {!noStatus && <Badge status={c.status} />}
         {end}
       </div>
     </>

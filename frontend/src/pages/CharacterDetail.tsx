@@ -95,7 +95,7 @@ export default function CharacterDetail() {
               <Link key={sc.scene.id} to={`${base}/characters/${id}/scenes/${sc.scene.id}`} className="item link">
                 <div className="avatar">{sc.scene.number}</div>
                 <div className="grow"><div className="title">{sc.scene.name || `Scene ${sc.scene.number}`}</div><div className="meta">{sc.change ? `Change #${sc.change.changeNumber} ${sc.change.name}` : "No change assigned"}</div></div>
-                <div className="end subtle">{sc.scene.shootDate ? fmtDate(sc.scene.shootDate) : ""}<Badge status={sc.scene.status} /></div>
+                <div className="end subtle">{sc.scene.shootDate ? fmtDate(sc.scene.shootDate) : ""}</div>
               </Link>
             ))}
           </div>
@@ -129,7 +129,7 @@ export default function CharacterDetail() {
                   <Link key={s.scene.id} to={`${base}/characters/${id}/scenes/${s.scene.id}`} className="item link" style={s.scene.id === sceneId ? { background: "var(--surface-2)" } : undefined}>
                     <div className="avatar">{s.scene.number}</div>
                     <div className="grow"><div className="title">{s.scene.name || `Scene ${s.scene.number}`}</div><div className="meta">{s.change ? `Change #${s.change.changeNumber} ${s.change.name}` : "No change assigned"}</div></div>
-                    <div className="end subtle">{s.scene.shootDate ? fmtDate(s.scene.shootDate) : ""}<Badge status={s.scene.status} /></div>
+                    <div className="end subtle">{s.scene.shootDate ? fmtDate(s.scene.shootDate) : ""}</div>
                   </Link>
                 ))}
               </div>
@@ -155,7 +155,7 @@ export default function CharacterDetail() {
             )}
           </Card>
           <Card title={`All pieces (${ch.costumes.length})`} pad0>
-            {ch.costumes.length === 0 ? <Empty title="No costumes tagged to this character" /> : <div className="list">{ch.costumes.map((c) => <CostumeRow key={c.id} c={c} />)}</div>}
+            {ch.costumes.length === 0 ? <Empty title="No costumes tagged to this character" /> : <div className="list">{ch.costumes.map((c) => <CostumeRow key={c.id} c={c} noStatus />)}</div>}
           </Card>
         </div>
         <div className="col gap-2">
@@ -181,7 +181,7 @@ export default function CharacterDetail() {
                 {canFit && <button className="btn btn-sm mt-2" onClick={() => setFitOpen(true)}><Plus size={14} /> Schedule fitting</button>}
               </div>
             ) : (
-              <div className="list">{ch.fittings.map((f) => <Link key={f.id} to={`${base}/fittings/${f.id}`} className="item link"><div className="grow"><div className="title small">{fmtDate(f.scheduledAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div><div className="meta">{f.items.length} piece{f.items.length === 1 ? "" : "s"}{f.location ? ` · ${f.location}` : ""}</div></div><Badge status={f.status} /></Link>)}</div>
+              <div className="list">{ch.fittings.map((f) => <Link key={f.id} to={`${base}/fittings/${f.id}`} className="item link"><div className="grow"><div className="title small">{fmtDate(f.scheduledAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div><div className="meta">{f.items.length} piece{f.items.length === 1 ? "" : "s"}{f.location ? ` · ${f.location}` : ""}</div></div></Link>)}</div>
             )}
           </Card>
           <Card title="More details" actions={canEdit && <button className="btn btn-sm" onClick={() => openDetail(-1)}><Plus size={14} /> Add more</button>} pad0>
