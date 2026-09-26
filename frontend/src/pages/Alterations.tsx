@@ -8,6 +8,7 @@ import { useAuth, TAILOR_ROLES } from "@/state/auth";
 import { fmtDateTime, humanize, matches } from "@/lib/format";
 import type { Alteration, Costume } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
+import { RecordActions } from "@/components/Discussion";
 import { CostumePicker, CostumeRow, PhotoGrid, Pipeline } from "@/components/domain";
 
 export default function Alterations() {
@@ -50,6 +51,8 @@ export default function Alterations() {
                     <div className="subtle">{a.character ? `${a.character.name}${a.character.actor ? ` (${a.character.actor.name})` : ""} · ` : ""}{a.tailorName ? `Tailor: ${a.tailorName} · ` : ""}{a.deadline ? `Due ${fmtDateTime(a.deadline)}` : "No deadline"}</div>
                     {a.notes && <div className="subtle mt-1" style={{ whiteSpace: "pre-line" }}>{a.notes}</div>}
                   </div>
+                  <RecordActions entityType="ALTERATION" entityId={a.id} title={`${a.costume.assetNumber} ${a.costume.name}`} path={`${base}/alterations`}
+                    summary={`Alteration: ${a.costume.assetNumber} ${a.costume.name}\n${a.issue} → ${a.required}\nStatus: ${humanize(a.status)}${a.deadline ? ` · Due ${fmtDateTime(a.deadline)}` : ""}`} />
                   {can(TAILOR_ROLES) && next && (
                     <div className="row gap-1 wrap">
                       <button className="btn btn-primary btn-sm" disabled={advance.isPending} onClick={() => advance.mutate({ id: a.id })}>{humanize(next)} <ChevronRight size={14} /></button>

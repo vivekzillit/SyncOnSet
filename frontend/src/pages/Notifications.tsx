@@ -15,7 +15,9 @@ export default function Notifications() {
   const base = `/p/${projectId}`;
   const open = (n: Notification) => {
     if (!n.read) markRead.mutate([n.id]);
-    const map: Record<string, string> = { COSTUME: "costumes", CLEANING: "cleaning", ALTERATION: "alterations", DAMAGE: "damages", FITTING: "fittings", RENTAL: "vendors" };
+    const map: Record<string, string> = { COSTUME: "costumes", CLEANING: "cleaning", ALTERATION: "alterations", DAMAGE: "damages", FITTING: "fittings", RENTAL: "vendors", MISSING: "missing", EXPENSE: "budget" };
+    // A chat message opens that record's conversation.
+    if (n.type === "CHAT" && n.entityType && n.entityId && map[n.entityType]) return nav(n.entityType === "FITTING" ? `${base}/fittings/${n.entityId}?chat=${n.entityId}` : `${base}/${map[n.entityType]}?chat=${n.entityId}`);
     if (n.entityType && n.entityId && (n.entityType === "COSTUME" || n.entityType === "CLEANING" || n.entityType === "FITTING")) nav(`${base}/${map[n.entityType]}/${n.entityId}`);
     else if (n.entityType && map[n.entityType]) nav(`${base}/${map[n.entityType]}`);
   };

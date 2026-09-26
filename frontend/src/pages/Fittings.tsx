@@ -8,6 +8,7 @@ import { useAuth, OPS_ROLES } from "@/state/auth";
 import { fmtDate, fmtTime, matches } from "@/lib/format";
 import type { Character, Costume, Fitting } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { RecordActions } from "@/components/Discussion";
 import { Avatar, CostumePicker, CostumeRow } from "@/components/domain";
 
 export default function Fittings() {
@@ -42,7 +43,11 @@ export default function Fittings() {
                   <div className="title">{x.character.name}{x.actor ? ` · ${x.actor.name}` : ""}</div>
                   <div className="meta">{fmtDate(x.scheduledAt)} {fmtTime(x.scheduledAt)}{x.location ? ` · ${x.location}` : ""} · {x.items.filter((i) => i.status === "FITTED").length}/{x.items.length} fitted{x.items.some((i) => i.status === "ALTERATION_REQUIRED") ? " · alteration needed" : ""}</div>
                 </div>
-                <div className="end"><Badge status={x.status} /></div>
+                <div className="end">
+                  <RecordActions entityType="FITTING" entityId={x.id} title={`Fitting · ${x.character.name}`} path={`${base}/fittings/${x.id}`}
+                    summary={`Fitting: ${x.character.name}${x.actor ? ` (${x.actor.name})` : ""}\n${fmtDate(x.scheduledAt)} ${fmtTime(x.scheduledAt)}${x.location ? ` · ${x.location}` : ""}`} />
+                  <Badge status={x.status} />
+                </div>
               </Link>
             ))}
           </div>

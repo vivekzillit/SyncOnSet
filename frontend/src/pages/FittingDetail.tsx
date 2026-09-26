@@ -8,6 +8,7 @@ import { OPS_ROLES } from "@/state/auth";
 import { fmtDateLong, fmtTime, humanize } from "@/lib/format";
 import type { Costume, Fitting } from "@/api/types";
 import { Badge, Card, ErrorBox, Field, Input, Modal, PageHead, Spinner, useToast, discardIfDirty, useUnsavedGuard } from "@/components/ui";
+import { RecordActions } from "@/components/Discussion";
 import { Avatar, CostumePicker, PhotoGrid } from "@/components/domain";
 
 export default function FittingDetail() {
@@ -43,10 +44,14 @@ export default function FittingDetail() {
         crumbs={<><Link to={`${base}/fittings`}>Fittings</Link> / {f.character.name}</>}
         title={<span className="row gap-2"><Avatar name={f.character.name} lg /><span>{f.character.name}{f.actor ? ` · ${f.actor.name}` : ""} <Badge status={f.status} lg /></span></span>}
         sub={<>{fmtDateLong(f.scheduledAt)} {fmtTime(f.scheduledAt)}{f.location ? ` · ${f.location}` : ""} · {fitted}/{f.items.length} fitted</>}
-        actions={ops && <>
+        actions={<>
+          <RecordActions entityType="FITTING" entityId={f.id} title={`Fitting · ${f.character.name}`} path={`${base}/fittings/${f.id}`}
+            summary={`Fitting: ${f.character.name}${f.actor ? ` (${f.actor.name})` : ""}\n${fmtDateLong(f.scheduledAt)} ${fmtTime(f.scheduledAt)}${f.location ? ` · ${f.location}` : ""} · ${fitted}/${f.items.length} fitted`} />
+          {ops && <>
           {f.status === "SCHEDULED" && <button className="btn" onClick={() => setStatus.mutate("IN_PROGRESS")}>Start fitting</button>}
           {f.status !== "COMPLETED" && f.status !== "CANCELLED" && <button className="btn btn-primary" onClick={() => setStatus.mutate("COMPLETED")}><Check size={16} /> Complete</button>}
           {f.status !== "CANCELLED" && f.status !== "COMPLETED" && <button className="btn btn-ghost" onClick={() => setStatus.mutate("CANCELLED")}>Cancel</button>}
+          </>}
         </>}
       />
       {f.notes && <div className="notice info mb-2">{f.notes}</div>}

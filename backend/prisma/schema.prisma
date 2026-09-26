@@ -69,6 +69,7 @@ model Project {
   expenses      Expense[]
   notifications Notification[]
   auditLogs     AuditLog[]
+  comments      Comment[]
   cues          ScriptCue[]
 }
 
@@ -553,6 +554,22 @@ model Notification {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+}
+
+/// Team chat on a record (expense, alteration, damage, missing item, fitting): one thread per record.
+model Comment {
+  id         String   @id @default(cuid())
+  projectId  String
+  entityType String   // EXPENSE | ALTERATION | DAMAGE | MISSING | FITTING
+  entityId   String
+  userId     String
+  userName   String   // kept so a thread still reads after a user is removed
+  body       String
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, entityType, entityId])
 }
 
 model AuditLog {

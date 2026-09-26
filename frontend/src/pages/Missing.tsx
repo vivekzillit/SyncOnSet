@@ -8,6 +8,7 @@ import { OPS_ROLES } from "@/state/auth";
 import { fmtDateTime, matches } from "@/lib/format";
 import type { Costume, MissingItem } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Spinner, Textarea, useToast } from "@/components/ui";
+import { RecordActions } from "@/components/Discussion";
 import { CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
 
 export default function Missing() {
@@ -52,6 +53,8 @@ export default function Missing() {
                   {m.notes && <div className="subtle mt-1">{m.notes}</div>}
                   <div className="mt-2"><PhotoGrid photos={m.photos || []} entityType="MISSING" entityId={m.id} kinds={["REFERENCE", "OTHER"]} compact attachments={false} /></div>
                 </div>
+                <RecordActions entityType="MISSING" entityId={m.id} title={`${m.costume.assetNumber} ${m.costume.name}`} path={`${base}/missing`}
+                  summary={`Missing: ${m.costume.assetNumber} ${m.costume.name}\nLast seen: ${m.lastSeenLocation || "—"} · last assigned: ${m.lastAssignedTo || "—"}\nReported ${fmtDateTime(m.createdAt)}`} />
                 {can(OPS_ROLES) && m.status === "OPEN" && (
                   <div className="col gap-1">
                     {found?.id === m.id ? (

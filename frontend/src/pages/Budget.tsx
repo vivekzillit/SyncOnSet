@@ -7,6 +7,7 @@ import { useAuth } from "@/state/auth";
 import { fmtDate, fmtMoney, humanize, todayISO } from "@/lib/format";
 import type { Character, Expense, Rental, Scene } from "@/api/types";
 import { Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Stat, useToast } from "@/components/ui";
+import { RecordActions } from "@/components/Discussion";
 
 interface BudgetReport { total: number; byCategory: Record<string, number>; byCharacter: Record<string, number>; byScene: Record<string, number>; inventoryValue: number; rentalCommitted: number; expenses: Expense[]; rentals: Rental[] }
 
@@ -49,7 +50,7 @@ export default function Budget() {
         {data.expenses.length === 0 ? <Empty icon="💸" title="No expenses" /> : (
           <div className="table-wrap"><table className="table">
             <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Character</th><th>Scene</th><th className="right">Amount</th><th></th></tr></thead>
-            <tbody>{data.expenses.map((e) => <tr key={e.id}><td className="nowrap">{fmtDate(e.date)}</td><td>{humanize(e.category)}</td><td>{e.description}{e.costume ? <span className="subtle"> · {e.costume.assetNumber}</span> : ""}{e.vendor ? <span className="subtle"> · {e.vendor.name}</span> : ""}</td><td>{e.character?.name || "—"}</td><td>{e.scene ? `Sc ${e.scene.number}` : "—"}</td><td className="right bold nowrap">{m(e.amount)}</td><td><button className="btn btn-ghost btn-sm" onClick={() => del.mutate(e.id)}><Trash2 size={14} /></button></td></tr>)}</tbody>
+            <tbody>{data.expenses.map((e) => <tr key={e.id}><td className="nowrap">{fmtDate(e.date)}</td><td>{humanize(e.category)}</td><td>{e.description}{e.costume ? <span className="subtle"> · {e.costume.assetNumber}</span> : ""}{e.vendor ? <span className="subtle"> · {e.vendor.name}</span> : ""}</td><td>{e.character?.name || "—"}</td><td>{e.scene ? `Sc ${e.scene.number}` : "—"}</td><td className="right bold nowrap">{m(e.amount)}</td><td className="nowrap"><RecordActions entityType="EXPENSE" entityId={e.id} title={e.description} path={`/p/${projectId}/budget`} summary={`Expense: ${e.description} · ${m(e.amount)}\n${[fmtDate(e.date), humanize(e.category), e.scene ? `Sc ${e.scene.number}` : null, e.character?.name, e.vendor?.name].filter(Boolean).join(" · ")}`} /><button className="btn btn-ghost btn-sm" onClick={() => del.mutate(e.id)}><Trash2 size={14} /></button></td></tr>)}</tbody>
           </table></div>
         )}
       </Card>

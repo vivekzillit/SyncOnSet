@@ -13,6 +13,8 @@ interface NotifyInput {
   roles?: readonly Role[];
   /** Deliver to specific users in addition to role targeting. */
   userIds?: string[];
+  /** Never deliver to these users (e.g. whoever caused the notification). */
+  excludeUserIds?: string[];
 }
 
 /** Fan-out a notification to each relevant project member (one row per user so read-state is per user). */
@@ -25,6 +27,7 @@ export async function notify(input: NotifyInput) {
   }
   for (const a of admins) targets.add(a.id);
   for (const u of input.userIds || []) targets.add(u);
+  for (const u of input.excludeUserIds || []) targets.delete(u);
   if (targets.size === 0) return 0;
   await prisma.notification.createMany({
     data: [...targets].map((userId) => ({

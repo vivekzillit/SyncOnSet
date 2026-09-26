@@ -8,6 +8,7 @@ import { useAuth, FINANCE_ROLES, OPS_ROLES } from "@/state/auth";
 import { fmtDateTime, fmtMoney, humanize, matches } from "@/lib/format";
 import type { Costume, DamageReport, Scene } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
+import { RecordActions } from "@/components/Discussion";
 import { CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
 
 export default function Damages() {
@@ -46,6 +47,8 @@ export default function Damages() {
                   <div className="mt-1"><b>{d.description}</b></div>
                   <div className="subtle">{fmtDateTime(d.createdAt)}{d.scene ? ` · Sc ${d.scene.number}${d.takeNumber ? ` T${d.takeNumber}` : ""}` : ""}{d.responsible ? ` · Responsible: ${humanize(d.responsible)}` : ""}{can(FINANCE_ROLES) && d.estimatedRepairCost != null ? ` · Est. repair ${fmtMoney(d.estimatedRepairCost, currency)}` : ""}</div>
                 </div>
+                <RecordActions entityType="DAMAGE" entityId={d.id} title={`${d.costume.assetNumber} ${d.costume.name}`} path={`${base}/damages`}
+                  summary={`Damage: ${d.costume.assetNumber} ${d.costume.name}\n${d.description}\nStatus: ${humanize(d.status)} · reported ${fmtDateTime(d.createdAt)}`} />
                 {can(OPS_ROLES) && ["OPEN", "REPAIRING"].includes(d.status) && (
                   <div className="row gap-1 wrap">
                     {d.status === "OPEN" && <button className="btn btn-sm" onClick={() => setStatus.mutate({ id: d.id, status: "REPAIRING" })}>Repairing</button>}
