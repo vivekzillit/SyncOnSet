@@ -96,6 +96,7 @@ model Actor {
   email          String?
   email2         String?
   agency         String?
+  talentRep      String?   // talent representative (agent / manager contact)
   startWorkDate  DateTime?
   nextFittingAt  DateTime? // next costume fitting (as entered on the actor record)
   fittingComment String?

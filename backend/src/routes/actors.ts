@@ -18,6 +18,7 @@ const schema = z.object({
   email: zOptionalString,
   email2: zOptionalString,
   agency: zOptionalString,
+  talentRep: zOptionalString,
   startWorkDate: zDate,
   nextFittingAt: zDate,
   fittingComment: zOptionalString,

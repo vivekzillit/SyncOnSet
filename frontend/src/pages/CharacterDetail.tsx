@@ -227,7 +227,7 @@ export default function CharacterDetail() {
         <ErrorBox error={saveDetails.error} />
       </Modal>
 
-      <ActorModal open={actorOpen} onClose={() => setActorOpen(false)} onSaved={(a) => assignActor.mutate(a.id)} allowAddAnother={false} saveLabel="Create & cast" />
+      <ActorModal open={actorOpen} onClose={() => setActorOpen(false)} onSaved={(a) => assignActor.mutate(a.id)} allowAddAnother={false} saveLabel="Create & cast" forCharacter={ch} />
 
       <Modal open={fitOpen} onClose={() => setFitOpen(false)} title={`Schedule fitting for ${ch.name}`} footer={<><button className="btn" onClick={() => setFitOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={createFitting.isPending} onClick={() => createFitting.mutate()}>Schedule</button></>}>
         <div className="form-grid">
