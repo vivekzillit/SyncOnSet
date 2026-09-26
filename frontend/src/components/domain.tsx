@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Html5Qrcode } from "html5-qrcode";
-import { Camera, Download, ExternalLink, FileText, Link as LinkIcon, Paperclip, Plus, X } from "lucide-react";
+import { Camera, Download, ExternalLink, FileText, Images, Link as LinkIcon, Paperclip, Play, Plus, Video, X } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { CONTINUITY_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { fmtDateTime, humanize, tone } from "@/lib/format";
-import type { Actor, Costume, Photo, TimelineEvent } from "@/api/types";
+import type { Actor, Costume, Photo, Role, TimelineEvent } from "@/api/types";
 import { Badge, Dot, Empty, ErrorBox, Field, Input, Modal, SearchBox, Select, Spinner, Textarea, initials, useToast } from "./ui";
 import { ActorModal } from "./ActorModal";
 
@@ -69,27 +69,51 @@ const fileSize = (bytes?: number | null) => {
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i += 1; }
   return `${n < 10 && i > 0 ? n.toFixed(1) : Math.round(n)} ${units[i]}`;
 };
-const isImage = (ph: Photo) => (ph.mediaType ? ph.mediaType === "IMAGE" : true);
+const isMedia = (ph: Photo) => (ph.mediaType ? ph.mediaType === "IMAGE" || ph.mediaType === "VIDEO" : true);
+/** The server caps an upload at 250 MB; saying so before sending saves a long wait on set. */
+const MAX_UPLOAD = 250 * 1024 * 1024;
+
+/** A photo or video as a square tile; a video shows its first frame under a play mark. */
+export function MediaThumb({ ph, alt }: { ph: Pick<Photo, "url" | "mediaType">; alt?: string }) {
+  if (ph.mediaType !== "VIDEO") return <img src={ph.url} alt={alt || ""} loading="lazy" />;
+  return (
+    <>
+      <video src={`${ph.url}#t=0.1`} muted playsInline preload="metadata" />
+      <span className="play" aria-hidden><Play size={16} fill="currentColor" /></span>
+    </>
+  );
+}
+
+/** A photo or video at full size, for the preview modal. */
+export function MediaView({ ph, alt }: { ph: Pick<Photo, "url" | "mediaType">; alt?: string }) {
+  return ph.mediaType === "VIDEO"
+    ? <video src={ph.url} controls autoPlay playsInline style={{ width: "100%", maxHeight: "75vh", borderRadius: 10, background: "#000" }} />
+    : <img src={ph.url} alt={alt || ""} style={{ width: "100%", borderRadius: 10 }} />;
+}
 
 /**
  * References attached to a record: photos shown as thumbnails, any other file listed for download,
  * and links out to a drive or a mood board. Used by characters, looks, fittings, continuity, cleaning and damage.
  */
-export function PhotoGrid({ photos, entityType, entityId, kinds, compact, attachments = true }: { photos: Photo[]; entityType: string; entityId: string; kinds?: string[]; compact?: boolean; attachments?: boolean }) {
+export function PhotoGrid({ photos, entityType, entityId, kinds, compact, attachments = true, editRoles = CONTINUITY_ROLES }: { photos: Photo[]; entityType: string; entityId: string; kinds?: string[]; compact?: boolean; attachments?: boolean; editRoles?: Role[] }) {
   const { projectId, can } = useProject();
   const qc = useQueryClient();
   const toast = useToast();
   const [kind, setKind] = useState((kinds || ["FRONT", "SIDE", "BACK", "CLOSEUP", "DETAIL", "STAIN", "REFERENCE", "DOCUMENT", "OTHER"])[0]);
   const photoRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Photo | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [link, setLink] = useState({ url: "", title: "" });
-  const editable = can(CONTINUITY_ROLES);
+  const editable = can(editRoles);
 
   const upload = useMutation({
-    mutationFn: async (files: FileList) => {
-      for (const f of Array.from(files)) {
+    mutationFn: async (files: File[]) => {
+      const tooBig = files.find((f) => f.size > MAX_UPLOAD);
+      if (tooBig) throw new Error(`${tooBig.name || "That file"} is over 250 MB. Trim the clip, or share it as a link.`);
+      for (const f of files) {
         const fd = new FormData();
         fd.append("file", f);
         fd.append("entityType", entityType);
@@ -108,37 +132,44 @@ export function PhotoGrid({ photos, entityType, entityId, kinds, compact, attach
   });
   const del = useMutation({ mutationFn: (id: string) => api(p(projectId, `/photos/${id}`), { method: "DELETE" }), onSuccess: () => qc.invalidateQueries() });
 
-  const images = photos.filter(isImage);
-  const others = photos.filter((ph) => !isImage(ph));
+  const images = photos.filter(isMedia);
+  const others = photos.filter((ph) => !isMedia(ph));
+  // Reset the input so picking the same file twice still uploads it.
+  const pickFiles = (e: ChangeEvent<HTMLInputElement>) => { const files = Array.from(e.target.files || []); e.target.value = ""; if (files.length) upload.mutate(files); };
 
   return (
     <div>
       {editable && (
         <div className="row gap-2 mb-2 wrap">
           <Select value={kind} onChange={(e) => setKind(e.target.value)} options={kinds || ["FRONT", "SIDE", "BACK", "CLOSEUP", "DETAIL", "STAIN", "REFERENCE", "DOCUMENT", "OTHER"]} style={{ width: "auto" }} />
-          <button type="button" className="btn btn-sm" onClick={() => photoRef.current?.click()} disabled={upload.isPending}>
-            <Camera size={15} /> {upload.isPending ? "Uploading…" : "Add photo"}
+          <button type="button" className="btn btn-sm" onClick={() => photoRef.current?.click()} disabled={upload.isPending} title="Take a photo with the camera">
+            <Camera size={15} /> {upload.isPending ? "Uploading…" : "Photo"}
           </button>
+          <button type="button" className="btn btn-sm" onClick={() => videoRef.current?.click()} disabled={upload.isPending} title="Record a video with the camera"><Video size={15} /> Video</button>
+          <button type="button" className="btn btn-sm" onClick={() => galleryRef.current?.click()} disabled={upload.isPending} title="Choose photos or videos from the gallery"><Images size={15} /> Gallery</button>
           {attachments && <>
             <button type="button" className="btn btn-sm" onClick={() => fileRef.current?.click()} disabled={upload.isPending}><Paperclip size={15} /> Add file</button>
             <button type="button" className="btn btn-sm" onClick={() => setLinkOpen(true)}><LinkIcon size={15} /> Add link</button>
           </>}
-          <input ref={photoRef} type="file" accept="image/*" capture="environment" multiple hidden onChange={(e) => e.target.files?.length && upload.mutate(e.target.files)} />
-          <input ref={fileRef} type="file" multiple hidden onChange={(e) => e.target.files?.length && upload.mutate(e.target.files)} />
+          {/* On a phone `capture` opens the camera straight away; the gallery input leaves it off so the library is offered. */}
+          <input ref={photoRef} type="file" accept="image/*" capture="environment" hidden onChange={pickFiles} />
+          <input ref={videoRef} type="file" accept="video/*" capture="environment" hidden onChange={pickFiles} />
+          <input ref={galleryRef} type="file" accept="image/*,video/*" multiple hidden onChange={pickFiles} />
+          <input ref={fileRef} type="file" multiple hidden onChange={pickFiles} />
         </div>
       )}
       {images.length === 0 && others.length === 0 ? (
-        <div className="subtle">{attachments ? "Nothing attached yet." : "No photos yet."}</div>
+        <div className="subtle">{attachments ? "Nothing attached yet." : "No photos or videos yet."}</div>
       ) : (
         <>
           {images.length > 0 && (
             <div className="photos" style={compact ? { gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))" } : undefined}>
               {images.map((ph) => (
                 <div key={ph.id} className="photo" onClick={() => setPreview(ph)}>
-                  <img src={ph.url} alt={ph.caption || ph.kind} loading="lazy" />
+                  <MediaThumb ph={ph} alt={ph.caption || ph.kind} />
                   <span className="kind">{ph.kind}</span>
                   {editable && (
-                    <button type="button" className="del" onClick={(e) => { e.stopPropagation(); del.mutate(ph.id); }} aria-label="Delete photo"><X size={12} /></button>
+                    <button type="button" className="del" onClick={(e) => { e.stopPropagation(); del.mutate(ph.id); }} aria-label={ph.mediaType === "VIDEO" ? "Delete video" : "Delete photo"}><X size={12} /></button>
                   )}
                 </div>
               ))}
@@ -162,7 +193,7 @@ export function PhotoGrid({ photos, entityType, entityId, kinds, compact, attach
         </>
       )}
       <Modal open={!!preview} onClose={() => setPreview(null)} title={preview ? `${humanize(preview.kind)} · ${fmtDateTime(preview.createdAt)}` : ""} wide>
-        {preview && <img src={preview.url} alt="" style={{ width: "100%", borderRadius: 10 }} />}
+        {preview && <MediaView ph={preview} />}
       </Modal>
       <Modal open={linkOpen} onClose={() => setLinkOpen(false)} title="Add a link"
         footer={<><button className="btn" onClick={() => setLinkOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!link.url.trim() || addLink.isPending} onClick={() => addLink.mutate()}>{addLink.isPending ? "Adding…" : "Add link"}</button></>}>

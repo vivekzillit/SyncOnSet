@@ -18,7 +18,7 @@ export interface Meta {
   projectTypes?: string[]; budgetBands?: string[]; budgetBandLabels?: Record<string, string>; genders?: string[];
 }
 
-export type MediaType = "IMAGE" | "FILE" | "LINK";
+export type MediaType = "IMAGE" | "VIDEO" | "FILE" | "LINK";
 export interface Photo { id: string; entityType: string; entityId: string; kind: string; mediaType?: MediaType; url: string; title?: string | null; mimeType?: string | null; size?: number | null; caption?: string | null; createdAt: string }
 export interface Actor {
   id: string; name: string; phone?: string | null; email?: string | null; agency?: string | null; measurements: Record<string, string | number>; notes?: string | null;
@@ -47,10 +47,10 @@ export interface CleaningRequest {
 }
 export interface FittingItem { id: string; costumeId: string; status: string; notes?: string | null; costume: Costume }
 export interface Fitting { id: string; characterId: string; actorId?: string | null; scheduledAt: string; location?: string | null; status: string; notes?: string | null; character: Character & { actor?: Actor | null }; actor?: { id: string; name: string } | null; items: FittingItem[]; photos?: Photo[] }
-export interface Alteration { id: string; costumeId: string; characterId?: string | null; issue: string; required: string; tailorName?: string | null; assignedToId?: string | null; priority: string; deadline?: string | null; status: string; notes?: string | null; createdAt: string; costume: Costume; character?: { id: string; name: string; actor?: { name: string } | null } | null }
+export interface Alteration { id: string; costumeId: string; characterId?: string | null; issue: string; required: string; tailorName?: string | null; assignedToId?: string | null; priority: string; deadline?: string | null; status: string; notes?: string | null; createdAt: string; costume: Costume; character?: { id: string; name: string; actor?: { name: string } | null } | null; photos?: Photo[] }
 export interface ContinuityRecord { id: string; sceneId: string; characterId: string; changeId?: string | null; takeNumber: number; notes?: string | null; details: Record<string, string>; accessories: { name: string; present: boolean }[]; recordedByName?: string | null; createdAt: string; scene?: { id: string; number: string; name?: string | null }; character?: { id: string; name: string; actor?: { name: string } | null }; change?: { id: string; changeNumber: number; name: string } | null; photos?: Photo[] }
 export interface DamageReport { id: string; costumeId: string; sceneId?: string | null; takeNumber?: number | null; description: string; estimatedRepairCost?: number | null; responsible?: string | null; status: string; notes?: string | null; createdAt: string; costume: Costume; scene?: { id: string; number: string } | null; photos?: Photo[] }
-export interface MissingItem { id: string; costumeId: string; lastSeenLocation?: string | null; lastAssignedTo?: string | null; lastScanAt?: string | null; status: string; notes?: string | null; createdAt: string; resolvedAt?: string | null; costume: Costume & { character?: { name: string } | null } }
+export interface MissingItem { id: string; costumeId: string; lastSeenLocation?: string | null; lastAssignedTo?: string | null; lastScanAt?: string | null; status: string; notes?: string | null; createdAt: string; resolvedAt?: string | null; costume: Costume & { character?: { name: string } | null }; photos?: Photo[] }
 export interface Vendor { id: string; name: string; contactName?: string | null; phone?: string | null; email?: string | null; address?: string | null; notes?: string | null; _count?: { costumes: number; rentals: number } }
 export interface Rental { id: string; costumeId: string; vendorId: string; ratePerDay: number; pickupDate: string; returnDate: string; status: string; notes?: string | null; costume: Costume; vendor: Vendor; isOverdue?: boolean; dueSoon?: boolean }
 export interface Expense { id: string; category: string; amount: number; description: string; date: string; costumeId?: string | null; characterId?: string | null; sceneId?: string | null; vendorId?: string | null; costume?: { assetNumber: string; name: string } | null; character?: { name: string } | null; scene?: { number: string } | null; vendor?: { name: string } | null }

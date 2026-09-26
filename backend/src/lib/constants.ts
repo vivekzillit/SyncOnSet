@@ -121,7 +121,7 @@ export const MISSING_STATUSES = ["OPEN", "FOUND", "WRITTEN_OFF"] as const;
 export const RENTAL_STATUSES = ["BOOKED", "PICKED_UP", "RETURNED", "OVERDUE"] as const;
 export const EXPENSE_CATEGORIES = ["PURCHASE", "RENTAL", "LAUNDRY", "TAILORING", "ACCESSORIES", "DAMAGE", "OTHER"] as const;
 
-export const PHOTO_ENTITY_TYPES = ["COSTUME", "CHANGE", "FITTING", "CONTINUITY", "CLEANING", "DAMAGE", "CHARACTER", "ACTOR"] as const;
+export const PHOTO_ENTITY_TYPES = ["COSTUME", "CHANGE", "FITTING", "CONTINUITY", "CLEANING", "DAMAGE", "ALTERATION", "MISSING", "CHARACTER", "ACTOR"] as const;
 export const PHOTO_KINDS = ["FRONT", "SIDE", "BACK", "CLOSEUP", "DETAIL", "STAIN", "REFERENCE", "DOCUMENT", "OTHER"] as const;
 /** A reference is a photo, any other uploaded file, or a link. */
 export const MEDIA_TYPES = ["IMAGE", "FILE", "LINK"] as const;

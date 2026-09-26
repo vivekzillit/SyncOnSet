@@ -4,9 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, LogOut } from "lucide-react";
 import { api } from "@/api/client";
 import { useAuth } from "@/state/auth";
-import { humanize } from "@/lib/format";
+import { humanize, matches } from "@/lib/format";
 import type { ProjectSummary } from "@/api/types";
-import { Badge, ErrorBox, Field, Input, Modal, Select, Spinner, Empty, useToast } from "@/components/ui";
+import { Badge, ErrorBox, Field, Input, Modal, SearchBox, Select, Spinner, Empty, useToast } from "@/components/ui";
 
 export default function Projects() {
   const { user, logout, meta } = useAuth();
@@ -14,12 +14,14 @@ export default function Projects() {
   const qc = useQueryClient();
   const toast = useToast();
   const { data, isLoading } = useQuery({ queryKey: ["projects"], queryFn: () => api<ProjectSummary[]>("/projects") });
+  const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", status: "PREP", currentLocation: "", currency: "INR" });
   const create = useMutation({
     mutationFn: () => api<ProjectSummary>("/projects", { body: form }),
     onSuccess: (pr) => { qc.invalidateQueries({ queryKey: ["projects"] }); toast.push("Project created", "ok"); nav(`/p/${pr.id}`); },
   });
+  const shown = (data || []).filter((pr) => matches(q, pr.name, pr.code, pr.currentLocation));
   const canCreate = ["ADMIN", "PRODUCTION_MANAGER", "COSTUME_DESIGNER"].includes(user?.role || "");
 
   return (
@@ -40,9 +42,11 @@ export default function Projects() {
         </div>
         <div className="card">
           <h2 className="mb-2">Your productions</h2>
+          {(data?.length ?? 0) > 1 && <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search production name or code…" /></div>}
           {isLoading ? <Spinner /> : !data?.length ? <Empty icon="🎬" title="Welcome" hint={canCreate ? "Let's get started." : "Ask a production manager to add you to a project."} action={canCreate ? <Link to="/projects/new" className="btn btn-primary">Create a Production</Link> : undefined} /> : (
+            !shown.length ? <Empty icon="🔍" title="No productions match" /> :
             <div className="grid grid-2">
-              {data.map((pr) => (
+              {shown.map((pr) => (
                 <Link key={pr.id} to={`/p/${pr.id}`} className="card flat" style={{ display: "block" }}>
                   <div className="row between">
                     <div>

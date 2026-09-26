@@ -35,7 +35,8 @@ alterationsRouter.get(
     if (req.query.status) where.status = String(req.query.status);
     if (req.query.open === "true") where.status = { notIn: ["COMPLETED", "CANCELLED"] };
     const items = await prisma.alterationRequest.findMany({ where, include, orderBy: [{ deadline: "asc" }, { createdAt: "desc" }] });
-    res.json({ pipeline: ALTERATION_PIPELINE, items });
+    const photos = await prisma.photo.findMany({ where: { entityType: "ALTERATION", entityId: { in: items.map((i) => i.id) } }, orderBy: { createdAt: "desc" } });
+    res.json({ pipeline: ALTERATION_PIPELINE, items: items.map((i) => ({ ...i, photos: photos.filter((ph) => ph.entityId === i.id) })) });
   }),
 );
 

@@ -40,7 +40,7 @@ export function createApp() {
     setHeaders: (res, filePath) => {
       res.setHeader("X-Content-Type-Options", "nosniff");
       // Pictures, PDFs and media display inline; anything else downloads, so an upload can never run in this origin.
-      if (!/\.(jpe?g|png|webp|heic|heif|gif|avif|pdf|mp4|mov|webm|m4a|mp3|wav)$/i.test(filePath)) res.setHeader("Content-Disposition", "attachment");
+      if (!/\.(jpe?g|png|webp|heic|heif|gif|avif|pdf|mp4|m4v|mov|webm|3gp|m4a|mp3|wav)$/i.test(filePath)) res.setHeader("Content-Disposition", "attachment");
     },
   }));
 

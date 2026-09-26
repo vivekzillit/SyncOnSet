@@ -5,9 +5,9 @@ import { Plus, BellRing } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, FINANCE_ROLES, OPS_ROLES } from "@/state/auth";
-import { fmtDate, fmtMoney } from "@/lib/format";
+import { fmtDate, fmtMoney, matches } from "@/lib/format";
 import type { Costume, Rental, Vendor } from "@/api/types";
-import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
+import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
 import { CostumePicker, CostumeRow } from "@/components/domain";
 
 export default function Vendors() {
@@ -19,6 +19,7 @@ export default function Vendors() {
   const [tab, setTab] = useState<"rentals" | "vendors">("rentals");
   const { data: vendors, isLoading } = useQuery({ queryKey: ["vendors", projectId], queryFn: () => api<Vendor[]>(p(projectId, "/vendors")) });
   const { data: rentals } = useQuery({ queryKey: ["rentals", projectId], queryFn: () => api<Rental[]>(p(projectId, "/rentals")) });
+  const [q, setQ] = useState("");
   const [vOpen, setVOpen] = useState(false);
   const [vf, setVf] = useState({ name: "", contactName: "", phone: "", email: "", address: "", notes: "" });
   const [rOpen, setROpen] = useState(false);
@@ -33,17 +34,22 @@ export default function Vendors() {
   const remind = useMutation({ mutationFn: () => api<{ reminded: number }>(p(projectId, "/rentals/remind"), { body: {} }), onSuccess: (r) => toast.push(`${r.reminded} reminder${r.reminded === 1 ? "" : "s"} sent`, "ok") });
 
   if (isLoading) return <Spinner />;
+  const shownRentals = (rentals || []).filter((r) => matches(q, r.costume.assetNumber, r.costume.name, r.vendor.name, r.status.replace(/_/g, " ")));
+  const shownVendors = (vendors || []).filter((v) => matches(q, v.name, v.contactName, v.phone, v.email, v.address));
   return (
     <div>
       <PageHead title="Vendors & Rentals" sub="Who we rent from, what is due back, and when." actions={can(OPS_ROLES) && (tab === "rentals" ? <><button className="btn" onClick={() => remind.mutate()}><BellRing size={16} /> Send return reminders</button><button className="btn btn-primary" onClick={() => setROpen(true)}><Plus size={16} /> Rental</button></> : <button className="btn btn-primary" onClick={() => setVOpen(true)}><Plus size={16} /> Vendor</button>)} />
       <Tabs tabs={[{ key: "rentals", label: `Rentals (${rentals?.length ?? 0})` }, { key: "vendors", label: `Vendors (${vendors?.length ?? 0})` }]} value={tab} onChange={setTab} />
+      {(tab === "rentals" ? !!rentals?.length : !!vendors?.length) && (
+        <div className="filters"><SearchBox value={q} onChange={setQ} placeholder={tab === "rentals" ? "Search costume, vendor, status…" : "Search vendor, contact, phone, email…"} /></div>
+      )}
       {tab === "rentals" ? (
         <Card pad0>
-          {!rentals?.length ? <Empty icon="🏷" title="No rentals" /> : (
+          {!rentals?.length ? <Empty icon="🏷" title="No rentals" /> : !shownRentals.length ? <Empty icon="🔍" title="No rentals match" /> : (
             <div className="table-wrap"><table className="table">
               <thead><tr><th>Costume</th><th>Vendor</th><th>Pickup</th><th>Return</th>{can(FINANCE_ROLES) && <th>Rate/day</th>}<th>Status</th><th></th></tr></thead>
               <tbody>
-                {rentals.map((r) => (
+                {shownRentals.map((r) => (
                   <tr key={r.id}>
                     <td><Link to={`${base}/costumes/${r.costume.id}`}><span className="mono bold">{r.costume.assetNumber}</span> {r.costume.name}</Link></td>
                     <td>{r.vendor.name}</td>
@@ -60,7 +66,7 @@ export default function Vendors() {
         </Card>
       ) : (
         <div className="grid grid-auto">
-          {!vendors?.length ? <Card><Empty icon="🏬" title="No vendors" /></Card> : vendors.map((v) => (
+          {!vendors?.length ? <Card><Empty icon="🏬" title="No vendors" /></Card> : !shownVendors.length ? <Card><Empty icon="🔍" title="No vendors match" /></Card> : shownVendors.map((v) => (
             <Card key={v.id} title={v.name}>
               <dl className="kv" style={{ gridTemplateColumns: "90px 1fr" }}>
                 {v.contactName && <><dt>Contact</dt><dd>{v.contactName}</dd></>}

@@ -6,8 +6,8 @@ import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { MANAGER_ROLES } from "@/state/auth";
 import { fmtDate, hasEpisodes, humanize } from "@/lib/format";
-import type { Character, CostumeChange, Scene, SceneCharacter } from "@/api/types";
-import { Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Field, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
+import type { Actor, Character, CostumeChange, Scene, SceneCharacter } from "@/api/types";
+import { Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { scriptLoc } from "@/components/SceneEditRow";
 import { sortByCast } from "@/components/PrincipalsModal";
 
@@ -39,13 +39,26 @@ export default function Breakdown() {
   // Adding a row: the script reader misses people, so a character can be put into a scene from here.
   const [addOpen, setAddOpen] = useState(false);
   const [locked, setLocked] = useState(false); // editing an existing row: scene and character are fixed, only the change moves
-  const [af, setAf] = useState({ sceneId: "", characterId: "", changeId: "" });
+  const [af, setAf] = useState({ sceneId: "", characterId: "", changeId: "", castNumber: "", actorId: "" });
   const { data: allCharacters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
   const charById = useMemo(() => new Map((allCharacters || []).map((ch) => [ch.id, ch])), [allCharacters]);
+  const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<Actor[]>(p(projectId, "/actors")), enabled: addOpen });
+  /** Cast number and cast name belong to the character, so a row's modal can set them without a trip to Characters. */
+  const castOf = (id: string) => { const ch = charById.get(id); return { castNumber: ch?.castNumber != null ? String(ch.castNumber) : "", actorId: ch?.actor?.id || "" }; };
   const { data: afChanges } = useQuery({ queryKey: ["changes", projectId, af.characterId], queryFn: () => api<CostumeChange[]>(p(projectId, `/changes?characterId=${af.characterId}`)), enabled: addOpen && !!af.characterId });
   const putRow = useMutation({
-    mutationFn: () => api(p(projectId, `/scenes/${af.sceneId}/characters/${af.characterId}`), { method: "PUT", body: { changeId: af.changeId || null } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["scenes", projectId] }); setAddOpen(false); toast.push(locked ? "Change updated" : "Added to the breakdown", "ok"); },
+    mutationFn: async () => {
+      const raw = af.castNumber.trim();
+      const castNumber = raw === "" ? null : Number(raw);
+      if (castNumber != null && (!Number.isInteger(castNumber) || castNumber < 0)) throw new Error("A cast number is a whole number");
+      const was = castOf(af.characterId);
+      const body: { castNumber?: number | null; actorId?: string | null } = {};
+      if (raw !== was.castNumber) body.castNumber = castNumber;
+      if (af.actorId !== was.actorId) body.actorId = af.actorId || null;
+      if (Object.keys(body).length) await api(p(projectId, `/characters/${af.characterId}`), { method: "PATCH", body });
+      await api(p(projectId, `/scenes/${af.sceneId}/characters/${af.characterId}`), { method: "PUT", body: { changeId: af.changeId || null } });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["scenes", projectId] }); qc.invalidateQueries({ queryKey: ["characters", projectId] }); qc.invalidateQueries({ queryKey: ["actors", projectId] }); setAddOpen(false); toast.push(locked ? "Change updated" : "Added to the breakdown", "ok"); },
     onError: (e: Error) => toast.push(e.message, "danger"),
   });
   const dropRow = useMutation({
@@ -55,7 +68,7 @@ export default function Breakdown() {
   });
   const openAdd = (row?: Row) => {
     setLocked(!!row);
-    setAf({ sceneId: row?.scene.id || "", characterId: row?.sc.characterId || "", changeId: row?.sc.change?.id || "" });
+    setAf({ sceneId: row?.scene.id || "", characterId: row?.sc.characterId || "", changeId: row?.sc.change?.id || "", ...castOf(row?.sc.characterId || "") });
     putRow.reset();
     setAddOpen(true);
   };
@@ -144,9 +157,22 @@ export default function Breakdown() {
               options={(scenes || []).map((sc) => ({ value: sc.id, label: [episodes && sc.episode ? `Ep ${sc.episode}` : null, `Sc ${sc.number}`, sc.name || sc.location].filter(Boolean).join(" · ") }))} placeholder="Select a scene" humanizeLabels={false} />
           </Field>
           <Field label="Character">
-            <Select value={af.characterId} onChange={(e) => setAf({ ...af, characterId: e.target.value, changeId: "" })} disabled={locked}
+            <Select value={af.characterId} onChange={(e) => setAf({ ...af, characterId: e.target.value, changeId: "", ...castOf(e.target.value) })} disabled={locked}
               options={(allCharacters || []).map((c) => ({ value: c.id, label: c.castNumber != null ? `${c.castNumber}. ${c.name}` : c.name }))} placeholder="Select a character" humanizeLabels={false} />
           </Field>
+          {af.characterId && (
+            <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
+              <div style={{ width: 140 }}>
+                <Field label="Cast number"><Input type="number" min={0} value={af.castNumber} onChange={(e) => setAf({ ...af, castNumber: e.target.value })} placeholder="—" /></Field>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Field label="Cast name" help="Both follow the character into every scene">
+                  <Select value={af.actorId} onChange={(e) => setAf({ ...af, actorId: e.target.value })}
+                    options={(actors || []).map((a) => ({ value: a.id, label: a.name }))} placeholder="No actor assigned" humanizeLabels={false} />
+                </Field>
+              </div>
+            </div>
+          )}
           <Field label="Change" help="Optional — leave it unassigned and the row shows as not ready">
             <Select value={af.changeId} onChange={(e) => setAf({ ...af, changeId: e.target.value })} disabled={!af.characterId}
               options={(afChanges || []).map((c) => ({ value: c.id, label: `#${c.changeNumber} ${c.name}` }))} placeholder="No change assigned" humanizeLabels={false} />

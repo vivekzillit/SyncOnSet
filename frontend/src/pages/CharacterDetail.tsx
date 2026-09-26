@@ -14,6 +14,9 @@ import { ActorModal } from "@/components/ActorModal";
 type CharacterDetailRow = { label: string; value: string };
 type Detail = Character & { actor?: Actor | null; details?: CharacterDetailRow[]; scenes: { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string }; change?: { id: string; changeNumber: number; name: string } | null }[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
 
+/** The header's + Change button is parked for now; flip this to bring it (and its modal) back. */
+const SHOW_NEW_CHANGE = false;
+
 export default function CharacterDetail() {
   const { id = "", sceneId = "" } = useParams();
   const { pathname } = useLocation();
@@ -110,7 +113,7 @@ export default function CharacterDetail() {
         crumbs={<><Link to={`${base}/characters`}>Characters</Link> / {ch.scenes.length > 1 ? <><Link to={`${base}/characters/${id}`}>{ch.name}</Link> / {viaScene ? `Sc ${viaScene.scene.number}` : "All scenes"}</> : ch.name}</>}
         title={<span className="row gap-2"><Avatar name={ch.name} lg /><span>{ch.castNumber != null && <span className="mono muted">{ch.castNumber}. </span>}{ch.name} <Badge status={ch.type}>{humanize(ch.type)}</Badge></span></span>}
         sub={<>{ch.actor ? <>Played by <b>{ch.actor.name}</b></> : "No actor assigned"}{ch.age ? ` · age ${ch.age}` : ""}{ch.description ? ` · ${ch.description}` : ""}</>}
-        actions={can(MANAGER_ROLES) && <><button className="btn" onClick={() => { setEf({ name: ch.name, type: ch.type, actorId: ch.actorId || "", age: ch.age ? String(ch.age) : "", description: ch.description || "", notes: ch.notes || "", castNumber: ch.castNumber != null ? String(ch.castNumber) : "" }); setEditOpen(true); }}><Pencil size={16} /> Edit</button><button className="btn btn-primary" onClick={() => setNewOpen(true)}><Plus size={16} /> Change</button></>}
+        actions={can(MANAGER_ROLES) && <><button className="btn" onClick={() => { setEf({ name: ch.name, type: ch.type, actorId: ch.actorId || "", age: ch.age ? String(ch.age) : "", description: ch.description || "", notes: ch.notes || "", castNumber: ch.castNumber != null ? String(ch.castNumber) : "" }); setEditOpen(true); }}><Pencil size={16} /> Edit</button>{SHOW_NEW_CHANGE && <button className="btn btn-primary" onClick={() => setNewOpen(true)}><Plus size={16} /> Change</button>}</>}
       />
       {viaScene && (
         <Card className="mb-2">
@@ -134,28 +137,6 @@ export default function CharacterDetail() {
                 ))}
               </div>
             )}
-          </Card>
-          <Card title={`Costume Changes (${ch.changes.length})`}>
-            {ch.changes.length === 0 ? <Empty icon="👗" title="No changes yet" hint="A change is a numbered outfit for this character. Add one, then attach costume pieces." /> : (
-              <div className="col gap-2">
-                {ch.changes.map((c) => (
-                  <Link key={c.id} to={`${base}/changes/${c.id}`} className="card flat" style={{ padding: 12 }}>
-                    <div className="row between">
-                      <div className="bold">Change #{c.changeNumber} · {c.name}</div>
-                      <span className="subtle">{c._count.sceneCharacters} scene{c._count.sceneCharacters === 1 ? "" : "s"}</span>
-                    </div>
-                    {c.description && <div className="subtle mt-1">{c.description}</div>}
-                    <div className="chips mt-2">
-                      {c.items.map((it) => <Badge key={it.id} status={it.costume.status}><span className="mono">{it.costume.assetNumber}</span> {it.costume.name}</Badge>)}
-                      {c.items.length === 0 && <span className="subtle">No pieces attached</span>}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Card>
-          <Card title={`All pieces (${ch.costumes.length})`} pad0>
-            {ch.costumes.length === 0 ? <Empty title="No costumes tagged to this character" /> : <div className="list">{ch.costumes.map((c) => <CostumeRow key={c.id} c={c} noStatus />)}</div>}
           </Card>
         </div>
         <div className="col gap-2">
@@ -201,6 +182,28 @@ export default function CharacterDetail() {
               </div>
             )}
           </Card>
+          <Card title={`Costume Changes (${ch.changes.length})`}>
+            {ch.changes.length === 0 ? <Empty icon="👗" title="No changes yet" hint="A change is a numbered outfit for this character. Add one, then attach costume pieces." /> : (
+              <div className="col gap-2">
+                {ch.changes.map((c) => (
+                  <Link key={c.id} to={`${base}/changes/${c.id}`} className="card flat" style={{ padding: 12 }}>
+                    <div className="row between">
+                      <div className="bold">Change #{c.changeNumber} · {c.name}</div>
+                      <span className="subtle">{c._count.sceneCharacters} scene{c._count.sceneCharacters === 1 ? "" : "s"}</span>
+                    </div>
+                    {c.description && <div className="subtle mt-1">{c.description}</div>}
+                    <div className="chips mt-2">
+                      {c.items.map((it) => <Badge key={it.id} status={it.costume.status}><span className="mono">{it.costume.assetNumber}</span> {it.costume.name}</Badge>)}
+                      {c.items.length === 0 && <span className="subtle">No pieces attached</span>}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
+          <Card title={`All pieces (${ch.costumes.length})`} pad0>
+            {ch.costumes.length === 0 ? <Empty title="No costumes tagged to this character" /> : <div className="list">{ch.costumes.map((c) => <CostumeRow key={c.id} c={c} noStatus />)}</div>}
+          </Card>
           {ch.notes && <Card title="Notes"><div className="small">{ch.notes}</div></Card>}
         </div>
       </div>
@@ -243,7 +246,7 @@ export default function CharacterDetail() {
       </Modal>
       <CostumePicker open={fitPick} onClose={() => setFitPick(false)} onPick={(c) => setFf({ ...ff, costumes: ff.costumes.some((x) => x.id === c.id) ? ff.costumes : [...ff.costumes, c] })} characterId={ch.id} />
 
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit character" footer={<><button className="btn" onClick={() => setEditOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={update.isPending} onClick={() => update.mutate()}>Save</button></>}>
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={<div>Edit character{" "}<div className="small subtle" style={{ fontWeight: 400, marginTop: 2 }}>This will apply to all scenes</div></div>} footer={<><button className="btn" onClick={() => setEditOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={update.isPending} onClick={() => update.mutate()}>Save</button></>}>
         <div className="form-grid">
           <Field label="Name" span2><Input value={ef.name} onChange={(e) => setEf({ ...ef, name: e.target.value })} /></Field>
           <Field label="Type"><Select value={ef.type} onChange={(e) => setEf({ ...ef, type: e.target.value })} options={meta?.characterTypes || []} /></Field>

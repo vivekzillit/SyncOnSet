@@ -2,6 +2,11 @@
 export const projectTypeLabel = (t?: string | null) => (t === "EPISODIC" ? "TV Series" : "Feature");
 /** TV series carry episodes; features do not, so episode columns and fields stay hidden for them. */
 export const hasEpisodes = (t?: string | null) => t === "EPISODIC";
+/** A list search: true when the query is blank or any of the values contains it, case-insensitively. */
+export const matches = (q: string, ...values: (string | number | null | undefined)[]) => {
+  const n = q.trim().toLowerCase();
+  return !n || values.some((v) => v != null && String(v).toLowerCase().includes(n));
+};
 export const humanize = (s?: string | null) => (s ? s.replace(/_/g, " ").toLowerCase().replace(/(^|\s)\S/g, (t) => t.toUpperCase()) : "");
 
 export function fmtDate(d?: string | Date | null, opts: Intl.DateTimeFormatOptions = { day: "2-digit", month: "short" }) {

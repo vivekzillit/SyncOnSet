@@ -5,9 +5,9 @@ import { Plus, Siren, LayoutGrid, List } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, CLEANING_ROLES } from "@/state/auth";
-import { fmtTime, humanize, relativeTime } from "@/lib/format";
+import { fmtTime, humanize, matches, relativeTime } from "@/lib/format";
 import type { CleaningRequest, Costume, Scene } from "@/api/types";
-import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { CostumePicker, CostumeRow } from "@/components/domain";
 
 export default function Cleaning() {
@@ -19,6 +19,7 @@ export default function Cleaning() {
   const [view, setView] = useState<"board" | "list">(window.innerWidth < 900 ? "list" : "board");
   const { data, isLoading } = useQuery({ queryKey: ["cleaning", projectId], queryFn: () => api<{ pipeline: string[]; items: CleaningRequest[] }>(p(projectId, "/cleaning")), refetchInterval: 20000 });
   const { data: scenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
+  const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ costume: Costume | null; problem: string; cleaningType: string; priority: string; sceneId: string; takeNumber: string; expectedReadyAt: string; notes: string }>({ costume: null, problem: "", cleaningType: "SPOT_CLEANING", priority: "NORMAL", sceneId: "", takeNumber: "", expectedReadyAt: "", notes: "" });
@@ -28,9 +29,14 @@ export default function Cleaning() {
   });
 
   if (isLoading || !data) return <Spinner />;
-  const open_ = data.items.filter((i) => !["READY", "CANCELLED"].includes(i.status));
+  const shown = data.items.filter((i) => matches(q, i.costume.assetNumber, i.costume.name, i.costume.character?.name, i.problem, humanize(i.cleaningType), i.scene?.number, i.assignedToName));
+  const open_ = shown.filter((i) => !["READY", "CANCELLED"].includes(i.status));
   const today = new Date().toDateString();
-  const readyToday = data.items.filter((i) => i.status === "READY" && new Date(i.completedAt || i.createdAt).toDateString() === today);
+  const isReadyToday = (i: CleaningRequest) => i.status === "READY" && new Date(i.completedAt || i.createdAt).toDateString() === today;
+  const readyToday = shown.filter(isReadyToday);
+  // The header counts the whole sink, not just what the search is showing.
+  const openCount = data.items.filter((i) => !["READY", "CANCELLED"].includes(i.status)).length;
+  const readyTodayCount = data.items.filter(isReadyToday).length;
 
   const card = (i: CleaningRequest) => (
     <Link key={i.id} to={`${base}/cleaning/${i.id}`} className={`kcard ${i.isEmergency ? "emergency" : ""}`} style={{ display: "block" }}>
@@ -47,11 +53,13 @@ export default function Cleaning() {
 
   return (
     <div>
-      <PageHead title="Sink / Cleaning" sub={`${open_.length} open · ${readyToday.length} completed today`} actions={<>
+      <PageHead title="Sink / Cleaning" sub={`${openCount} open · ${readyTodayCount} completed today`} actions={<>
         <div className="row gap-0 hide-mobile" style={{ gap: 2 }}><button className={`btn btn-sm ${view === "board" ? "btn-primary" : ""}`} onClick={() => setView("board")}><LayoutGrid size={14} /></button><button className={`btn btn-sm ${view === "list" ? "btn-primary" : ""}`} onClick={() => setView("list")}><List size={14} /></button></div>
         <Link to={`${base}/scan?emergency=1`} className="btn btn-emergency"><Siren size={16} /> Emergency</Link>
         {can(CLEANING_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Request</button>}
       </>} />
+
+      <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, problem, scene, assignee…" /></div>
 
       {view === "board" ? (
         <div className="kanban">
@@ -67,9 +75,9 @@ export default function Cleaning() {
         </div>
       ) : (
         <Card pad0>
-          {data.items.length === 0 ? <Empty icon="🧼" title="No cleaning requests" /> : (
+          {shown.length === 0 ? <Empty icon="🧼" title={q ? "No cleaning requests match" : "No cleaning requests"} /> : (
             <div className="list">
-              {[...open_, ...data.items.filter((i) => i.status === "READY" || i.status === "CANCELLED")].map((i) => (
+              {[...open_, ...shown.filter((i) => i.status === "READY" || i.status === "CANCELLED")].map((i) => (
                 <Link key={i.id} to={`${base}/cleaning/${i.id}`} className="item link">
                   <Dot status={i.isEmergency ? "URGENT" : i.priority} pulse={i.isEmergency && i.status !== "READY"} />
                   <div className="grow" style={{ minWidth: 0 }}>

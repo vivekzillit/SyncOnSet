@@ -5,10 +5,10 @@ import { Plus, MapPin } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { OPS_ROLES } from "@/state/auth";
-import { fmtDateTime } from "@/lib/format";
+import { fmtDateTime, matches } from "@/lib/format";
 import type { Costume, MissingItem } from "@/api/types";
-import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, Spinner, Textarea, useToast } from "@/components/ui";
-import { CostumePicker, CostumeRow } from "@/components/domain";
+import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Spinner, Textarea, useToast } from "@/components/ui";
+import { CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
 
 export default function Missing() {
   const { projectId, can } = useProject();
@@ -16,6 +16,7 @@ export default function Missing() {
   const toast = useToast();
   const base = `/p/${projectId}`;
   const [filter, setFilter] = useState<"OPEN" | "all" | "">("OPEN");
+  const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey: ["missing", projectId], queryFn: () => api<MissingItem[]>(p(projectId, "/missing")) });
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
@@ -28,12 +29,13 @@ export default function Missing() {
   const resolve = useMutation({ mutationFn: (v: { id: string; status: string; foundLocation?: string }) => api(p(projectId, `/missing/${v.id}`), { method: "PATCH", body: v }), onSuccess: () => { qc.invalidateQueries(); setFound(null); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
   if (isLoading || !data) return <Spinner />;
-  const items = data.filter((m) => filter !== "OPEN" || m.status === "OPEN");
+  const items = data.filter((m) => (filter !== "OPEN" || m.status === "OPEN")
+    && matches(q, m.costume.assetNumber, m.costume.name, m.costume.character?.name, m.lastSeenLocation, m.lastAssignedTo, m.notes));
   return (
     <div>
       <PageHead title="Missing items" sub="Every open search, with last known location and custodian." actions={can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Report missing</button>} />
-      <div className="filters"><Chips options={[{ key: "OPEN", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
-      {items.length === 0 ? <Card><Empty icon="🔎" title="Nothing missing" hint="Great — every piece is accounted for." /></Card> : (
+      <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, character, last seen, custodian…" /><Chips options={[{ key: "OPEN", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
+      {items.length === 0 ? <Card>{q ? <Empty icon="🔎" title="No missing items match" /> : <Empty icon="🔎" title="Nothing missing" hint="Great — every piece is accounted for." />}</Card> : (
         <div className="col gap-2">
           {items.map((m) => (
             <Card key={m.id}>
@@ -48,6 +50,7 @@ export default function Missing() {
                     {m.resolvedAt && <><dt>Resolved</dt><dd>{fmtDateTime(m.resolvedAt)}</dd></>}
                   </dl>
                   {m.notes && <div className="subtle mt-1">{m.notes}</div>}
+                  <div className="mt-2"><PhotoGrid photos={m.photos || []} entityType="MISSING" entityId={m.id} kinds={["REFERENCE", "OTHER"]} compact attachments={false} /></div>
                 </div>
                 {can(OPS_ROLES) && m.status === "OPEN" && (
                   <div className="col gap-1">

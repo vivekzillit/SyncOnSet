@@ -15,7 +15,9 @@ missingRouter.get(
   wrap(async (req, res) => {
     const where: Record<string, unknown> = { projectId: req.projectId };
     if (req.query.status) where.status = String(req.query.status);
-    res.json(await prisma.missingItem.findMany({ where, include, orderBy: { createdAt: "desc" } }));
+    const items = await prisma.missingItem.findMany({ where, include, orderBy: { createdAt: "desc" } });
+    const photos = await prisma.photo.findMany({ where: { entityType: "MISSING", entityId: { in: items.map((i) => i.id) } }, orderBy: { createdAt: "desc" } });
+    res.json(items.map((i) => ({ ...i, photos: photos.filter((ph) => ph.entityId === i.id) })));
   }),
 );
 

@@ -434,7 +434,7 @@ model Photo {
   entityType String   // COSTUME | CHANGE | FITTING | CONTINUITY | CLEANING | DAMAGE | CHARACTER
   entityId   String
   kind       String   @default("OTHER") // FRONT | SIDE | BACK | CLOSEUP | DETAIL | STAIN | OTHER
-  mediaType  String   @default("IMAGE") // IMAGE | FILE | LINK
+  mediaType  String   @default("IMAGE") // IMAGE | VIDEO | FILE | LINK
   url        String   // /uploads/… for an upload, the address itself for a link
   title      String?  // link title or the file's original name
   mimeType   String?

@@ -4,10 +4,10 @@ import path from "path";
 import fs from "fs";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { wrap, notFound, badRequest } from "../lib/errors";
+import { wrap, notFound, badRequest, forbidden } from "../lib/errors";
 import { parse } from "../lib/validate";
-import { requireRole } from "../middleware/auth";
-import { CONTINUITY_ROLES, PHOTO_ENTITY_TYPES, PHOTO_KINDS } from "../lib/constants";
+import { effectiveRole, requireRole } from "../middleware/auth";
+import { CONTINUITY_ROLES, PHOTO_ENTITY_TYPES, PHOTO_KINDS, TAILOR_ROLES } from "../lib/constants";
 import { audit } from "../services/audit";
 import { config } from "../config";
 
@@ -23,11 +23,17 @@ const storage = multer.diskStorage({
   },
 });
 export const IMAGE_RE = /^image\/(jpeg|png|webp|heic|heif|gif|avif)$/i;
+export const VIDEO_RE = /^video\//i;
+/** Tailors attach to the alterations they work on; everything else is for the continuity roles. */
+const ATTACH_ROLES = [...new Set([...CONTINUITY_ROLES, ...TAILOR_ROLES])];
+const canAttach = (req: Parameters<typeof effectiveRole>[0], entityType: string) =>
+  (entityType === "ALTERATION" ? TAILOR_ROLES : CONTINUITY_ROLES).includes(effectiveRole(req));
 /** Anything that a browser could execute in this origin is refused: an upload is served from the app's own domain. */
 const BLOCKED_RE = /\.(html?|xhtml|svg|js|mjs|jsx|php|phtml|asp|aspx|jsp|sh|bash|command|exe|bat|cmd|msi|scr|jar|app|dmg|pkg|deb|rpm|py|rb|pl|vbs|ps1|hta|wsf|cgi)$/i;
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 },
+  // Phone videos are big: a minute of 1080p is well over 100 MB.
+  limits: { fileSize: 250 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const name = file.originalname || "";
     if (BLOCKED_RE.test(name)) return cb(badRequest(`${path.extname(name)} files cannot be attached. Export it as PDF, or share it as a link.`));
@@ -52,10 +58,10 @@ photosRouter.get(
   wrap(async (req, res) => {
     const where: Record<string, unknown> = { projectId: req.projectId };
     if (req.query.entityType) where.entityType = String(req.query.entityType);
-    // The gallery is for pictures; files and links live on the record they belong to.
-    const photos = await prisma.photo.findMany({ where: { ...where, mediaType: "IMAGE" }, orderBy: { createdAt: "desc" }, take: 2000 });
+    // The gallery is for pictures and clips; files and links live on the record they belong to.
+    const photos = await prisma.photo.findMany({ where: { ...where, mediaType: { in: ["IMAGE", "VIDEO"] } }, orderBy: { createdAt: "desc" }, take: 2000 });
     const ids = (t: string) => photos.filter((ph) => ph.entityType === t).map((ph) => ph.entityId);
-    const [costumes, characters, changes, fittings, continuity, cleaning, damages, actors] = await Promise.all([
+    const [costumes, characters, changes, fittings, continuity, cleaning, damages, actors, alterations, missing] = await Promise.all([
       prisma.costume.findMany({ where: { id: { in: ids("COSTUME") } }, select: { id: true, assetNumber: true, name: true, characterId: true, character: { select: { name: true } } } }),
       prisma.character.findMany({ where: { id: { in: ids("CHARACTER") } }, select: { id: true, name: true } }),
       prisma.costumeChange.findMany({ where: { id: { in: ids("CHANGE") } }, select: { id: true, changeNumber: true, name: true, characterId: true, character: { select: { name: true } } } }),
@@ -64,6 +70,8 @@ photosRouter.get(
       prisma.cleaningRequest.findMany({ where: { id: { in: ids("CLEANING") } }, select: { id: true, sceneId: true, costume: { select: { assetNumber: true, name: true, characterId: true } } } }),
       prisma.damageReport.findMany({ where: { id: { in: ids("DAMAGE") } }, select: { id: true, sceneId: true, costume: { select: { assetNumber: true, name: true, characterId: true } } } }),
       prisma.actor.findMany({ where: { id: { in: ids("ACTOR") } }, select: { id: true, name: true } }),
+      prisma.alterationRequest.findMany({ where: { id: { in: ids("ALTERATION") } }, select: { id: true, characterId: true, costume: { select: { assetNumber: true, name: true, characterId: true } } } }),
+      prisma.missingItem.findMany({ where: { id: { in: ids("MISSING") } }, select: { id: true, costume: { select: { assetNumber: true, name: true, characterId: true } } } }),
     ]);
     const label = new Map<string, { label: string; characterId?: string | null; sceneId?: string | null; link: string }>();
     costumes.forEach((c) => label.set(`COSTUME:${c.id}`, { label: `${c.assetNumber} ${c.name}${c.character ? ` · ${c.character.name}` : ""}`, characterId: c.characterId, link: `costumes/${c.id}` }));
@@ -73,6 +81,8 @@ photosRouter.get(
     continuity.forEach((r) => label.set(`CONTINUITY:${r.id}`, { label: `Sc ${r.scene?.number} Take ${r.takeNumber} · ${r.character?.name || ""}`, characterId: r.characterId, sceneId: r.sceneId, link: `continuity?sceneId=${r.sceneId}&characterId=${r.characterId}` }));
     cleaning.forEach((c) => label.set(`CLEANING:${c.id}`, { label: `Cleaning · ${c.costume.assetNumber} ${c.costume.name}`, characterId: c.costume.characterId, sceneId: c.sceneId, link: `cleaning/${c.id}` }));
     damages.forEach((d) => label.set(`DAMAGE:${d.id}`, { label: `Damage · ${d.costume.assetNumber} ${d.costume.name}`, characterId: d.costume.characterId, sceneId: d.sceneId, link: `damages` }));
+    alterations.forEach((a) => label.set(`ALTERATION:${a.id}`, { label: `Alteration · ${a.costume.assetNumber} ${a.costume.name}`, characterId: a.characterId || a.costume.characterId, link: `alterations` }));
+    missing.forEach((m) => label.set(`MISSING:${m.id}`, { label: `Missing · ${m.costume.assetNumber} ${m.costume.name}`, characterId: m.costume.characterId, link: `missing` }));
     actors.forEach((a) => label.set(`ACTOR:${a.id}`, { label: a.name, link: `actors` }));
     const q = String(req.query.q || "").trim().toLowerCase();
     const characterId = req.query.characterId ? String(req.query.characterId) : null;
@@ -87,17 +97,22 @@ photosRouter.get(
 /** multipart/form-data: file (a photo or any other document), entityType, entityId, kind?, caption? */
 photosRouter.post(
   "/",
-  requireRole(CONTINUITY_ROLES),
+  requireRole(ATTACH_ROLES),
   upload.single("file"),
   wrap(async (req, res) => {
     if (!req.file) throw badRequest("file is required");
     const meta = parse(z.object({ entityType: z.enum(PHOTO_ENTITY_TYPES), entityId: z.string(), kind: z.enum(PHOTO_KINDS).optional(), caption: z.string().optional() }), req.body);
+    if (!canAttach(req, meta.entityType)) {
+      fs.promises.unlink(req.file.path).catch(() => undefined);
+      throw forbidden("You cannot attach files here");
+    }
     const isImage = IMAGE_RE.test(req.file.mimetype);
+    const isVideo = VIDEO_RE.test(req.file.mimetype);
     const photo = await prisma.photo.create({
       data: {
         projectId: req.projectId!, entityType: meta.entityType, entityId: meta.entityId,
-        kind: meta.kind || (isImage ? "OTHER" : "DOCUMENT"),
-        mediaType: isImage ? "IMAGE" : "FILE",
+        kind: meta.kind || (isImage || isVideo ? "OTHER" : "DOCUMENT"),
+        mediaType: isImage ? "IMAGE" : isVideo ? "VIDEO" : "FILE",
         title: req.file.originalname || null,
         mimeType: req.file.mimetype || null,
         size: req.file.size,
@@ -135,10 +150,11 @@ photosRouter.post(
 
 photosRouter.delete(
   "/:id",
-  requireRole(CONTINUITY_ROLES),
+  requireRole(ATTACH_ROLES),
   wrap(async (req, res) => {
     const photo = await prisma.photo.findFirst({ where: { id: req.params.id, projectId: req.projectId } });
     if (!photo) throw notFound("Reference");
+    if (!canAttach(req, photo.entityType)) throw forbidden("You cannot remove this");
     await prisma.photo.delete({ where: { id: photo.id } });
     // A link has no file of its own to remove.
     if (photo.mediaType !== "LINK") fs.promises.unlink(path.join(config.uploadDir, path.basename(photo.url))).catch(() => undefined);

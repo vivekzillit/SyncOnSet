@@ -5,10 +5,10 @@ import { Plus, ChevronRight } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, TAILOR_ROLES } from "@/state/auth";
-import { fmtDateTime, humanize } from "@/lib/format";
+import { fmtDateTime, humanize, matches } from "@/lib/format";
 import type { Alteration, Costume } from "@/api/types";
-import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, useToast } from "@/components/ui";
-import { CostumePicker, CostumeRow, Pipeline } from "@/components/domain";
+import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
+import { CostumePicker, CostumeRow, PhotoGrid, Pipeline } from "@/components/domain";
 
 export default function Alterations() {
   const { projectId, can } = useProject();
@@ -17,6 +17,7 @@ export default function Alterations() {
   const toast = useToast();
   const base = `/p/${projectId}`;
   const [filter, setFilter] = useState<"open" | "all" | "">("open");
+  const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey: ["alterations", projectId], queryFn: () => api<{ pipeline: string[]; items: Alteration[] }>(p(projectId, "/alterations")) });
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
@@ -28,12 +29,13 @@ export default function Alterations() {
   const advance = useMutation({ mutationFn: (v: { id: string; toStatus?: string }) => api(p(projectId, `/alterations/${v.id}/advance`), { body: { toStatus: v.toStatus } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
   if (isLoading || !data) return <Spinner />;
-  const items = data.items.filter((i) => filter !== "open" || !["COMPLETED", "CANCELLED"].includes(i.status));
+  const items = data.items.filter((i) => (filter !== "open" || !["COMPLETED", "CANCELLED"].includes(i.status))
+    && matches(q, i.costume.assetNumber, i.costume.name, i.issue, i.required, i.tailorName, i.character?.name, i.character?.actor?.name, humanize(i.status), humanize(i.priority)));
   return (
     <div>
       <PageHead title="Alterations & tailoring" sub="Track every alteration from request to quality check." actions={can(TAILOR_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Alteration</button>} />
-      <div className="filters"><Chips options={[{ key: "open", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
-      {items.length === 0 ? <Card><Empty icon="✂️" title="No alterations" /></Card> : (
+      <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, issue, tailor, character…" /><Chips options={[{ key: "open", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
+      {items.length === 0 ? <Card><Empty icon="✂️" title={q ? "No alterations match" : "No alterations"} /></Card> : (
         <div className="col gap-2">
           {items.map((a) => {
             const idx = data.pipeline.indexOf(a.status);
@@ -56,6 +58,7 @@ export default function Alterations() {
                   )}
                 </div>
                 {!["COMPLETED", "CANCELLED"].includes(a.status) && <div className="mt-2"><Pipeline steps={data.pipeline} current={a.status} /></div>}
+                <div className="mt-2"><PhotoGrid photos={a.photos || []} entityType="ALTERATION" entityId={a.id} kinds={["DETAIL", "FRONT", "BACK", "SIDE", "OTHER"]} compact attachments={false} editRoles={TAILOR_ROLES} /></div>
               </Card>
             );
           })}

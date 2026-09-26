@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Hash, Plus } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
-import { humanize } from "@/lib/format";
+import { humanize, matches } from "@/lib/format";
 import type { Actor, Character } from "@/api/types";
-import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
+import { Card, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
 import { ActorSelect, Avatar } from "@/components/domain";
 import { initials } from "@/components/ui";
 
@@ -26,6 +26,10 @@ export default function Characters() {
   const [cf, setCf] = useState({ name: "", type: "SUPPORTING", actorId: "", age: "", description: "", castNumber: "" });
   const [numbering, setNumbering] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [q, setQ] = useState("");
+  const needle = q.trim();
+  const shownChars = useMemo(() => (characters || []).filter((c) => matches(needle, c.name, c.actor?.name, humanize(c.type), c.castNumber, c.description)), [characters, needle]);
+  const shownActors = useMemo(() => (actors || []).filter((a) => matches(needle, a.name, a.agency, a.phone, a.email, ...(a.characters || []).map((c) => c.name))), [actors, needle]);
   const unnumbered = (characters || []).filter((c) => c.castNumber == null).length;
   const [af, setAf] = useState<{ name: string; phone: string; email: string; agency: string; notes: string; measurements: Record<string, string> }>({ name: "", phone: "", email: "", agency: "", notes: "", measurements: {} });
 
@@ -57,18 +61,23 @@ export default function Characters() {
     <div>
       <PageHead title="List of Characters" sub="Who wears what. Cast numbers appear on sides and call sheets." actions={<><Link to={`/p/${projectId}/actors`} className="btn">★ Actors</Link>{can(MANAGER_ROLES) && tab === "characters" && (numbering ? <button className="btn" onClick={stopNumbering}>Done</button> : <button className="btn" onClick={() => setNumbering(true)}><Hash size={16} /> Cast numbers</button>)}{can(MANAGER_ROLES) && (tab === "characters" ? <button className="btn btn-primary" onClick={() => setCharOpen(true)}><Plus size={16} /> Character</button> : <button className="btn btn-primary" onClick={() => setActorOpen(true)}><Plus size={16} /> Actor</button>)}</>} />
       <Tabs tabs={[{ key: "characters", label: `Characters (${characters?.length ?? 0})` }, { key: "actors", label: `Actors (${actors?.length ?? 0})` }]} value={tab} onChange={setTab} />
-      {tab === "characters" && !!characters?.length && (
+      {(tab === "characters" ? !!characters?.length : !!actors?.length) && (
+        <div className="filters">
+          <SearchBox value={q} onChange={setQ} placeholder={tab === "characters" ? "Search character, actor, cast number, type…" : "Search actor, character, agency, phone…"} />
+        </div>
+      )}
+      {tab === "characters" && !!characters?.length && !needle && (
         <div className="subtle mb-2">In cast-number order{unnumbered > 0 ? <> · <b>{unnumbered}</b> of {characters.length} still have no cast number{numbering ? ", type it beside the name" : ""}</> : null}</div>
       )}
       {tab === "characters" ? (
         <Card pad0>
-          {isLoading ? <Spinner /> : !characters?.length ? <Empty icon="🧍" title="No characters yet" /> : (
+          {isLoading ? <Spinner /> : !characters?.length ? <Empty icon="🧍" title="No characters yet" /> : !shownChars.length ? <Empty icon="🔍" title="No characters match" hint="Try a different name or cast number." /> : (
             <div className="list">
-              {characters.map((c) => {
+              {shownChars.map((c) => {
                 const body = (
                   <>
                     <div className="grow" style={{ minWidth: 0 }}>
-                      <div className="row gap-1"><span className="title">{c.name}</span><Badge status={c.type}>{humanize(c.type)}</Badge></div>
+                      <span className="title">{c.name}</span>
                       <div className="meta">{c.actor?.name || "No actor assigned"}{c.age ? ` · age ${c.age}` : ""}</div>
                     </div>
                     <div className="end subtle hide-mobile">{c._count?.scenes} scenes · {c._count?.changes} changes · {c._count?.costumes} pieces</div>
@@ -95,9 +104,9 @@ export default function Characters() {
         </Card>
       ) : (
         <Card pad0>
-          {!actors ? <Spinner /> : actors.length === 0 ? <Empty icon="🎭" title="No actors yet" /> : (
+          {!actors ? <Spinner /> : actors.length === 0 ? <Empty icon="🎭" title="No actors yet" /> : !shownActors.length ? <Empty icon="🔍" title="No actors match" hint="Try a different name." /> : (
             <div className="list">
-              {actors.map((a) => (
+              {shownActors.map((a) => (
                 <div key={a.id} className="item">
                   <Avatar name={a.name} />
                   <div className="grow" style={{ minWidth: 0 }}>

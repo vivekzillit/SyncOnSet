@@ -5,9 +5,9 @@ import { Plus } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, FINANCE_ROLES, OPS_ROLES } from "@/state/auth";
-import { fmtDateTime, fmtMoney, humanize } from "@/lib/format";
+import { fmtDateTime, fmtMoney, humanize, matches } from "@/lib/format";
 import type { Costume, DamageReport, Scene } from "@/api/types";
-import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, useToast } from "@/components/ui";
+import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
 
 export default function Damages() {
@@ -17,6 +17,7 @@ export default function Damages() {
   const toast = useToast();
   const base = `/p/${projectId}`;
   const [filter, setFilter] = useState<"open" | "all" | "">("open");
+  const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey: ["damages", projectId], queryFn: () => api<DamageReport[]>(p(projectId, "/damages")) });
   const { data: scenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
   const [open, setOpen] = useState(false);
@@ -29,12 +30,13 @@ export default function Damages() {
   const setStatus = useMutation({ mutationFn: (v: { id: string; status: string }) => api(p(projectId, `/damages/${v.id}`), { method: "PATCH", body: { status: v.status } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
   if (isLoading || !data) return <Spinner />;
-  const items = data.filter((d) => filter !== "open" || ["OPEN", "REPAIRING"].includes(d.status));
+  const items = data.filter((d) => (filter !== "open" || ["OPEN", "REPAIRING"].includes(d.status))
+    && matches(q, d.costume.assetNumber, d.costume.name, d.description, d.scene?.number, humanize(d.responsible), humanize(d.status)));
   return (
     <div>
       <PageHead title="Damage reports" actions={can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Report damage</button>} />
-      <div className="filters"><Chips options={[{ key: "open", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
-      {items.length === 0 ? <Card><Empty icon="🧵" title="No damage reports" /></Card> : (
+      <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, damage, scene…" /><Chips options={[{ key: "open", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
+      {items.length === 0 ? <Card><Empty icon="🧵" title={q ? "No damage reports match" : "No damage reports"} /></Card> : (
         <div className="col gap-2">
           {items.map((d) => (
             <Card key={d.id}>

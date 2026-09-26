@@ -5,9 +5,9 @@ import { Plus } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, OPS_ROLES } from "@/state/auth";
-import { fmtDate, fmtTime } from "@/lib/format";
+import { fmtDate, fmtTime, matches } from "@/lib/format";
 import type { Character, Costume, Fitting } from "@/api/types";
-import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { Avatar, CostumePicker, CostumeRow } from "@/components/domain";
 
 export default function Fittings() {
@@ -17,6 +17,7 @@ export default function Fittings() {
   const toast = useToast();
   const base = `/p/${projectId}`;
   const [status, setStatus] = useState("");
+  const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey: ["fittings", projectId], queryFn: () => api<Fitting[]>(p(projectId, "/fittings")) });
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
   const [open, setOpen] = useState(false);
@@ -26,13 +27,13 @@ export default function Fittings() {
     mutationFn: () => api<Fitting>(p(projectId, "/fittings"), { body: { characterId: f.characterId, scheduledAt: f.scheduledAt || new Date().toISOString(), location: f.location || null, notes: f.notes || null, costumeIds: f.costumes.map((c) => c.id) } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["fittings", projectId] }); setOpen(false); setF({ characterId: "", scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
-  const list = (data || []).filter((x) => !status || x.status === status);
+  const list = (data || []).filter((x) => (!status || x.status === status) && matches(q, x.character.name, x.actor?.name, x.location));
   return (
     <div>
       <PageHead title="Fittings" sub="Schedule fittings, tick off each piece, raise alterations on the spot." actions={can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Fitting</button>} />
-      <div className="filters"><Chips all="All" options={(meta?.fittingStatuses || []).map((s) => ({ key: s, label: s.replace(/_/g, " ").toLowerCase() }))} value={status} onChange={setStatus} /></div>
+      <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search character, actor, location…" /><Chips all="All" options={(meta?.fittingStatuses || []).map((s) => ({ key: s, label: s.replace(/_/g, " ").toLowerCase() }))} value={status} onChange={setStatus} /></div>
       <Card pad0>
-        {isLoading ? <Spinner /> : list.length === 0 ? <Empty icon="📏" title="No fittings" /> : (
+        {isLoading ? <Spinner /> : list.length === 0 ? <Empty icon="📏" title={q ? "No fittings match" : "No fittings"} /> : (
           <div className="list">
             {list.map((x) => (
               <Link key={x.id} to={`${base}/fittings/${x.id}`} className="item link">
