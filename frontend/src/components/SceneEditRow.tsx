@@ -2,10 +2,13 @@ import { api, p } from "@/api/client";
 import { dateKey } from "@/lib/format";
 import type { Character, Meta, Scene, SceneCharacter } from "@/api/types";
 import { Input, Select, initials } from "@/components/ui";
+import { ActorSelect } from "@/components/domain";
 import { castLabel, sortByCast } from "@/components/PrincipalsModal";
 
 /* ---------- Inline row drafts ---------- */
-export interface Draft { number: string; episode: string; dayPrefix: string; dayN: string; intExt: string; location: string; synopsis: string; shootDate: string; principals: string[] }
+/** `cast` holds only what the user typed into the cast columns: a cast number and the actor playing them, per character. */
+export interface CastEdit { castNumber?: string; actorId?: string }
+export interface Draft { number: string; episode: string; dayPrefix: string; dayN: string; intExt: string; location: string; synopsis: string; shootDate: string; principals: string[]; cast: Record<string, CastEdit> }
 export const NEW = "new";
 export const LOCATION_LIST_ID = "scene-locations";
 const DAY_PREFIXES = ["Day", "Night"];
@@ -24,8 +27,8 @@ const joinScriptDay = (d: Draft) => (d.dayN.trim() ? [d.dayPrefix, d.dayN.trim()
 /** A date-only input ("YYYY-MM-DD") is sent as the viewer's local midnight so it round-trips to the same calendar day in every timezone. */
 const localDateISO = (ymd: string) => { const [y, m, d] = ymd.split("-").map(Number); return new Date(y, m - 1, d).toISOString(); };
 
-export const emptyDraft = (): Draft => ({ number: "", episode: "", dayPrefix: "Day", dayN: "", intExt: "INT", location: "", synopsis: "", shootDate: "", principals: [] });
-export const toDraft = (s: Scene): Draft => ({ number: s.number, episode: s.episode || "", ...parseScriptDay(s.scriptDay), intExt: s.intExt || "", location: s.location || "", synopsis: s.synopsis || "", shootDate: dateKey(s.shootDate), principals: s.characters.map((c) => c.characterId) });
+export const emptyDraft = (): Draft => ({ number: "", episode: "", dayPrefix: "Day", dayN: "", intExt: "INT", location: "", synopsis: "", shootDate: "", principals: [], cast: {} });
+export const toDraft = (s: Scene): Draft => ({ number: s.number, episode: s.episode || "", ...parseScriptDay(s.scriptDay), intExt: s.intExt || "", location: s.location || "", synopsis: s.synopsis || "", shootDate: dateKey(s.shootDate), principals: s.characters.map((c) => c.characterId), cast: {} });
 type Body = { number: string; episode: string | null; scriptDay: string | null; intExt: string | null; location: string | null; synopsis: string | null; shootDate: string | null };
 const toBody = (d: Draft): Body => ({ number: d.number.trim(), episode: d.episode.trim() || null, scriptDay: joinScriptDay(d) || null, intExt: d.intExt || null, location: d.location.trim() || null, synopsis: d.synopsis.trim() || null, shootDate: d.shootDate ? localDateISO(d.shootDate) : null });
 /** Keys of `next` whose value differs from `prev` — so a PATCH only touches what the user changed. */
@@ -58,6 +61,24 @@ export async function persistDraft(projectId: string, id: string | null, d: Draf
     for (const cid of originalIds.filter((x) => !d.principals.includes(x))) await api(p(projectId, `/scenes/${sceneId}/characters/${cid}`), { method: "DELETE" });
   } catch (e) {
     throw new PersistError((e as Error).message || "Could not update principals", created ? sceneId : undefined);
+  }
+  // A cast number and the actor playing a part belong to the character, not the scene, so they are saved
+  // against the character — only for the people still in the scene, and only where the user typed something.
+  try {
+    for (const [characterId, edit] of Object.entries(d.cast)) {
+      if (!d.principals.includes(characterId)) continue;
+      const body: { castNumber?: number | null; actorId?: string | null } = {};
+      if (edit.castNumber !== undefined) {
+        const raw = edit.castNumber.trim();
+        const n = raw === "" ? null : Number(raw);
+        if (n !== null && (!Number.isInteger(n) || n < 0)) throw new Error("A cast number has to be a whole number");
+        body.castNumber = n;
+      }
+      if (edit.actorId !== undefined) body.actorId = edit.actorId || null;
+      if (Object.keys(body).length) await api(p(projectId, `/characters/${characterId}`), { method: "PATCH", body });
+    }
+  } catch (e) {
+    throw new PersistError((e as Error).message || "Could not save the cast", created ? sceneId : undefined);
   }
   return sceneId;
 }
@@ -108,7 +129,6 @@ export function castNumbers(chars: Pick<SceneCharacter, "characterId" | "charact
   const numbered = sorted.filter((c) => c.castNumber != null);
   return { text: numbered.map((c) => c.castNumber).join(", "), title: numbered.map(castLabel).join("\n"), missing: sorted.length - numbered.length };
 }
-export const castNumbersOf = (ids: string[], byId: Map<string, Character>) => castNumbers(ids.map((id) => byId.get(id)).filter((c): c is Character => !!c).map((c) => ({ characterId: c.id, character: c })), byId);
 
 /** The actors playing them, in the same order. A character with nobody cast yet is left out. */
 export function castMembers(chars: Pick<SceneCharacter, "characterId" | "character">[], byId: Map<string, Character>) {
@@ -119,11 +139,14 @@ export function castMembers(chars: Pick<SceneCharacter, "characterId" | "charact
   const cast = sorted.filter((c) => c.actor);
   return { text: cast.map((c) => c.actor).join(", "), title: cast.map((c) => `${c.actor} · ${c.name}`).join("\n"), missing: sorted.length - cast.length };
 }
-export const castMembersOf = (ids: string[], byId: Map<string, Character>) => castMembers(ids.map((id) => byId.get(id)).filter((c): c is Character => !!c).map((c) => ({ characterId: c.id, character: c })), byId);
 
 /* ---------- Inline edit row (add + edit share it) ---------- */
-export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, numbers, cast, error, episodes }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; numbers?: { text: string; title: string }; cast?: { text: string; title: string }; error?: string; episodes?: boolean }) {
+export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, people = [], error, episodes }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; people?: Character[]; error?: string; episodes?: boolean }) {
   const set = (patch: Partial<Draft>) => onChange({ ...d, ...patch });
+  /** Cast edits are per character, so each one is merged into the draft's map rather than replacing it. */
+  const setCast = (characterId: string, patch: CastEdit) => set({ cast: { ...d.cast, [characterId]: { ...d.cast[characterId], ...patch } } });
+  const castNumberOf = (c: Character) => d.cast[c.id]?.castNumber ?? (c.castNumber != null ? String(c.castNumber) : "");
+  const actorOf = (c: Character) => d.cast[c.id]?.actorId ?? c.actorId ?? "";
   const canSave = !!d.number.trim() && !error && !busy;
   // Enter saves / Escape cancels only from a text or date input: a focused button (Cancel, Add/Remove) must not also trigger Save.
   const onKey = (e: React.KeyboardEvent) => {
@@ -161,8 +184,31 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
           <button type="button" className="btn btn-sm" disabled={busy} onClick={onPrincipals}>Add/Remove</button>
         </div>
       </td>
-      <td className="small subtle mono" title={numbers?.title}>{numbers?.text || "—"}</td>
-      <td className="small subtle" title={cast?.title}>{cast?.text || "—"}</td>
+      {/* A cast number and the actor belong to the character, so a change here follows them into every scene. */}
+      <td title="A cast number belongs to the character — changing it here changes it in every scene they are in">
+        {people.length === 0 ? <span className="subtle">—</span> : (
+          <div className="col gap-1" style={{ minWidth: 118 }}>
+            {people.map((c) => (
+              <div key={c.id} className="row gap-1">
+                <Input type="number" min={0} step={1} className="mono" value={castNumberOf(c)} onChange={(e) => setCast(c.id, { castNumber: e.target.value })} disabled={busy} placeholder="#" aria-label={`Cast number for ${c.name}`} style={{ width: 66 }} />
+                {people.length > 1 && <span className="subtle tiny truncate" title={c.name}>{c.name}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </td>
+      <td title="Who is cast in the part — the same actor shows on every scene the character is in">
+        {people.length === 0 ? <span className="subtle">—</span> : (
+          <div className="col gap-1" style={{ minWidth: 180 }}>
+            {people.map((c) => (
+              <div key={c.id} className="col" style={{ gap: 1 }}>
+                {people.length > 1 && <span className="subtle tiny truncate" title={c.name}>{c.name}</span>}
+                <ActorSelect value={actorOf(c)} onChange={(actorId) => setCast(c.id, { actorId })} disabled={busy} />
+              </div>
+            ))}
+          </div>
+        )}
+      </td>
       <td><Input type="date" value={d.shootDate} onChange={(e) => set({ shootDate: e.target.value })} disabled={busy} style={{ minWidth: 150 }} /></td>
       <td className="right nowrap">
         {onSave && <button type="button" className="btn btn-sm" style={{ background: "var(--ok)", color: "#fff", borderColor: "var(--ok)" }} disabled={!canSave} onClick={onSave}>{busy ? "Saving…" : "Save"}</button>}
