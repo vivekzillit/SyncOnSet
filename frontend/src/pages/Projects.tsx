@@ -34,7 +34,7 @@ export default function Projects() {
             </div>
           </div>
           <div className="row gap-1">
-            {canCreate && <Link to="/projects/new" className="btn btn-accent btn-sm"><Plus size={15} /> Create a Production</Link>}
+            {canCreate && <Link to="/projects/new" className="btn btn-accent btn-sm"><Plus size={15} /> Create</Link>}
             <button className="btn btn-sm" onClick={() => { logout(); nav("/login"); }}><LogOut size={15} /> Sign out</button>
           </div>
         </div>
