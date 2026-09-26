@@ -38,6 +38,17 @@ function diffBody(next: Body, prev: Body): Partial<Body> {
   return out;
 }
 
+/** SQLite's integer column, so anything larger is rejected before it reaches Prisma. */
+const CAST_NUMBER_MAX = 2147483647;
+/** Why a typed cast number cannot be saved, or null when it is fine (blank clears the number). */
+export function castNumberProblem(raw: string): string | null {
+  const t = raw.trim();
+  if (t === "") return null;
+  if (!/^\d+$/.test(t)) return "A cast number is a whole number";
+  if (Number(t) > CAST_NUMBER_MAX) return "That cast number is too big";
+  return null;
+}
+
 /** Thrown by persistDraft when a brand-new scene was created but a follow-up step failed: `createdId` lets a retry become an update instead of a duplicate POST. */
 export class PersistError extends Error {
   createdId?: string;
@@ -70,9 +81,9 @@ export async function persistDraft(projectId: string, id: string | null, d: Draf
       const body: { castNumber?: number | null; actorId?: string | null } = {};
       if (edit.castNumber !== undefined) {
         const raw = edit.castNumber.trim();
-        const n = raw === "" ? null : Number(raw);
-        if (n !== null && (!Number.isInteger(n) || n < 0)) throw new Error("A cast number has to be a whole number");
-        body.castNumber = n;
+        const problem = castNumberProblem(raw);
+        if (problem) throw new Error(problem);
+        body.castNumber = raw === "" ? null : Number(raw);
       }
       if (edit.actorId !== undefined) body.actorId = edit.actorId || null;
       if (Object.keys(body).length) await api(p(projectId, `/characters/${characterId}`), { method: "PATCH", body });
@@ -143,14 +154,28 @@ export function castMembers(chars: Pick<SceneCharacter, "characterId" | "charact
 /* ---------- Inline edit row (add + edit share it) ---------- */
 export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, people = [], error, episodes }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; people?: Character[]; error?: string; episodes?: boolean }) {
   const set = (patch: Partial<Draft>) => onChange({ ...d, ...patch });
-  /** Cast edits are per character, so each one is merged into the draft's map rather than replacing it. */
-  const setCast = (characterId: string, patch: CastEdit) => set({ cast: { ...d.cast, [characterId]: { ...d.cast[characterId], ...patch } } });
   const castNumberOf = (c: Character) => d.cast[c.id]?.castNumber ?? (c.castNumber != null ? String(c.castNumber) : "");
   const actorOf = (c: Character) => d.cast[c.id]?.actorId ?? c.actorId ?? "";
-  const canSave = !!d.number.trim() && !error && !busy;
+  /**
+   * Cast edits are per character, so each one is merged into the draft's map rather than replacing it —
+   * and a value typed back to what the character already has stops being an edit, so the row does not
+   * stay dirty and no pointless write is sent.
+   */
+  const setCast = (c: Character, patch: CastEdit) => {
+    const next: CastEdit = { ...d.cast[c.id], ...patch };
+    if (next.castNumber !== undefined && next.castNumber.trim() === (c.castNumber != null ? String(c.castNumber) : "")) delete next.castNumber;
+    if (next.actorId !== undefined && (next.actorId || "") === (c.actorId || "")) delete next.actorId;
+    const cast = { ...d.cast };
+    if (Object.keys(next).length) cast[c.id] = next; else delete cast[c.id];
+    set({ cast });
+  };
+  const castProblem = people.map((c) => castNumberProblem(castNumberOf(c))).find(Boolean) || undefined;
+  const canSave = !!d.number.trim() && !error && !castProblem && !busy;
   // Enter saves / Escape cancels only from a text or date input: a focused button (Cancel, Add/Remove) must not also trigger Save.
   const onKey = (e: React.KeyboardEvent) => {
     if (!(e.target instanceof HTMLInputElement)) return;
+    // The new-actor dialog opens inside this row, so its typing must not reach the row's Save / Cancel.
+    if (e.target.closest(".modal-bg")) return;
     if (e.key === "Enter" && onSave && canSave) { e.preventDefault(); onSave(); }
     else if (e.key === "Escape" && onCancel && !busy) { e.preventDefault(); onCancel(); }
   };
@@ -184,26 +209,33 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
           <button type="button" className="btn btn-sm" disabled={busy} onClick={onPrincipals}>Add/Remove</button>
         </div>
       </td>
-      {/* A cast number and the actor belong to the character, so a change here follows them into every scene. */}
+      {/* A cast number and the actor belong to the character, so a change here follows them into every scene.
+          Both cells stack the same per-person block, so the Nth number always sits beside the Nth actor. */}
       <td title="A cast number belongs to the character — changing it here changes it in every scene they are in">
         {people.length === 0 ? <span className="subtle">—</span> : (
-          <div className="col gap-1" style={{ minWidth: 118 }}>
-            {people.map((c) => (
-              <div key={c.id} className="row gap-1">
-                <Input type="number" min={0} step={1} className="mono" value={castNumberOf(c)} onChange={(e) => setCast(c.id, { castNumber: e.target.value })} disabled={busy} placeholder="#" aria-label={`Cast number for ${c.name}`} style={{ width: 66 }} />
-                {people.length > 1 && <span className="subtle tiny truncate" title={c.name}>{c.name}</span>}
-              </div>
-            ))}
+          <div className="col gap-1" style={{ minWidth: 92 }}>
+            {people.map((c) => {
+              const problem = castNumberProblem(castNumberOf(c));
+              return (
+                <div key={c.id} className="col" style={{ gap: 1 }}>
+                  {people.length > 1 && <span className="subtle tiny truncate" style={{ maxWidth: 88 }} title={c.name}>{c.name}</span>}
+                  {/* Deliberately not type="number": that hands back an empty string for anything it cannot parse,
+                      which would read as "clear this cast number", and a stray scroll wheel would retype it. */}
+                  <Input value={castNumberOf(c)} onChange={(e) => setCast(c, { castNumber: e.target.value })} disabled={busy} inputMode="numeric" pattern="[0-9]*" className="mono" placeholder="#" aria-label={`Cast number for ${c.name}`} aria-invalid={!!problem} title={problem || undefined} style={{ width: 72, borderColor: problem ? "var(--danger)" : undefined }} />
+                </div>
+              );
+            })}
           </div>
         )}
+        {castProblem && <div className="tiny" style={{ color: "var(--danger)", marginTop: 2 }}>{castProblem}</div>}
       </td>
       <td title="Who is cast in the part — the same actor shows on every scene the character is in">
         {people.length === 0 ? <span className="subtle">—</span> : (
           <div className="col gap-1" style={{ minWidth: 180 }}>
             {people.map((c) => (
               <div key={c.id} className="col" style={{ gap: 1 }}>
-                {people.length > 1 && <span className="subtle tiny truncate" title={c.name}>{c.name}</span>}
-                <ActorSelect value={actorOf(c)} onChange={(actorId) => setCast(c.id, { actorId })} disabled={busy} />
+                {people.length > 1 && <span className="subtle tiny truncate" style={{ maxWidth: 170 }} title={c.name}>{c.name}</span>}
+                <ActorSelect value={actorOf(c)} onChange={(actorId) => setCast(c, { actorId })} disabled={busy} label={`Actor for ${c.name}`} />
               </div>
             ))}
           </div>
