@@ -340,3 +340,7 @@ a.tab.active, .tab.active > button { color: var(--text); border-bottom-color: va
 .gsearch-item:hover { background: var(--surface-2); }
 @media (max-width: 900px) { .topnav-row1 { padding: 8px 14px; } }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Discard-changes confirmation: sits above any open modal. */
+.modal-bg.discard-bg { z-index: 70; align-items: center; padding: 20px; }
+.modal.discard { max-width: 400px; border-radius: 16px; }

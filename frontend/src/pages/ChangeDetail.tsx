@@ -7,7 +7,7 @@ import { useProject } from "@/state/project";
 import { OPS_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { fmtDate } from "@/lib/format";
 import type { Costume, CostumeChange } from "@/api/types";
-import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Spinner, Textarea, useToast } from "@/components/ui";
+import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, Spinner, Textarea, useToast, discardIfDirty } from "@/components/ui";
 import { CostumePicker, PhotoGrid } from "@/components/domain";
 
 export default function ChangeDetail() {
@@ -46,7 +46,7 @@ export default function ChangeDetail() {
                     <Link to={`${base}/costumes/${it.costume.id}`} className="title"><span className="mono">{it.costume.assetNumber}</span> {it.costume.name}</Link>
                     <div className="meta">{[it.costume.type, it.costume.color, it.costume.size ? `Size ${it.costume.size}` : null, it.costume.location].filter(Boolean).join(" · ")}</div>
                     {wear?.costumeId === it.costumeId ? (
-                      <div className="row gap-1 mt-1"><Input value={wear.text} onChange={(e) => setWear({ ...wear, text: e.target.value })} placeholder="Wear notes: sleeves rolled, top button open…" /><button className="btn btn-sm btn-primary" onClick={() => setWearNotes.mutate(wear)}>Save</button><button className="btn btn-sm" onClick={() => setWear(null)}>Cancel</button></div>
+                      <div className="row gap-1 mt-1"><Input value={wear.text} onChange={(e) => setWear({ ...wear, text: e.target.value })} placeholder="Wear notes: sleeves rolled, top button open…" /><button className="btn btn-sm btn-primary" onClick={() => setWearNotes.mutate(wear)}>Save</button><button className="btn btn-sm" onClick={async () => { if (await discardIfDirty(wear.text !== (it.wearNotes || ""))) setWear(null); }}>Cancel</button></div>
                     ) : (
                       <div className="subtle" onClick={() => can(OPS_ROLES) && setWear({ costumeId: it.costumeId, text: it.wearNotes || "" })} style={{ cursor: can(OPS_ROLES) ? "text" : undefined }}>{it.wearNotes ? `✎ ${it.wearNotes}` : can(OPS_ROLES) ? "+ add wear notes" : ""}</div>
                     )}

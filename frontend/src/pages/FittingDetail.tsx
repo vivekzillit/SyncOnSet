@@ -7,7 +7,7 @@ import { useProject } from "@/state/project";
 import { OPS_ROLES } from "@/state/auth";
 import { fmtDateLong, fmtTime, humanize } from "@/lib/format";
 import type { Costume, Fitting } from "@/api/types";
-import { Badge, Card, ErrorBox, Field, Input, Modal, PageHead, Spinner, useToast } from "@/components/ui";
+import { Badge, Card, ErrorBox, Field, Input, Modal, PageHead, Spinner, useToast, discardIfDirty } from "@/components/ui";
 import { Avatar, CostumePicker, PhotoGrid } from "@/components/domain";
 
 export default function FittingDetail() {
@@ -58,7 +58,7 @@ export default function FittingDetail() {
                     <div className="row gap-1"><Link to={`${base}/costumes/${it.costume.id}`} className="title"><span className="mono">{it.costume.assetNumber}</span> {it.costume.name}</Link><Badge status={it.status} /></div>
                     <div className="meta">{it.costume.size ? `Size ${it.costume.size} · ` : ""}{humanize(it.costume.status)}</div>
                     {noteEdit?.costumeId === it.costumeId ? (
-                      <div className="row gap-1 mt-1"><Input value={noteEdit.text} onChange={(e) => setNoteEdit({ ...noteEdit, text: e.target.value })} placeholder="Notes: half size big, insole added…" /><button className="btn btn-sm btn-primary" onClick={() => setItem.mutate({ costumeId: it.costumeId, notes: noteEdit.text })}>Save</button><button className="btn btn-sm" onClick={() => setNoteEdit(null)}>Cancel</button></div>
+                      <div className="row gap-1 mt-1"><Input value={noteEdit.text} onChange={(e) => setNoteEdit({ ...noteEdit, text: e.target.value })} placeholder="Notes: half size big, insole added…" /><button className="btn btn-sm btn-primary" onClick={() => setItem.mutate({ costumeId: it.costumeId, notes: noteEdit.text })}>Save</button><button className="btn btn-sm" onClick={async () => { if (await discardIfDirty(noteEdit.text !== (it.notes || ""))) setNoteEdit(null); }}>Cancel</button></div>
                     ) : (
                       <div className="subtle" onClick={() => ops && setNoteEdit({ costumeId: it.costumeId, text: it.notes || "" })} style={{ cursor: ops ? "text" : undefined }}>{it.notes ? `✎ ${it.notes}` : ops ? "+ notes" : ""}</div>
                     )}

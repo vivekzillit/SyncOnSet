@@ -7,11 +7,11 @@ import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, hasEpisodes, humanize, todayISO } from "@/lib/format";
 import type { Character, Scene } from "@/api/types";
-import { Badge, Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { Badge, Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Modal, PageHead, SearchBox, Select, Spinner, Textarea, discardIfDirty, useToast, useUnsavedGuard } from "@/components/ui";
 import { ScriptUploadModal } from "@/components/ScriptUpload";
 import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
-import { PrincipalsModal } from "@/components/PrincipalsModal";
-import { EditRow, LOCATION_LIST_ID, NEW, PersistError, castMembers, castMembersOf, castNumbers, castNumbersOf, characterNames, characterNamesOf, emptyDraft, persistDraft, planSaveOrder, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
+import { PrincipalsModal, sortByCast } from "@/components/PrincipalsModal";
+import { EditRow, LOCATION_LIST_ID, NEW, PersistError, castMembers, castNumbers, characterNames, characterNamesOf, emptyDraft, persistDraft, planSaveOrder, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
 
 const SHOOT_DATE = { day: "2-digit", month: "short", year: "numeric" } as const;
 type SaveAllResult = { ok: string[]; failed: { key: string; number: string; message: string; createdId?: string }[] };
@@ -87,6 +87,8 @@ export default function Scenes() {
     ...ids.flatMap((id) => [qc.invalidateQueries({ queryKey: ["scene", id] }), qc.invalidateQueries({ queryKey: ["readiness", id] })]),
   ]);
   const fail = (e: Error) => toast.push(e.message || "Something went wrong", "danger");
+  /** The characters a draft row holds, in cast order — the cast number and actor cells edit these directly. */
+  const peopleIn = (d: Draft) => sortByCast(d.principals.map((id) => charById.get(id)).filter((c): c is Character => !!c));
   const setDraft = (key: string, d: Draft) => setDrafts((all) => ({ ...all, [key]: d }));
   const dropDraft = (key: string) => setDrafts((all) => { const n = { ...all }; delete n[key]; return n; });
   /** A new-row save that created the scene but failed afterwards: keep the draft under the new id so a retry updates instead of re-creating. */
@@ -138,7 +140,17 @@ export default function Scenes() {
   const startEdit = (s: Scene) => setDraft(s.id, toDraft(s));
   // Rows already being edited keep their in-progress values; only untouched rows get a fresh snapshot.
   const startEditAll = () => { setDrafts((all) => ({ ...Object.fromEntries(list.map((s) => [s.id, toDraft(s)])), ...all })); setEditAll(true); };
-  const cancelAll = () => { setDrafts({}); setEditAll(false); };
+  /** A draft only counts as unsaved once it differs from the scene it was opened on (or from a blank row). */
+  const changed = (key: string) => {
+    const d = drafts[key];
+    if (!d) return false;
+    const scene = key === NEW ? undefined : sceneById.get(key);
+    const base = key === NEW ? emptyDraft() : scene ? toDraft(scene) : null;
+    return !base || JSON.stringify(d) !== JSON.stringify(base);
+  };
+  const cancelOne = async (key: string) => { if (await discardIfDirty(changed(key))) dropDraft(key); };
+  const cancelAll = async () => { if (await discardIfDirty(Object.keys(drafts).some(changed))) { setDrafts({}); setEditAll(false); } };
+  useUnsavedGuard(Object.keys(drafts).some(changed));
   const busy = saveOne.isPending || saveAll.isPending;
   const principalsDraft = principalsFor ? drafts[principalsFor] : undefined;
   const picking = single !== null;
@@ -215,10 +227,10 @@ export default function Scenes() {
             <table className="table">
               <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast number</th><th>Cast Name</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
-                {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={characterNamesOf(drafts[NEW].principals, charById)} numbers={castNumbersOf(drafts[NEW].principals, charById)} cast={castMembersOf(drafts[NEW].principals, charById)} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => dropDraft(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
+                {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={characterNamesOf(drafts[NEW].principals, charById)} people={peopleIn(drafts[NEW])} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => cancelOne(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
                 {list.map((s) => {
                   const d = drafts[s.id];
-                  if (d) return <EditRow episodes={episodes} key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={characterNamesOf(d.principals, charById)} numbers={castNumbersOf(d.principals, charById)} cast={castMembersOf(d.principals, charById)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => dropDraft(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
+                  if (d) return <EditRow episodes={episodes} key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={characterNamesOf(d.principals, charById)} people={peopleIn(d)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => cancelOne(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
                   const names = characterNames(s.characters, charById);
                   const numbers = castNumbers(s.characters, charById);
                   const cast = castMembers(s.characters, charById);
