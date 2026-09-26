@@ -30,8 +30,11 @@ charactersRouter.get(
         actor: { select: { id: true, name: true } },
         _count: { select: { scenes: true, changes: true, costumes: true } },
       },
-      orderBy: [{ castNumber: "asc" }, { type: "asc" }, { name: "asc" }],
+      orderBy: [{ type: "asc" }, { name: "asc" }],
     });
+    // Cast-number order, the way a call sheet reads. SQLite sorts NULLs first, which would stand every
+    // unnumbered character ahead of cast #1, so the numbered ones lead and the rest follow by name.
+    characters.sort((a, b) => (a.castNumber ?? Number.MAX_SAFE_INTEGER) - (b.castNumber ?? Number.MAX_SAFE_INTEGER) || a.name.localeCompare(b.name));
     res.json(characters);
   }),
 );

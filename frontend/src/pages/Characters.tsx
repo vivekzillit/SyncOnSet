@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Hash, Plus } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
@@ -24,12 +24,30 @@ export default function Characters() {
   const [charOpen, setCharOpen] = useState(false);
   const [actorOpen, setActorOpen] = useState(false);
   const [cf, setCf] = useState({ name: "", type: "SUPPORTING", actorId: "", age: "", description: "", castNumber: "" });
+  const [numbering, setNumbering] = useState(false);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const unnumbered = (characters || []).filter((c) => c.castNumber == null).length;
   const [af, setAf] = useState<{ name: string; phone: string; email: string; agency: string; notes: string; measurements: Record<string, string> }>({ name: "", phone: "", email: "", agency: "", notes: "", measurements: {} });
 
   const createChar = useMutation({
     mutationFn: () => api(p(projectId, "/characters"), { body: { name: cf.name, type: cf.type, actorId: cf.actorId || null, age: cf.age ? Number(cf.age) : null, description: cf.description || null, castNumber: cf.castNumber ? Number(cf.castNumber) : null } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["characters", projectId] }); setCharOpen(false); setCf({ name: "", type: "SUPPORTING", actorId: "", age: "", description: "", castNumber: "" }); toast.push("Character created", "ok"); },
   });
+  /** Cast numbers are set from the list itself: with 100+ characters, one modal each is no way to do it. */
+  const setCast = useMutation({
+    mutationFn: ({ id, castNumber }: { id: string; castNumber: number | null }) => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { castNumber } }),
+    onError: (e: Error) => toast.push(e.message, "danger"),
+  });
+  /** Rows are left where they are while numbering, and re-sorted once the list is put down. */
+  const stopNumbering = () => { setNumbering(false); setDraft({}); qc.invalidateQueries({ queryKey: ["characters", projectId] }); };
+  const commitCast = (c: Character) => {
+    const raw = (draft[c.id] ?? "").trim();
+    const next = raw === "" ? null : Number(raw);
+    if (next != null && (!Number.isInteger(next) || next < 0)) { toast.push("A cast number is a whole number", "danger"); return; }
+    if (next === (c.castNumber ?? null)) return;
+    setCast.mutate({ id: c.id, castNumber: next });
+  };
+
   const createActor = useMutation({
     mutationFn: () => api(p(projectId, "/actors"), { body: { ...af, measurements: Object.fromEntries(Object.entries(af.measurements).filter(([, v]) => v)) } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["actors", projectId] }); setActorOpen(false); setAf({ name: "", phone: "", email: "", agency: "", notes: "", measurements: {} }); toast.push("Actor added", "ok"); },
@@ -37,22 +55,41 @@ export default function Characters() {
 
   return (
     <div>
-      <PageHead title="List of Characters" sub="Who wears what. Cast numbers appear on sides and call sheets." actions={<><Link to={`/p/${projectId}/actors`} className="btn">★ Actors</Link>{can(MANAGER_ROLES) && (tab === "characters" ? <button className="btn btn-primary" onClick={() => setCharOpen(true)}><Plus size={16} /> Character</button> : <button className="btn btn-primary" onClick={() => setActorOpen(true)}><Plus size={16} /> Actor</button>)}</>} />
+      <PageHead title="List of Characters" sub="Who wears what. Cast numbers appear on sides and call sheets." actions={<><Link to={`/p/${projectId}/actors`} className="btn">★ Actors</Link>{can(MANAGER_ROLES) && tab === "characters" && (numbering ? <button className="btn" onClick={stopNumbering}>Done</button> : <button className="btn" onClick={() => setNumbering(true)}><Hash size={16} /> Cast numbers</button>)}{can(MANAGER_ROLES) && (tab === "characters" ? <button className="btn btn-primary" onClick={() => setCharOpen(true)}><Plus size={16} /> Character</button> : <button className="btn btn-primary" onClick={() => setActorOpen(true)}><Plus size={16} /> Actor</button>)}</>} />
       <Tabs tabs={[{ key: "characters", label: `Characters (${characters?.length ?? 0})` }, { key: "actors", label: `Actors (${actors?.length ?? 0})` }]} value={tab} onChange={setTab} />
+      {tab === "characters" && !!characters?.length && (
+        <div className="subtle mb-2">In cast-number order{unnumbered > 0 ? <> · <b>{unnumbered}</b> of {characters.length} still have no cast number{numbering ? ", type it beside the name" : ""}</> : null}</div>
+      )}
       {tab === "characters" ? (
         <Card pad0>
           {isLoading ? <Spinner /> : !characters?.length ? <Empty icon="🧍" title="No characters yet" /> : (
             <div className="list">
-              {characters.map((c) => (
-                <Link key={c.id} to={`/p/${projectId}/characters/${c.id}`} className="item link">
-                  <div className="avatar">{c.castNumber != null ? c.castNumber : initials(c.name)}</div>
-                  <div className="grow" style={{ minWidth: 0 }}>
-                    <div className="row gap-1"><span className="title">{c.name}</span><Badge status={c.type}>{humanize(c.type)}</Badge></div>
-                    <div className="meta">{c.actor?.name || "No actor assigned"}{c.age ? ` · age ${c.age}` : ""}</div>
+              {characters.map((c) => {
+                const body = (
+                  <>
+                    <div className="grow" style={{ minWidth: 0 }}>
+                      <div className="row gap-1"><span className="title">{c.name}</span><Badge status={c.type}>{humanize(c.type)}</Badge></div>
+                      <div className="meta">{c.actor?.name || "No actor assigned"}{c.age ? ` · age ${c.age}` : ""}</div>
+                    </div>
+                    <div className="end subtle hide-mobile">{c._count?.scenes} scenes · {c._count?.changes} changes · {c._count?.costumes} pieces</div>
+                  </>
+                );
+                return numbering ? (
+                  <div key={c.id} className="item">
+                    <Input type="number" min={0} step={1} className="mono" style={{ width: 78 }} placeholder="#" aria-label={`Cast number for ${c.name}`}
+                      value={draft[c.id] ?? (c.castNumber != null ? String(c.castNumber) : "")}
+                      onChange={(e) => setDraft({ ...draft, [c.id]: e.target.value })}
+                      onBlur={() => commitCast(c)}
+                      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+                    {body}
                   </div>
-                  <div className="end subtle hide-mobile">{c._count?.scenes} scenes · {c._count?.changes} changes · {c._count?.costumes} pieces</div>
-                </Link>
-              ))}
+                ) : (
+                  <Link key={c.id} to={`/p/${projectId}/characters/${c.id}`} className="item link">
+                    <div className="avatar">{c.castNumber != null ? c.castNumber : <span className="subtle">—</span>}</div>
+                    {body}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </Card>

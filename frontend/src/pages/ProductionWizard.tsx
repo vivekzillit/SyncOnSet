@@ -7,17 +7,17 @@ import { useAuth } from "@/state/auth";
 import { ErrorBox, Field, Input } from "@/components/ui";
 import { CharacterConfirmation, buildCharacterImport, initialRows, manualCharacters, type ConfirmRow, type DetectedCharacter, type ExistingCharacter } from "@/components/CharacterConfirmation";
 
-const STEPS = 5;
+const STEPS = 4;
 
 interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; scriptDay?: string | null; synopsis: string | null; status?: string; characters: string[]; text?: string; pages?: string | null }
 interface ParseResult { format: string; file: string; scenes: ParsedScene[]; characters: DetectedCharacter[]; existingCharacters: ExistingCharacter[]; warnings: string[] }
 type DateKey = "prepStartDate" | "prepEndDate" | "prepWrapDate" | "startDate" | "endDate" | "wrapDate";
 
-/** SyncOnSet-style production setup: type → title → prep & shoot dates → script upload (optional) → character confirmation. */
+/** SyncOnSet-style production setup: type → prep & shoot dates → script upload (optional) → character confirmation. */
 export default function ProductionWizard() {
   const nav = useNavigate();
   const qc = useQueryClient();
-  const { user, refresh } = useAuth();
+  const { refresh } = useAuth();
   const [step, setStep] = useState(0);
   const [f, setF] = useState({ type: "", name: "", prepStartDate: "", prepEndDate: "", prepWrapDate: "", startDate: "", endDate: "", wrapDate: "", revision: "White" });
   const [withPrep, setWithPrep] = useState(false);
@@ -28,16 +28,18 @@ export default function ProductionWizard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const firstName = (user?.name || "").split(" ")[0];
   const kind = f.type === "EPISODIC" ? "series" : "feature";
 
-  const code = () => (f.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase() || "PROD") + String(Math.floor(Math.random() * 900) + 100);
-  const projectBody = () => ({ name: f.name.trim(), type: f.type || "FEATURE", prepStartDate: f.prepStartDate || null, prepEndDate: f.prepEndDate || null, prepWrapDate: f.prepWrapDate || null, startDate: f.startDate || null, endDate: f.endDate || null, wrapDate: f.wrapDate || null });
+  /** No title step: the production is named after its script (or "Untitled …") and can be renamed later. */
+  const nameFor = (file?: File) => f.name.trim() || (file ? file.name.replace(/\.[^.]+$/, "").trim() : "") || `Untitled ${kind === "series" ? "Series" : "Feature"}`;
+  const code = (name: string) => (name.replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase() || "PROD") + String(Math.floor(Math.random() * 900) + 100);
+  const projectBody = (name: string) => ({ name, type: f.type || "FEATURE", prepStartDate: f.prepStartDate || null, prepEndDate: f.prepEndDate || null, prepWrapDate: f.prepWrapDate || null, startDate: f.startDate || null, endDate: f.endDate || null, wrapDate: f.wrapDate || null });
 
   /** The project is created the first time a script is read (the parser needs a project); later steps reuse it. */
-  async function ensureProject(): Promise<string> {
+  async function ensureProject(name: string): Promise<string> {
     if (projectId) return projectId;
-    const pr = await api<{ id: string }>("/projects", { body: { ...projectBody(), code: code(), status: "PREP" } });
+    setF((prev) => ({ ...prev, name }));
+    const pr = await api<{ id: string }>("/projects", { body: { ...projectBody(name), code: code(name), status: "PREP" } });
     setProjectId(pr.id);
     await refresh();
     return pr.id;
@@ -46,10 +48,10 @@ export default function ProductionWizard() {
   async function parseFile(file: File) {
     setBusy(true); setError(null);
     try {
-      const id = await ensureProject();
+      const id = await ensureProject(nameFor(file));
       const fd = new FormData(); fd.append("file", file);
       const r = await api<ParseResult>(p(id, "/scenes/parse-script"), { formData: fd });
-      setParsed(r); setRows(initialRows(r.characters, r.existingCharacters)); setStep(4);
+      setParsed(r); setRows(initialRows(r.characters, r.existingCharacters)); setStep(3);
     } catch (e) { setError(e); } finally { setBusy(false); }
   }
   /** Create/update the production, import the confirmed breakdown if a script was read, and open the Scenes list. */
@@ -57,9 +59,10 @@ export default function ProductionWizard() {
     setBusy(true); setError(null);
     try {
       const existed = !!projectId;
-      const id = await ensureProject();
-      // Anything edited after going Back (title, dates) is saved before the import.
-      if (existed) await api(`/projects/${id}`, { method: "PATCH", body: projectBody() });
+      const name = nameFor();
+      const id = await ensureProject(name);
+      // Dates edited after going Back are saved before the import.
+      if (existed) await api(`/projects/${id}`, { method: "PATCH", body: projectBody(name) });
       if (parsed) {
         const { characterMap, castNumbers } = buildCharacterImport(rows, parsed.existingCharacters);
         const scenes = parsed.scenes.map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, scriptDay: s.scriptDay || null, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
@@ -80,10 +83,13 @@ export default function ProductionWizard() {
       <Link to="/projects" className="btn btn-ghost">Cancel</Link>
     </div>
   );
-  const navRow = (next: () => void, canNext = true) => (
+  const navRow = (next: () => void, canNext = true, skip?: () => void) => (
     <div className="row between mt-3">
       {backAndCancel}
-      <button type="button" className="btn btn-primary" onClick={next} disabled={!canNext || busy}>{busy ? "Working…" : "Continue"}</button>
+      <div className="row gap-2">
+        {skip && <button type="button" className="btn btn-ghost" onClick={skip} disabled={busy}>Skip</button>}
+        <button type="button" className="btn btn-primary" onClick={next} disabled={!canNext || busy}>{busy ? "Working…" : "Continue"}</button>
+      </div>
     </div>
   );
   const dateField = (label: string, key: DateKey, min?: string) => (
@@ -107,10 +113,10 @@ export default function ProductionWizard() {
 
   return (
     <div className="login" style={{ alignItems: "start", paddingTop: 48 }}>
-      <div className="card" style={{ width: "100%", maxWidth: step >= 4 ? 900 : 560, padding: 28 }}>
+      <div className="card" style={{ width: "100%", maxWidth: step >= 3 ? 900 : 560, padding: 28 }}>
         <div className="row gap-2 mb-2"><div className="brand-mark">C&amp;S</div><div className="subtle">Create a production · step {Math.min(step + 1, STEPS)} of {STEPS}</div></div>
         {step === 0 && (<>
-          <h2 className="center">What are you working on{firstName ? `, ${firstName}` : ""}?</h2>
+          <h2 className="center">Select</h2>
           <div className="grid grid-2 keep mt-3">
             {[["FEATURE", "Feature", <Film key="f" size={40} />], ["EPISODIC", "TV Series", <Tv key="t" size={40} />]].map(([v, label, icon]) => (
               <button key={v as string} type="button" className="card flat" style={{ padding: 22, textAlign: "center", cursor: "pointer", borderColor: f.type === v ? "var(--ink)" : undefined, borderWidth: f.type === v ? 2 : 1 }} onClick={() => setF({ ...f, type: v as string })}>
@@ -121,11 +127,6 @@ export default function ProductionWizard() {
           {navRow(() => setStep(1), !!f.type)}
         </>)}
         {step === 1 && (<>
-          <h2 className="center">What is the title of your {kind}?</h2>
-          <div className="mt-3"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Production Title" autoFocus onKeyDown={(e) => e.key === "Enter" && f.name.trim() && setStep(2)} /></div>
-          {navRow(() => setStep(2), !!f.name.trim())}
-        </>)}
-        {step === 2 && (<>
           <h2 className="center">What are the estimated shoot dates?</h2>
           <div className="col mt-3" style={{ gap: 18 }}>
             {dateRange("Shoot dates", "startDate", "endDate")}
@@ -144,9 +145,14 @@ export default function ProductionWizard() {
               </div>
             )}
           </div>
-          {navRow(() => setStep(3))}
+          {/* Skip moves on with no dates at all, clearing any half-entered ones. */}
+          {navRow(() => setStep(2), true, () => {
+            setWithPrep(false); setWithWrap(false);
+            setF((prev) => ({ ...prev, prepStartDate: "", prepEndDate: "", prepWrapDate: "", startDate: "", endDate: "", wrapDate: "" }));
+            setStep(2);
+          })}
         </>)}
-        {step === 3 && (<>
+        {step === 2 && (<>
           <h2 className="center row gap-1" style={{ justifyContent: "center" }}><FileText size={20} /> Upload script for breakdown</h2>
           <div className="col mt-3">
             <Input value={f.revision} onChange={(e) => setF({ ...f, revision: e.target.value })} placeholder="Draft (ex. Blue)" style={{ maxWidth: 260, alignSelf: "center" }} />
@@ -159,11 +165,11 @@ export default function ProductionWizard() {
           </div>
           <ErrorBox error={error} />
           {/* The script is optional: with one read, Continue goes to Character Confirmation; without, it creates the production as is. */}
-          {navRow(() => (parsed ? setStep(4) : finish()))}
+          {navRow(() => (parsed ? setStep(3) : finish()))}
         </>)}
-        {step === 4 && parsed && (<>
+        {step === 3 && parsed && (<>
           <div className="row between wrap gap-2">
-            <h2>🎭 List of Character</h2>
+            <h2>🎭 Character Name</h2>
             <div className="row gap-2"><button type="button" className="btn btn-ghost" onClick={finish} disabled={busy}>Skip</button><button type="button" className="btn btn-primary" onClick={finish} disabled={busy}>{busy ? "Importing…" : "Continue"}</button></div>
           </div>
           <div className="subtle mb-2">{parsed.file} · {parsed.scenes.length} scenes · draft "{f.revision || "—"}"</div>

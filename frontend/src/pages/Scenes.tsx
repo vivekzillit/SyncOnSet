@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, FileUp, CalendarDays, MoreVertical, MoreHorizontal } from "lucide-react";
+import { Plus, Upload, FileUp, CalendarDays } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
@@ -11,23 +11,10 @@ import { Badge, Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Modal, PageHea
 import { ScriptUploadModal } from "@/components/ScriptUpload";
 import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
 import { PrincipalsModal } from "@/components/PrincipalsModal";
-import { FixedMenu } from "@/components/FixedMenu";
 import { EditRow, LOCATION_LIST_ID, NEW, PersistError, castMembers, castMembersOf, castNumbers, castNumbersOf, characterNames, characterNamesOf, emptyDraft, persistDraft, planSaveOrder, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
 
-const MENU_H = 188; // approx height of a 5-item menu, used to flip it upward near the bottom of the viewport
-const MENU_W = 176;
-const ITEM = "btn btn-ghost btn-sm btn-block";
-const ITEM_STYLE = { justifyContent: "flex-start" } as const;
 const SHOOT_DATE = { day: "2-digit", month: "short", year: "numeric" } as const;
-type MenuPos = { top: number; left: number; anchor: HTMLElement };
 type SaveAllResult = { ok: string[]; failed: { key: string; number: string; message: string; createdId?: string }[] };
-
-/** Where a fixed menu opens for its trigger button: below it, or above when it would overflow the viewport. */
-function menuPosition(el: HTMLElement): MenuPos {
-  const r = el.getBoundingClientRect();
-  const below = r.bottom + 4 + MENU_H <= window.innerHeight;
-  return { top: below ? r.bottom + 4 : Math.max(8, r.top - 4 - MENU_H), left: Math.max(8, r.right - MENU_W), anchor: el };
-}
 
 export default function Scenes() {
   const { projectId, can, project } = useProject();
@@ -44,8 +31,8 @@ export default function Scenes() {
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [editAll, setEditAll] = useState(false);
   const [principalsFor, setPrincipalsFor] = useState<string | null>(null);
-  const [menu, setMenu] = useState<(MenuPos & { id: string }) | null>(null);
-  const [more, setMore] = useState<MenuPos | null>(null);
+  // "Edit single" mode: pick one row, then act on it from the toolbar (null = mode off, "" = on but nothing picked yet).
+  const [single, setSingle] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
   const [docOpen, setDocOpen] = useState<DocKind | null>(null);
@@ -154,7 +141,9 @@ export default function Scenes() {
   const cancelAll = () => { setDrafts({}); setEditAll(false); };
   const busy = saveOne.isPending || saveAll.isPending;
   const principalsDraft = principalsFor ? drafts[principalsFor] : undefined;
-  const menuScene = menu ? sceneById.get(menu.id) : undefined;
+  const picking = single !== null;
+  const picked = single ? sceneById.get(single) : undefined;
+  const endSingle = () => setSingle(null);
   const addRow = () => setDraft(NEW, emptyDraft());
 
   const emptyTitle = when === "today" ? "No scenes scheduled today" : when === "upcoming" ? "No upcoming scenes" : q || rev ? "No scenes match" : "No scenes yet";
@@ -186,16 +175,32 @@ export default function Scenes() {
       <div className="filters">
         <SearchBox value={q} onChange={setQ} placeholder="Search scene, location, description, character…" />
         {episodes && episodeList.length > 0 && <Select value={ep} onChange={(e) => setEp(e.target.value)} options={episodeList.map((n) => ({ value: n, label: `Episode ${n}` }))} placeholder="All episodes" humanizeLabels={false} aria-label="Episode" style={{ width: "auto", minWidth: 150 }} />}
-        <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "scheduled", label: "Scheduled" }, { key: "all", label: "All scenes" }]} value={when} onChange={(v) => setWhen((v || "all") as "today" | "upcoming" | "scheduled" | "all")} />
+        {!editAll && <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "scheduled", label: "Scheduled" }, { key: "all", label: "All scenes" }]} value={when} onChange={(v) => setWhen((v || "all") as "today" | "upcoming" | "scheduled" | "all")} />}
         {canEdit && (
           <div className="row gap-1" style={{ marginLeft: "auto" }}>
             {editAll ? (
               <><button className="btn btn-blue" disabled={busy || draftKeys.length === 0 || !!firstProblem} title={firstProblem} onClick={() => saveAll.mutate()}>{saveAll.isPending ? "Saving…" : `Save all (${draftKeys.length})`}</button><button className="btn" disabled={busy} onClick={cancelAll}>Cancel</button></>
+            ) : picking ? (
+              <>
+                {picked ? <>
+                  <span className="small subtle nowrap">Scene {picked.number}</span>
+                  <button className="btn btn-blue" onClick={() => { startEdit(picked); endSingle(); }}>Edit</button>
+                  <button className="btn" disabled={clone.isPending} onClick={() => { clone.mutate(picked.id); endSingle(); }}>Clone</button>
+                  {picked.status === "OMITTED"
+                    ? <button className="btn" disabled={setStatusM.isPending} onClick={() => { setStatusM.mutate({ id: picked.id, status: "PLANNED" }); endSingle(); }}>Restore</button>
+                    // Keyed by scene so an armed Omit/Delete confirmation never carries over to another row.
+                    : <ConfirmButton key={`omit-${picked.id}`} confirmText="Omit scene?" onConfirm={() => { setStatusM.mutate({ id: picked.id, status: "OMITTED" }); endSingle(); }}>Omit</ConfirmButton>}
+                  <ConfirmButton key={`del-${picked.id}`} confirmText="Delete scene?" onConfirm={() => { del.mutate(picked.id); endSingle(); }}>Delete</ConfirmButton>
+                </> : <span className="small subtle nowrap">Select a scene</span>}
+                <button className="btn" onClick={endSingle}>Cancel</button>
+              </>
             ) : (
-              <button className="btn" disabled={list.length === 0 || busy} onClick={startEditAll}>Edit All</button>
+              <>
+                <button className="btn" disabled={list.length === 0 || busy} onClick={startEditAll}>Edit All</button>
+                <button className="btn" disabled={list.length === 0 || busy} onClick={() => setSingle("")}>Edit Single</button>
+                <button className="btn btn-blue" disabled={!!drafts[NEW] || busy} onClick={addRow}><Plus size={16} /> Add</button>
+              </>
             )}
-            <button className="btn" aria-label="More actions" aria-haspopup="menu" aria-expanded={!!more} onClick={(e) => { e.stopPropagation(); setMenu(null); setMore(more ? null : menuPosition(e.currentTarget)); }}><MoreHorizontal size={16} /></button>
-            <button className="btn btn-blue" disabled={!!drafts[NEW] || busy} onClick={addRow}><Plus size={16} /> Add</button>
           </div>
         )}
       </div>
@@ -206,7 +211,7 @@ export default function Scenes() {
         {isLoading ? <Spinner /> : list.length === 0 && !drafts[NEW] ? (
           <Empty icon="🎬" title={emptyTitle} hint={emptyHint} action={canEdit && when === "all" && !q && !rev ? <button className="btn btn-blue" onClick={addRow}><Plus size={16} /> Add scene</button> : undefined} />
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap table-scroll">
             <table className="table">
               <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast number</th><th>Cast Name</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
@@ -219,7 +224,7 @@ export default function Scenes() {
                   const cast = castMembers(s.characters, charById);
                   const readiness = humanize(s.readiness);
                   return (
-                    <tr key={s.id} style={s.status === "OMITTED" ? { opacity: 0.55 } : undefined}>
+                    <tr key={s.id} className={picking ? `row-pick${single === s.id ? " is-picked" : ""}` : undefined} style={s.status === "OMITTED" ? { opacity: 0.55 } : undefined} onClick={picking ? () => setSingle(s.id) : undefined}>
                       <td><span title={readiness} aria-label={readiness} role="img"><Dot status={s.readiness} pulse={s.readiness === "MISSING"} /></span></td>
                       {episodes && <td className="nowrap">{s.episode || ""}</td>}
                       <td className="nowrap"><Link to={`/p/${projectId}/scenes/${s.id}`} className="bold" title={s.name || `Scene ${s.number}`}>{s.number}</Link>{s.status !== "PLANNED" && <span className="hide-mobile" style={{ marginLeft: 8 }}><Badge status={s.status} /></span>}</td>
@@ -232,7 +237,7 @@ export default function Scenes() {
                       <td className="subtle" title={cast.title || undefined}>{cast.text || "—"}</td>
                       <td className="nowrap">{s.shootDate ? fmtDate(s.shootDate, SHOOT_DATE) : ""}</td>
                       <td className="right">
-                        {canEdit && <button className="btn btn-ghost btn-sm" aria-label="Scene actions" aria-haspopup="menu" aria-expanded={menu?.id === s.id} onClick={(e) => { e.stopPropagation(); setMore(null); setMenu(menu?.id === s.id ? null : { id: s.id, ...menuPosition(e.currentTarget) }); }}><MoreVertical size={16} /></button>}
+                        {picking && <input type="radio" name="scene-pick" aria-label={`Select scene ${s.number}`} checked={single === s.id} onChange={() => setSingle(s.id)} />}
                       </td>
                     </tr>
                   );
@@ -242,25 +247,6 @@ export default function Scenes() {
           </div>
         )}
       </Card>
-
-      {/* Keyed by scene so an armed Omit/Delete confirmation never carries over to another row. */}
-      {menu && menuScene && (
-        <FixedMenu key={menu.id} top={menu.top} left={menu.left} width={MENU_W} anchor={menu.anchor} label={`Scene ${menuScene.number} actions`} onClose={() => setMenu(null)}>
-          <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { startEdit(menuScene); setMenu(null); }}>Edit</button>
-          <button role="menuitem" className={ITEM} style={ITEM_STYLE} disabled={clone.isPending} onClick={() => { clone.mutate(menu.id); setMenu(null); }}>Clone</button>
-          {menuScene.status === "OMITTED"
-            ? <button role="menuitem" className={ITEM} style={ITEM_STYLE} disabled={setStatusM.isPending} onClick={() => { setStatusM.mutate({ id: menu.id, status: "PLANNED" }); setMenu(null); }}>Restore</button>
-            : <ConfirmButton role="menuitem" className={ITEM} style={ITEM_STYLE} confirmText="Omit scene?" onConfirm={() => { setStatusM.mutate({ id: menu.id, status: "OMITTED" }); setMenu(null); }}>Omit</ConfirmButton>}
-          <ConfirmButton role="menuitem" className={ITEM} style={ITEM_STYLE} confirmText="Delete scene?" onConfirm={() => { del.mutate(menu.id); setMenu(null); }}>Delete</ConfirmButton>
-        </FixedMenu>
-      )}
-      {more && canEdit && (
-        <FixedMenu top={more.top} left={more.left} width={MENU_W} anchor={more.anchor} label="More scene actions" onClose={() => setMore(null)}>
-          <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setScriptOpen(true); setMore(null); }}><FileUp size={14} /> Upload script</button>
-          <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setDocOpen("SCHEDULE"); setMore(null); }}><CalendarDays size={14} /> Upload schedule</button>
-          <button role="menuitem" className={ITEM} style={ITEM_STYLE} onClick={() => { setImportOpen(true); setMore(null); }}><Upload size={14} /> Import breakdown</button>
-        </FixedMenu>
-      )}
 
       <PrincipalsModal open={!!principalsDraft} onClose={() => setPrincipalsFor(null)} characters={characters || []} value={principalsDraft?.principals || []} onChange={(ids) => principalsFor && drafts[principalsFor] && setDraft(principalsFor, { ...drafts[principalsFor], principals: ids })} />
 
