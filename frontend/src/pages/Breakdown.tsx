@@ -6,10 +6,11 @@ import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { MANAGER_ROLES } from "@/state/auth";
 import { fmtDate, hasEpisodes, humanize } from "@/lib/format";
-import type { Actor, Character, CostumeChange, Scene, SceneCharacter } from "@/api/types";
+import type { Character, CostumeChange, Scene, SceneCharacter } from "@/api/types";
 import { Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { scriptLoc } from "@/components/SceneEditRow";
 import { sortByCast } from "@/components/PrincipalsModal";
+import { ActorSelect } from "@/components/domain";
 
 const SHOOT_DATE = { day: "2-digit", month: "short" } as const;
 
@@ -42,7 +43,6 @@ export default function Breakdown() {
   const [af, setAf] = useState({ sceneId: "", characterId: "", changeId: "", castNumber: "", actorId: "" });
   const { data: allCharacters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
   const charById = useMemo(() => new Map((allCharacters || []).map((ch) => [ch.id, ch])), [allCharacters]);
-  const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<Actor[]>(p(projectId, "/actors")), enabled: addOpen });
   /** Cast number and cast name belong to the character, so a row's modal can set them without a trip to Characters. */
   const castOf = (id: string) => { const ch = charById.get(id); return { castNumber: ch?.castNumber != null ? String(ch.castNumber) : "", actorId: ch?.actor?.id || "" }; };
   const { data: afChanges } = useQuery({ queryKey: ["changes", projectId, af.characterId], queryFn: () => api<CostumeChange[]>(p(projectId, `/changes?characterId=${af.characterId}`)), enabled: addOpen && !!af.characterId });
@@ -167,8 +167,7 @@ export default function Breakdown() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Field label="Cast name" help="Both follow the character into every scene">
-                  <Select value={af.actorId} onChange={(e) => setAf({ ...af, actorId: e.target.value })}
-                    options={(actors || []).map((a) => ({ value: a.id, label: a.name }))} placeholder="No actor assigned" humanizeLabels={false} />
+                  <ActorSelect value={af.actorId} onChange={(actorId) => setAf({ ...af, actorId })} placeholder="No actor assigned" label="Cast name" />
                 </Field>
               </div>
             </div>

@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, Keyboard, Printer } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, Images, Keyboard, Printer, Video, X } from "lucide-react";
 import { api, ApiError, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { CONTINUITY_ROLES } from "@/state/auth";
@@ -13,6 +13,50 @@ import { PhotoGrid, QRScanner } from "@/components/domain";
 import { ScheduleUploadModal } from "@/components/ScheduleUpload";
 
 const DEFAULT_DETAILS = ["Shirt", "Sleeves", "Collar", "Trousers", "Hair", "Accessories"];
+const MAX_UPLOAD = 250 * 1024 * 1024;
+
+/** Photos and videos picked for a take before it exists; they upload once the take is saved. */
+function TakeMedia({ files, onChange, disabled }: { files: File[]; onChange: (files: File[]) => void; disabled?: boolean }) {
+  const photoRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+  const previews = useMemo(() => files.map((file) => ({ file, url: URL.createObjectURL(file), video: file.type.startsWith("video/") })), [files]);
+  useEffect(() => () => previews.forEach((pv) => URL.revokeObjectURL(pv.url)), [previews]);
+  // Reset the input so picking the same file twice still adds it.
+  const pick = (e: ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []); e.target.value = "";
+    const tooBig = picked.find((file) => file.size > MAX_UPLOAD);
+    if (tooBig) toast.push(`${tooBig.name || "That file"} is over 250 MB. Trim the clip first.`, "danger");
+    const ok = picked.filter((file) => file.size <= MAX_UPLOAD);
+    if (ok.length) onChange([...files, ...ok]);
+  };
+  return (
+    <div className="col gap-1">
+      {previews.length > 0 && (
+        <div className="take-media">
+          {previews.map((pv, i) => (
+            <div key={pv.url} className="take-media-item">
+              {pv.video ? <video src={pv.url} muted playsInline preload="metadata" /> : <img src={pv.url} alt={pv.file.name} />}
+              {pv.video && <span className="take-media-badge"><Video size={12} /></span>}
+              <button type="button" className="take-media-remove" disabled={disabled} aria-label={`Remove ${pv.file.name}`} onClick={() => onChange(files.filter((_, j) => j !== i))}><X size={12} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="row gap-1" style={{ flexWrap: "wrap" }}>
+        <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => photoRef.current?.click()} title="Take a photo with the camera"><Camera size={14} /> Photo</button>
+        <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => videoRef.current?.click()} title="Record a video with the camera"><Video size={14} /> Video</button>
+        <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => galleryRef.current?.click()} title="Choose photos or videos from the gallery"><Images size={14} /> Gallery</button>
+      </div>
+      {/* On a phone `capture` opens the camera straight away; the gallery input leaves it off so the library is offered. */}
+      <input ref={photoRef} type="file" accept="image/*" capture="environment" hidden onChange={pick} />
+      <input ref={videoRef} type="file" accept="video/*" capture="environment" hidden onChange={pick} />
+      <input ref={galleryRef} type="file" accept="image/*,video/*" multiple hidden onChange={pick} />
+    </div>
+  );
+}
+
 type Draft = { takeNumber: string; details: { k: string; v: string }[]; accessories: { name: string; present: boolean }[]; notes: string };
 
 /**
@@ -171,6 +215,7 @@ export default function ContinuityOnSet() {
   const [asset, setAsset] = useState("");
   const [scanError, setScanError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
+  const [media, setMedia] = useState<File[]>([]);
   const [callsheetOpen, setCallsheetOpen] = useState(false);
   const [day, setDay] = useState(todayISO());
 
@@ -189,7 +234,7 @@ export default function ContinuityOnSet() {
     return { takeNumber: String((c.last?.takeNumber || 0) + 1), details, accessories, notes: "" };
   }, [c.last, c.sc]);
   useEffect(() => { if (!touched) setF(fill); }, [fill, touched]);
-  useEffect(() => { setTouched(false); }, [c.sceneId, c.characterId]);
+  useEffect(() => { setTouched(false); setMedia([]); }, [c.sceneId, c.characterId]);
   const edit = (patch: Partial<Draft>) => { setTouched(true); setF((prev) => ({ ...prev, ...patch })); };
 
   /** A scanned label adds that piece to the take, so what the actor is wearing is recorded by scanning it. */
@@ -210,13 +255,27 @@ export default function ContinuityOnSet() {
   };
 
   const create = useMutation({
-    mutationFn: () => api<ContinuityRecord>(p(c.projectId, "/continuity"), { body: { sceneId: c.sceneId, characterId: c.characterId, changeId: c.sc?.changeId || null, takeNumber: Number(f.takeNumber), notes: f.notes || null, details: Object.fromEntries(f.details.filter((d) => d.k.trim()).map((d) => [d.k.trim(), d.v])), accessories: f.accessories.filter((a) => a.name.trim()) } }),
-    onSuccess: () => {
+    mutationFn: async () => {
+      const record = await api<ContinuityRecord>(p(c.projectId, "/continuity"), { body: { sceneId: c.sceneId, characterId: c.characterId, changeId: c.sc?.changeId || null, takeNumber: Number(f.takeNumber), notes: f.notes || null, details: Object.fromEntries(f.details.filter((d) => d.k.trim()).map((d) => [d.k.trim(), d.v])), accessories: f.accessories.filter((a) => a.name.trim()) } });
+      // The take is saved first so its media has something to attach to; a failed upload never loses the take.
+      let failed = 0;
+      for (const file of media) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("entityType", "CONTINUITY");
+        fd.append("entityId", record.id);
+        try { await api(p(c.projectId, "/photos"), { formData: fd }); } catch { failed += 1; }
+      }
+      return { failed };
+    },
+    onSuccess: ({ failed }) => {
       qc.invalidateQueries({ queryKey: ["continuity"] });
       qc.invalidateQueries({ queryKey: ["continuity-photos"] });
       qc.invalidateQueries({ queryKey: ["scene", c.sceneId] });
       setTouched(false);
-      toast.push("Take recorded — the form is ready for the next one", "ok");
+      setMedia([]);
+      if (failed) toast.push(`Take recorded, but ${failed} photo/video${failed === 1 ? "" : "s"} did not upload — add ${failed === 1 ? "it" : "them"} from the continuity book`, "danger");
+      else toast.push("Take recorded — the form is ready for the next one", "ok");
     },
   });
 
@@ -224,7 +283,7 @@ export default function ContinuityOnSet() {
   const detail = !c.sceneId ? null : !c.characterId ? <TagSomeone c={c} /> : !mayRecord ? <Card><Empty icon="🎬" title="You can view the continuity book" hint="Recording takes is for the continuity and costume team." /></Card> : (
         <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
           <Card title={`Record take · ${c.sc?.character.name || ""} · Sc ${c.scene?.number || ""}`}
-            actions={<button className="btn btn-primary" disabled={!f.takeNumber || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Saving…" : "Save take"}</button>}>
+            actions={<button className="btn btn-primary" disabled={!f.takeNumber || create.isPending} onClick={() => create.mutate()}>{create.isPending ? (media.length ? "Uploading…" : "Saving…") : "Save take"}</button>}>
             <div className="col">
               <Field label="Take number"><Input type="number" min={1} value={f.takeNumber} onChange={(e) => edit({ takeNumber: e.target.value })} style={{ maxWidth: 140 }} /></Field>
               <Field label="Wear details" help={c.last ? `Pre-filled from take ${c.last.takeNumber}` : undefined}>
@@ -253,6 +312,9 @@ export default function ContinuityOnSet() {
                     <button type="button" className="btn btn-sm" onClick={() => setCamera((v) => !v)}>{camera ? <><CameraOff size={14} /> Stop camera</> : <><Camera size={14} /> Scan</>}</button>
                   </div>
                 </div>
+              </Field>
+              <Field label="Photos & videos" help="Shoot with the camera or pick from the gallery; they are saved with the take.">
+                <TakeMedia files={media} onChange={setMedia} disabled={create.isPending} />
               </Field>
               <Field label="Notes"><Textarea value={f.notes} onChange={(e) => edit({ notes: e.target.value })} placeholder="Coffee spill at end of take…" /></Field>
             </div>
