@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, MapPin } from "lucide-react";
@@ -9,7 +9,7 @@ import { fmtDateTime, matches } from "@/lib/format";
 import type { Costume, MissingItem } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Spinner, Textarea, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
-import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, uploadMedia } from "@/components/domain";
+import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, attachMedia } from "@/components/domain";
 
 export default function Missing() {
   const { projectId, can } = useProject();
@@ -24,14 +24,17 @@ export default function Missing() {
   const [f, setF] = useState<{ costume: Costume | null; lastSeenLocation: string; lastAssignedTo: string; notes: string }>({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" });
   const [found, setFound] = useState<{ id: string; location: string } | null>(null);
   const [media, setMedia] = useState<File[]>([]);
+  const createdId = useRef<string | null>(null);
+  /** Closing drops what was picked, so it can never ride along to the next record. */
+  const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
   const create = useMutation({
-    // The photos are picked before the report exists, so they are attached to it the moment it does.
+    // The record is created once — a failed upload can be retried from the same open form without filing
+    // a second one — and whatever did not attach stays in the picker rather than being thrown away.
     mutationFn: async () => {
-      const report = await api<{ id: string }>(p(projectId, "/missing"), { body: { costumeId: f.costume!.id, lastSeenLocation: f.lastSeenLocation || null, lastAssignedTo: f.lastAssignedTo || null, notes: f.notes || null } });
-      if (media.length) await uploadMedia(projectId, "MISSING", report.id, media, "REFERENCE").catch((e: Error) => toast.push(`Reported missing, but the media did not attach: ${e.message}`, "danger"));
-      return report;
+      if (!createdId.current) createdId.current = (await api<{ id: string }>(p(projectId, "/missing"), { body: { costumeId: f.costume!.id, lastSeenLocation: f.lastSeenLocation || null, lastAssignedTo: f.lastAssignedTo || null, notes: f.notes || null } })).id;
+      await attachMedia({ projectId, entityType: "MISSING", entityId: createdId.current, files: media, kind: "REFERENCE", keep: setMedia, savedNote: "The report is saved — press Report again to attach what is left." });
     },
-    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setMedia([]); setF({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" }); toast.push("Reported missing", "ok"); },
+    onSuccess: () => { createdId.current = null; qc.invalidateQueries(); closeForm(); setF({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" }); toast.push("Reported missing", "ok"); },
   });
   const resolve = useMutation({ mutationFn: (v: { id: string; status: string; foundLocation?: string }) => api(p(projectId, `/missing/${v.id}`), { method: "PATCH", body: v }), onSuccess: () => { qc.invalidateQueries(); setFound(null); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -76,7 +79,7 @@ export default function Missing() {
           ))}
         </div>
       )}
-      <Modal open={open} onClose={() => setOpen(false)} title="Report missing" footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-danger" disabled={!f.costume || create.isPending} onClick={() => create.mutate()}>Report</button></>}>
+      <Modal open={open} onClose={closeForm} title="Report missing" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-danger" disabled={!f.costume || create.isPending} onClick={() => create.mutate()}>Report</button></>}>
         <div className="col">
           <Field label="Costume">{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
           <Field label="Last seen location"><Input value={f.lastSeenLocation} onChange={(e) => setF({ ...f, lastSeenLocation: e.target.value })} placeholder="Set B" /></Field>

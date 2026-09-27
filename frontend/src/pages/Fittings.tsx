@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
@@ -9,7 +9,7 @@ import { fmtDate, fmtTime, matches } from "@/lib/format";
 import type { Character, Costume, Fitting } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
-import { Avatar, CostumePicker, CostumeRow, MediaPicker, uploadMedia } from "@/components/domain";
+import { Avatar, CostumePicker, CostumeRow, MediaPicker, attachMedia } from "@/components/domain";
 
 export default function Fittings() {
   const { projectId, can } = useProject();
@@ -25,14 +25,17 @@ export default function Fittings() {
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ characterId: string; scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ characterId: "", scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] });
   const [media, setMedia] = useState<File[]>([]);
+  const createdId = useRef<string | null>(null);
+  /** Closing drops what was picked, so it can never ride along to the next fitting. */
+  const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
   const create = useMutation({
-    // The photos are picked before the fitting exists, so they are attached to it the moment it does.
+    // The fitting is created once — a failed upload can be retried from the same open form without booking
+    // a second one — and whatever did not attach stays in the picker rather than being thrown away.
     mutationFn: async () => {
-      const fitting = await api<Fitting>(p(projectId, "/fittings"), { body: { characterId: f.characterId, scheduledAt: f.scheduledAt || new Date().toISOString(), location: f.location || null, notes: f.notes || null, costumeIds: f.costumes.map((c) => c.id) } });
-      if (media.length) await uploadMedia(projectId, "FITTING", fitting.id, media, "REFERENCE").catch((e: Error) => toast.push(`Fitting scheduled, but the media did not attach: ${e.message}`, "danger"));
-      return fitting;
+      if (!createdId.current) createdId.current = (await api<Fitting>(p(projectId, "/fittings"), { body: { characterId: f.characterId, scheduledAt: f.scheduledAt || new Date().toISOString(), location: f.location || null, notes: f.notes || null, costumeIds: f.costumes.map((c) => c.id) } })).id;
+      await attachMedia({ projectId, entityType: "FITTING", entityId: createdId.current, files: media, kind: "REFERENCE", keep: setMedia, savedNote: "The fitting is saved — press Schedule again to attach what is left." });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["fittings", projectId] }); setOpen(false); setMedia([]); setF({ characterId: "", scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
+    onSuccess: () => { createdId.current = null; qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeForm(); setF({ characterId: "", scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
   const list = (data || []).filter((x) => (!status || x.status === status) && matches(q, x.character.name, x.actor?.name, x.location));
   return (
@@ -59,7 +62,7 @@ export default function Fittings() {
           </div>
         )}
       </Card>
-      <Modal open={open} onClose={() => setOpen(false)} title="Schedule fitting" footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!f.characterId || create.isPending} onClick={() => create.mutate()}>Schedule</button></>}>
+      <Modal open={open} onClose={closeForm} title="Schedule fitting" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-primary" disabled={!f.characterId || create.isPending} onClick={() => create.mutate()}>Schedule</button></>}>
         <div className="form-grid">
           <Field label="Character" span2><Select value={f.characterId} onChange={(e) => setF({ ...f, characterId: e.target.value, costumes: [] })} options={(characters || []).map((c) => ({ value: c.id, label: `${c.name}${c.actor ? ` (${c.actor.name})` : ""}` }))} placeholder="Select…" /></Field>
           <Field label="When"><Input type="datetime-local" value={f.scheduledAt} onChange={(e) => setF({ ...f, scheduledAt: e.target.value })} /></Field>

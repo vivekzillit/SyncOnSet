@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, ChevronRight } from "lucide-react";
@@ -9,7 +9,7 @@ import { fmtDateTime, humanize, matches } from "@/lib/format";
 import type { Alteration, Costume } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
-import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, Pipeline, uploadMedia } from "@/components/domain";
+import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, Pipeline, attachMedia } from "@/components/domain";
 
 export default function Alterations() {
   const { projectId, can } = useProject();
@@ -24,14 +24,17 @@ export default function Alterations() {
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ costume: Costume | null; issue: string; required: string; tailorName: string; priority: string; deadline: string }>({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" });
   const [media, setMedia] = useState<File[]>([]);
+  const createdId = useRef<string | null>(null);
+  /** Closing drops what was picked, so it can never ride along to the next record. */
+  const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
   const create = useMutation({
-    // The photos are picked before the request exists, so they are attached to it the moment it does.
+    // The record is created once — a failed upload can be retried from the same open form without filing
+    // a second one — and whatever did not attach stays in the picker rather than being thrown away.
     mutationFn: async () => {
-      const request = await api<{ id: string }>(p(projectId, "/alterations"), { body: { costumeId: f.costume!.id, issue: f.issue, required: f.required, tailorName: f.tailorName || null, priority: f.priority, deadline: f.deadline || null } });
-      if (media.length) await uploadMedia(projectId, "ALTERATION", request.id, media, "DETAIL").catch((e: Error) => toast.push(`Alteration requested, but the media did not attach: ${e.message}`, "danger"));
-      return request;
+      if (!createdId.current) createdId.current = (await api<{ id: string }>(p(projectId, "/alterations"), { body: { costumeId: f.costume!.id, issue: f.issue, required: f.required, tailorName: f.tailorName || null, priority: f.priority, deadline: f.deadline || null } })).id;
+      await attachMedia({ projectId, entityType: "ALTERATION", entityId: createdId.current, files: media, kind: "DETAIL", keep: setMedia, savedNote: "The request is saved — press Request again to attach what is left." });
     },
-    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setMedia([]); setF({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" }); toast.push("Alteration requested", "ok"); },
+    onSuccess: () => { createdId.current = null; qc.invalidateQueries(); closeForm(); setF({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" }); toast.push("Alteration requested", "ok"); },
   });
   const advance = useMutation({ mutationFn: (v: { id: string; toStatus?: string }) => api(p(projectId, `/alterations/${v.id}/advance`), { body: { toStatus: v.toStatus } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -73,7 +76,7 @@ export default function Alterations() {
           })}
         </div>
       )}
-      <Modal open={open} onClose={() => setOpen(false)} title="Alteration request" footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!f.costume || !f.issue || !f.required || create.isPending} onClick={() => create.mutate()}>Request</button></>}>
+      <Modal open={open} onClose={closeForm} title="Alteration request" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-primary" disabled={!f.costume || !f.issue || !f.required || create.isPending} onClick={() => create.mutate()}>Request</button></>}>
         <div className="form-grid">
           <Field label="Costume" span2>{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
           <Field label="Issue" span2><Input value={f.issue} onChange={(e) => setF({ ...f, issue: e.target.value })} placeholder="Sleeves too long" /></Field>

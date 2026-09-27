@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Siren, Droplets, ArrowRightLeft, PackageCheck, PackageOpen, Clapperboard, Scissors, AlertTriangle, SearchX, MapPin, Archive, Undo2 } from "lucide-react";
@@ -8,7 +8,7 @@ import { useAuth, CLEANING_ROLES, FINANCE_ROLES, MANAGER_ROLES, OPS_ROLES, TAILO
 import { humanize } from "@/lib/format";
 import type { Character, CleaningRequest, Costume, Scene, Vendor } from "@/api/types";
 import { Badge, ErrorBox, Field, Input, Modal, Select, Textarea, useToast } from "./ui";
-import { CostumeRow, MediaPicker, uploadMedia } from "./domain";
+import { CostumeRow, MediaPicker, attachMedia } from "./domain";
 
 type ModalKind = null | "action" | "cleaning" | "emergency" | "emergencyResult" | "damage" | "alteration" | "missing";
 
@@ -216,17 +216,22 @@ export function CostumeFormModal({ open, onClose, initial, onSaved, defaultChara
   }, [open, initial, defaultCharacterId]);
 
   const [media, setMedia] = useState<File[]>([]);
-  useEffect(() => { if (!open) setMedia([]); }, [open]);
+  const createdId = useRef<string | null>(null);
+  useEffect(() => { if (!open) { setMedia([]); createdId.current = null; } }, [open]);
   const save = useMutation({
     // A new piece has no id until it is saved, so anything shot here is attached straight after.
     mutationFn: async () => {
       const body: Record<string, unknown> = { ...f, assetNumber: f.assetNumber || undefined, quantity: Number(f.quantity) || 1, purchaseCost: f.purchaseCost ? Number(f.purchaseCost) : null, rentalCostPerDay: f.rentalCostPerDay ? Number(f.rentalCostPerDay) : null, vendorId: f.vendorId || null, characterId: f.characterId || null, type: f.type || null, color: f.color || null, brand: f.brand || null, size: f.size || null, fabric: f.fabric || null, careInstructions: f.careInstructions || null, notes: f.notes || null };
       if (!can(FINANCE_ROLES)) { delete body.purchaseCost; delete body.rentalCostPerDay; }
-      const costume = initial ? await api<Costume>(p(projectId, `/costumes/${initial.id}`), { method: "PATCH", body }) : await api<Costume>(p(projectId, "/costumes"), { body });
-      if (media.length) await uploadMedia(projectId, "COSTUME", costume.id, media, "REFERENCE").catch((e: Error) => toast.push(`${costume.assetNumber} saved, but the media did not attach: ${e.message}`, "danger"));
+      // Saved once: if the media fails, pressing Save again retries the files rather than adding a second piece.
+      const costume = initial ? await api<Costume>(p(projectId, `/costumes/${initial.id}`), { method: "PATCH", body })
+        : createdId.current ? await api<Costume>(p(projectId, `/costumes/${createdId.current}`), { method: "PATCH", body })
+        : await api<Costume>(p(projectId, "/costumes"), { body });
+      createdId.current = initial ? null : costume.id;
+      await attachMedia({ projectId, entityType: "COSTUME", entityId: costume.id, files: media, kind: "REFERENCE", keep: setMedia, savedNote: `${costume.assetNumber} is saved — press Save again to attach what is left.` });
       return costume;
     },
-    onSuccess: (c) => { qc.invalidateQueries(); setMedia([]); toast.push(initial ? "Costume updated" : `${c.assetNumber} added`, "ok"); onSaved?.(c); onClose(); },
+    onSuccess: (c) => { createdId.current = null; qc.invalidateQueries(); setMedia([]); toast.push(initial ? "Costume updated" : `${c.assetNumber} added`, "ok"); onSaved?.(c); onClose(); },
   });
   const types = meta?.costumeTypes?.[f.category] || [];
   return (

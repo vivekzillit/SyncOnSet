@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Html5Qrcode } from "html5-qrcode";
@@ -97,20 +97,32 @@ export function MediaView({ ph, alt }: { ph: Pick<Photo, "url" | "mediaType">; a
  * the camera straight away; Gallery leaves it off so the library is offered instead.
  */
 export function MediaPicker({ files, onChange, disabled }: { files: File[]; onChange: (files: File[]) => void; disabled?: boolean }) {
+  const toast = useToast();
   const photoRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
-  const [urls, setUrls] = useState<string[]>([]);
-  // Object URLs are revoked when the picked files change, so a long-lived form does not leak them.
-  useEffect(() => {
-    const made = files.map((f) => URL.createObjectURL(f));
-    setUrls(made);
-    return () => made.forEach((u) => URL.revokeObjectURL(u));
-  }, [files]);
+  const tilesRef = useRef<HTMLDivElement>(null);
+  // Derived in the same pass as the files, so a tile is never drawn against the previous file's URL.
+  const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+  useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
+  /** Camera captures share a filename, so tiles are named by what they are and where they sit. */
+  const labelOf = (file: File, i: number) => `${file.type.startsWith("video/") ? "Video" : "Photo"} ${i + 1}`;
   const add = (e: ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files || []);
     e.target.value = ""; // so the same file can be picked twice
-    if (picked.length) onChange([...files, ...picked]);
+    // Too big is told here, while the shot can still be redone — not after the record has been saved.
+    const fits = picked.filter((f) => f.size <= MAX_UPLOAD);
+    const over = picked.filter((f) => f.size > MAX_UPLOAD);
+    if (over.length) toast.push(`${over.map((f) => f.name || "That file").join(", ")} is over 250 MB — trim the clip, or share it as a link.`, "danger");
+    if (fits.length) onChange([...files, ...fits]);
+  };
+  /** Removing a tile takes its button with it, so the focus is handed to the next one (or back to the buttons). */
+  const remove = (i: number) => {
+    onChange(files.filter((_, j) => j !== i));
+    requestAnimationFrame(() => {
+      const dels = tilesRef.current?.querySelectorAll<HTMLButtonElement>("button.del");
+      (dels && (dels[Math.min(i, dels.length - 1)] || dels[0]) ? dels[Math.min(i, dels.length - 1)] : galleryRef.current?.previousElementSibling as HTMLButtonElement | null)?.focus();
+    });
   };
   return (
     <div className="col gap-1">
@@ -123,13 +135,14 @@ export function MediaPicker({ files, onChange, disabled }: { files: File[]; onCh
         <input ref={galleryRef} type="file" accept="image/*,video/*" multiple hidden onChange={add} />
       </div>
       {files.length === 0 ? <div className="subtle tiny">Attached once this is saved.</div> : (
-        <div className="photos" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))" }}>
+        <div className="photos" ref={tilesRef} style={{ gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))" }}>
           {files.map((file, i) => (
-            <div key={`${file.name}-${i}`} className="photo" title={file.name}>
+            <div key={`${file.name}-${file.lastModified}-${i}`} className="photo" title={file.name || labelOf(file, i)}>
+              {/* #t=0.1 for the same reason MediaThumb uses it: without a seek the element shows no frame. */}
               {file.type.startsWith("video/")
-                ? <><video src={urls[i]} muted playsInline preload="metadata" /><span className="play" aria-hidden><Play size={16} fill="currentColor" /></span></>
-                : <img src={urls[i]} alt={file.name} />}
-              <button type="button" className="del" disabled={disabled} onClick={() => onChange(files.filter((_, j) => j !== i))} aria-label={`Remove ${file.name}`}><X size={12} /></button>
+                ? <><video src={`${urls[i]}#t=0.1`} muted playsInline preload="metadata" /><span className="play" aria-hidden><Play size={16} fill="currentColor" /></span></>
+                : <img src={urls[i]} alt={labelOf(file, i)} />}
+              <button type="button" className="del" disabled={disabled} onClick={() => remove(i)} aria-label={`Remove ${labelOf(file, i)}`}><X size={12} /></button>
             </div>
           ))}
         </div>
@@ -138,17 +151,45 @@ export function MediaPicker({ files, onChange, disabled }: { files: File[]; onCh
   );
 }
 
-/** Attach what MediaPicker collected, once the record it belongs to exists. */
+/** What is still unattached when an upload run gives up, so a retry sends those and not the ones already up. */
+export class MediaUploadError extends Error {
+  remaining: File[];
+  constructor(message: string, remaining: File[]) { super(message); this.remaining = remaining; }
+}
+
+/** Attach what MediaPicker collected, once the record it belongs to exists. Files go up one at a time. */
 export async function uploadMedia(projectId: string, entityType: string, entityId: string, files: File[], kind: string) {
-  const tooBig = files.find((f) => f.size > MAX_UPLOAD);
-  if (tooBig) throw new Error(`${tooBig.name || "That file"} is over 250 MB. Trim the clip, or share it as a link.`);
+  const left = [...files];
   for (const file of files) {
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("entityType", entityType);
-    fd.append("entityId", entityId);
-    fd.append("kind", kind);
-    await api(p(projectId, "/photos"), { formData: fd });
+    try {
+      if (file.size > MAX_UPLOAD) throw new Error(`${file.name || "That file"} is over 250 MB. Trim the clip, or share it as a link.`);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("entityType", entityType);
+      fd.append("entityId", entityId);
+      fd.append("kind", kind);
+      await api(p(projectId, "/photos"), { formData: fd });
+      left.shift();
+    } catch (e) {
+      throw new MediaUploadError((e as Error).message || "That file could not be attached", left);
+    }
+  }
+}
+
+/**
+ * Attach a form's picked media to the record it was just filled in for. A failure keeps whatever is still
+ * unattached in the form and reports it: the record is already saved, so pressing save again only retries
+ * those files rather than filing a second report.
+ */
+export async function attachMedia({ projectId, entityType, entityId, files, kind, keep, savedNote }: { projectId: string; entityType: string; entityId: string; files: File[]; kind: string; keep: (files: File[]) => void; savedNote: string }) {
+  if (!files.length) return;
+  try {
+    await uploadMedia(projectId, entityType, entityId, files, kind);
+  } catch (e) {
+    if (e instanceof MediaUploadError) keep(e.remaining);
+    // A dropped connection surfaces as fetch's own "Failed to fetch", which means nothing on set.
+    const why = (e as Error).message || "";
+    throw new Error(`${/failed to fetch|networkerror|load failed/i.test(why) ? "The upload did not go through — check the connection." : why} ${savedNote}`);
   }
 }
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
@@ -9,7 +9,7 @@ import { fmtDateTime, fmtMoney, humanize, matches } from "@/lib/format";
 import type { Costume, DamageReport, Scene } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
-import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, uploadMedia } from "@/components/domain";
+import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, attachMedia } from "@/components/domain";
 
 export default function Damages() {
   const { projectId, can, currency } = useProject();
@@ -25,14 +25,17 @@ export default function Damages() {
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ costume: Costume | null; description: string; sceneId: string; takeNumber: string; estimatedRepairCost: string; responsible: string }>({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" });
   const [media, setMedia] = useState<File[]>([]);
+  const createdId = useRef<string | null>(null);
+  /** Closing drops what was picked, so it can never ride along to the next record. */
+  const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
   const create = useMutation({
-    // The photos are picked before the report exists, so they are attached to it the moment it does.
+    // The record is created once — a failed upload can be retried from the same open form without filing
+    // a second one — and whatever did not attach stays in the picker rather than being thrown away.
     mutationFn: async () => {
-      const report = await api<{ id: string }>(p(projectId, "/damages"), { body: { costumeId: f.costume!.id, description: f.description, sceneId: f.sceneId || null, takeNumber: f.takeNumber ? Number(f.takeNumber) : null, estimatedRepairCost: f.estimatedRepairCost ? Number(f.estimatedRepairCost) : null, responsible: f.responsible || null } });
-      if (media.length) await uploadMedia(projectId, "DAMAGE", report.id, media, "DETAIL").catch((e: Error) => toast.push(`Damage reported, but the media did not attach: ${e.message}`, "danger"));
-      return report;
+      if (!createdId.current) createdId.current = (await api<{ id: string }>(p(projectId, "/damages"), { body: { costumeId: f.costume!.id, description: f.description, sceneId: f.sceneId || null, takeNumber: f.takeNumber ? Number(f.takeNumber) : null, estimatedRepairCost: f.estimatedRepairCost ? Number(f.estimatedRepairCost) : null, responsible: f.responsible || null } })).id;
+      await attachMedia({ projectId, entityType: "DAMAGE", entityId: createdId.current, files: media, kind: "DETAIL", keep: setMedia, savedNote: "The report is saved — press Report again to attach what is left." });
     },
-    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setMedia([]); setF({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" }); toast.push("Damage reported", "ok"); },
+    onSuccess: () => { createdId.current = null; qc.invalidateQueries(); closeForm(); setF({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" }); toast.push("Damage reported", "ok"); },
   });
   const setStatus = useMutation({ mutationFn: (v: { id: string; status: string }) => api(p(projectId, `/damages/${v.id}`), { method: "PATCH", body: { status: v.status } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -68,7 +71,7 @@ export default function Damages() {
           ))}
         </div>
       )}
-      <Modal open={open} onClose={() => setOpen(false)} title="Report damage" footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-danger" disabled={!f.costume || !f.description || create.isPending} onClick={() => create.mutate()}>Report</button></>}>
+      <Modal open={open} onClose={closeForm} title="Report damage" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-danger" disabled={!f.costume || !f.description || create.isPending} onClick={() => create.mutate()}>Report</button></>}>
         <div className="form-grid">
           <Field label="Costume" span2>{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
           <Field label="Damage" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Torn sleeve" /></Field>
