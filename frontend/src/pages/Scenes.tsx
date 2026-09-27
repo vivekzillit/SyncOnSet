@@ -123,8 +123,6 @@ export default function Scenes() {
     },
     onError: (e: Error) => { invalidate(); fail(e); },
   });
-  const clone = useMutation({ mutationFn: (id: string) => api<Scene>(p(projectId, `/scenes/${id}/clone`), { method: "POST" }), onSuccess: (s) => { invalidate(); toast.push(`Cloned as scene ${s.number}`, "ok"); }, onError: fail });
-  const setStatusM = useMutation({ mutationFn: ({ id, status }: { id: string; status: string }) => api(p(projectId, `/scenes/${id}`), { method: "PATCH", body: { status } }), onSuccess: (_r, v) => { invalidate(v.id); toast.push(v.status === "OMITTED" ? "Scene omitted" : "Scene restored", "ok"); }, onError: fail });
   const del = useMutation({ mutationFn: (id: string) => api(p(projectId, `/scenes/${id}`), { method: "DELETE" }), onSuccess: () => { qc.invalidateQueries(); toast.push("Scene deleted", "ok"); }, onError: fail });
   const importM = useMutation({
     mutationFn: () => {
@@ -198,11 +196,7 @@ export default function Scenes() {
                 {picked ? <>
                   <span className="small subtle nowrap">Scene {picked.number}</span>
                   <button className="btn btn-blue" onClick={() => { startEdit(picked); endSingle(); }}>Edit</button>
-                  <button className="btn" disabled={clone.isPending} onClick={() => { clone.mutate(picked.id); endSingle(); }}>Clone</button>
-                  {picked.status === "OMITTED"
-                    ? <button className="btn" disabled={setStatusM.isPending} onClick={() => { setStatusM.mutate({ id: picked.id, status: "PLANNED" }); endSingle(); }}>Restore</button>
-                    // Keyed by scene so an armed Omit/Delete confirmation never carries over to another row.
-                    : <ConfirmButton key={`omit-${picked.id}`} confirmText="Omit scene?" onConfirm={() => { setStatusM.mutate({ id: picked.id, status: "OMITTED" }); endSingle(); }}>Omit</ConfirmButton>}
+                  {/* Keyed by scene so an armed Delete confirmation never carries over to another row. */}
                   <ConfirmButton key={`del-${picked.id}`} confirmText="Delete scene?" onConfirm={() => { del.mutate(picked.id); endSingle(); }}>Delete</ConfirmButton>
                 </> : <span className="small subtle nowrap">Select a scene</span>}
                 <button className="btn" onClick={endSingle}>Cancel</button>
