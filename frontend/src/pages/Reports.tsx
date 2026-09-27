@@ -35,11 +35,8 @@ export default function Reports() {
                 <div className="subtle">{fmtDateLong(daily.date)} · Shooting day {daily.project.shootingDay}</div>
                 <div className="grid grid-stats mt-2">
                   <Stat label="Scenes" value={daily.summary.scenes} />
-                  <Stat label="Costumes used" value={daily.summary.costumesUsed} />
-                  <Stat label="Issued" value={daily.summary.issued} />
                   <Stat label="Returned" value={daily.summary.returned} />
                   <Stat label="Cleaning" value={daily.summary.cleaning} hint={`${daily.summary.cleaningCompleted} completed`} />
-                  <Stat label="Emergencies" value={daily.summary.emergencyRequests} tone={daily.summary.emergencyRequests ? "danger" : undefined} />
                   <Stat label="Alteration" value={daily.summary.alteration} />
                   <Stat label="Damaged" value={daily.summary.damaged} />
                   <Stat label="Missing" value={daily.summary.missing} tone={daily.summary.missing ? "danger" : undefined} />
