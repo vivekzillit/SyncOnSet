@@ -92,6 +92,67 @@ export function MediaView({ ph, alt }: { ph: Pick<Photo, "url" | "mediaType">; a
 }
 
 /**
+ * Photos and videos picked while a record is still being filled in — a report or a piece that has no id yet,
+ * so nothing can be uploaded until it is saved. The camera buttons carry `capture`, which on a phone opens
+ * the camera straight away; Gallery leaves it off so the library is offered instead.
+ */
+export function MediaPicker({ files, onChange, disabled }: { files: File[]; onChange: (files: File[]) => void; disabled?: boolean }) {
+  const photoRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const [urls, setUrls] = useState<string[]>([]);
+  // Object URLs are revoked when the picked files change, so a long-lived form does not leak them.
+  useEffect(() => {
+    const made = files.map((f) => URL.createObjectURL(f));
+    setUrls(made);
+    return () => made.forEach((u) => URL.revokeObjectURL(u));
+  }, [files]);
+  const add = (e: ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = ""; // so the same file can be picked twice
+    if (picked.length) onChange([...files, ...picked]);
+  };
+  return (
+    <div className="col gap-1">
+      <div className="row gap-1 wrap">
+        <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => photoRef.current?.click()} title="Take a photo with the camera"><Camera size={15} /> Photo</button>
+        <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => videoRef.current?.click()} title="Record a video with the camera"><Video size={15} /> Video</button>
+        <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => galleryRef.current?.click()} title="Choose photos or videos from the gallery"><Images size={15} /> Gallery</button>
+        <input ref={photoRef} type="file" accept="image/*" capture="environment" hidden onChange={add} />
+        <input ref={videoRef} type="file" accept="video/*" capture="environment" hidden onChange={add} />
+        <input ref={galleryRef} type="file" accept="image/*,video/*" multiple hidden onChange={add} />
+      </div>
+      {files.length === 0 ? <div className="subtle tiny">Attached once this is saved.</div> : (
+        <div className="photos" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))" }}>
+          {files.map((file, i) => (
+            <div key={`${file.name}-${i}`} className="photo" title={file.name}>
+              {file.type.startsWith("video/")
+                ? <><video src={urls[i]} muted playsInline preload="metadata" /><span className="play" aria-hidden><Play size={16} fill="currentColor" /></span></>
+                : <img src={urls[i]} alt={file.name} />}
+              <button type="button" className="del" disabled={disabled} onClick={() => onChange(files.filter((_, j) => j !== i))} aria-label={`Remove ${file.name}`}><X size={12} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Attach what MediaPicker collected, once the record it belongs to exists. */
+export async function uploadMedia(projectId: string, entityType: string, entityId: string, files: File[], kind: string) {
+  const tooBig = files.find((f) => f.size > MAX_UPLOAD);
+  if (tooBig) throw new Error(`${tooBig.name || "That file"} is over 250 MB. Trim the clip, or share it as a link.`);
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("entityType", entityType);
+    fd.append("entityId", entityId);
+    fd.append("kind", kind);
+    await api(p(projectId, "/photos"), { formData: fd });
+  }
+}
+
+/**
  * References attached to a record: photos shown as thumbnails, any other file listed for download,
  * and links out to a drive or a mood board. Used by characters, looks, fittings, continuity, cleaning and damage.
  */
@@ -312,7 +373,7 @@ export function ReadinessLine({ level, name, sub }: { level: string; name: React
 const NEW_ACTOR = "__new_actor__";
 
 /** Actor dropdown that also offers "+ New actor", opening the same Create Actor form the Actors page uses. */
-export function ActorSelect({ value, onChange, disabled, label }: { value: string; onChange: (actorId: string) => void; disabled?: boolean; label?: string }) {
+export function ActorSelect({ value, onChange, disabled, label, placeholder = "— unassigned —" }: { value: string; onChange: (actorId: string) => void; disabled?: boolean; label?: string; placeholder?: string }) {
   const { projectId, can } = useProject();
   const [open, setOpen] = useState(false);
   const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<Actor[]>(p(projectId, "/actors")) });
@@ -321,7 +382,7 @@ export function ActorSelect({ value, onChange, disabled, label }: { value: strin
 
   return (
     <>
-      <Select value={value} onChange={(e) => (e.target.value === NEW_ACTOR ? setOpen(true) : onChange(e.target.value))} options={options} placeholder="— unassigned —" disabled={disabled} aria-label={label} />
+      <Select value={value} onChange={(e) => (e.target.value === NEW_ACTOR ? setOpen(true) : onChange(e.target.value))} options={options} placeholder={placeholder} disabled={disabled} aria-label={label} />
       {/* Created from a character, so the new actor is assigned straight back to it — no "Create +". */}
       <ActorModal open={open} onClose={() => setOpen(false)} onSaved={(a) => onChange(a.id)} allowAddAnother={false} saveLabel="Create & assign" />
     </>

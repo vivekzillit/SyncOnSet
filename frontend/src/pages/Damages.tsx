@@ -9,7 +9,7 @@ import { fmtDateTime, fmtMoney, humanize, matches } from "@/lib/format";
 import type { Costume, DamageReport, Scene } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
-import { CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
+import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, uploadMedia } from "@/components/domain";
 
 export default function Damages() {
   const { projectId, can, currency } = useProject();
@@ -24,9 +24,15 @@ export default function Damages() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ costume: Costume | null; description: string; sceneId: string; takeNumber: string; estimatedRepairCost: string; responsible: string }>({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" });
+  const [media, setMedia] = useState<File[]>([]);
   const create = useMutation({
-    mutationFn: () => api(p(projectId, "/damages"), { body: { costumeId: f.costume!.id, description: f.description, sceneId: f.sceneId || null, takeNumber: f.takeNumber ? Number(f.takeNumber) : null, estimatedRepairCost: f.estimatedRepairCost ? Number(f.estimatedRepairCost) : null, responsible: f.responsible || null } }),
-    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setF({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" }); toast.push("Damage reported", "ok"); },
+    // The photos are picked before the report exists, so they are attached to it the moment it does.
+    mutationFn: async () => {
+      const report = await api<{ id: string }>(p(projectId, "/damages"), { body: { costumeId: f.costume!.id, description: f.description, sceneId: f.sceneId || null, takeNumber: f.takeNumber ? Number(f.takeNumber) : null, estimatedRepairCost: f.estimatedRepairCost ? Number(f.estimatedRepairCost) : null, responsible: f.responsible || null } });
+      if (media.length) await uploadMedia(projectId, "DAMAGE", report.id, media, "DETAIL").catch((e: Error) => toast.push(`Damage reported, but the media did not attach: ${e.message}`, "danger"));
+      return report;
+    },
+    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setMedia([]); setF({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" }); toast.push("Damage reported", "ok"); },
   });
   const setStatus = useMutation({ mutationFn: (v: { id: string; status: string }) => api(p(projectId, `/damages/${v.id}`), { method: "PATCH", body: { status: v.status } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -70,6 +76,7 @@ export default function Damages() {
           <Field label="Take"><Input type="number" value={f.takeNumber} onChange={(e) => setF({ ...f, takeNumber: e.target.value })} /></Field>
           {can(FINANCE_ROLES) && <Field label={`Estimated repair (${currency})`}><Input type="number" value={f.estimatedRepairCost} onChange={(e) => setF({ ...f, estimatedRepairCost: e.target.value })} /></Field>}
           <Field label="Responsible"><Select value={f.responsible} onChange={(e) => setF({ ...f, responsible: e.target.value })} options={meta?.damageResponsible || []} /></Field>
+          <Field label="Photos & video" span2 help="Shoot it now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>
         </div>
         <ErrorBox error={create.error} />
       </Modal>

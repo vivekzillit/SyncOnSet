@@ -9,7 +9,7 @@ import { fmtDate, fmtTime, matches } from "@/lib/format";
 import type { Character, Costume, Fitting } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
-import { Avatar, CostumePicker, CostumeRow } from "@/components/domain";
+import { Avatar, CostumePicker, CostumeRow, MediaPicker, uploadMedia } from "@/components/domain";
 
 export default function Fittings() {
   const { projectId, can } = useProject();
@@ -24,9 +24,15 @@ export default function Fittings() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ characterId: string; scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ characterId: "", scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] });
+  const [media, setMedia] = useState<File[]>([]);
   const create = useMutation({
-    mutationFn: () => api<Fitting>(p(projectId, "/fittings"), { body: { characterId: f.characterId, scheduledAt: f.scheduledAt || new Date().toISOString(), location: f.location || null, notes: f.notes || null, costumeIds: f.costumes.map((c) => c.id) } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["fittings", projectId] }); setOpen(false); setF({ characterId: "", scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
+    // The photos are picked before the fitting exists, so they are attached to it the moment it does.
+    mutationFn: async () => {
+      const fitting = await api<Fitting>(p(projectId, "/fittings"), { body: { characterId: f.characterId, scheduledAt: f.scheduledAt || new Date().toISOString(), location: f.location || null, notes: f.notes || null, costumeIds: f.costumes.map((c) => c.id) } });
+      if (media.length) await uploadMedia(projectId, "FITTING", fitting.id, media, "REFERENCE").catch((e: Error) => toast.push(`Fitting scheduled, but the media did not attach: ${e.message}`, "danger"));
+      return fitting;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["fittings", projectId] }); setOpen(false); setMedia([]); setF({ characterId: "", scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
   const list = (data || []).filter((x) => (!status || x.status === status) && matches(q, x.character.name, x.actor?.name, x.location));
   return (
@@ -63,6 +69,7 @@ export default function Fittings() {
             <button type="button" className="btn btn-sm mt-1" onClick={() => setPick(true)}><Plus size={14} /> Add piece</button>
           </Field>
           <Field label="Notes" span2><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
+          <Field label="Photos & video" span2 help="Shoot it now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>
         </div>
         <ErrorBox error={create.error} />
       </Modal>

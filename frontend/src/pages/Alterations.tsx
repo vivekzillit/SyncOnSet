@@ -9,7 +9,7 @@ import { fmtDateTime, humanize, matches } from "@/lib/format";
 import type { Alteration, Costume } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
-import { CostumePicker, CostumeRow, PhotoGrid, Pipeline } from "@/components/domain";
+import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, Pipeline, uploadMedia } from "@/components/domain";
 
 export default function Alterations() {
   const { projectId, can } = useProject();
@@ -23,9 +23,15 @@ export default function Alterations() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ costume: Costume | null; issue: string; required: string; tailorName: string; priority: string; deadline: string }>({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" });
+  const [media, setMedia] = useState<File[]>([]);
   const create = useMutation({
-    mutationFn: () => api(p(projectId, "/alterations"), { body: { costumeId: f.costume!.id, issue: f.issue, required: f.required, tailorName: f.tailorName || null, priority: f.priority, deadline: f.deadline || null } }),
-    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setF({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" }); toast.push("Alteration requested", "ok"); },
+    // The photos are picked before the request exists, so they are attached to it the moment it does.
+    mutationFn: async () => {
+      const request = await api<{ id: string }>(p(projectId, "/alterations"), { body: { costumeId: f.costume!.id, issue: f.issue, required: f.required, tailorName: f.tailorName || null, priority: f.priority, deadline: f.deadline || null } });
+      if (media.length) await uploadMedia(projectId, "ALTERATION", request.id, media, "DETAIL").catch((e: Error) => toast.push(`Alteration requested, but the media did not attach: ${e.message}`, "danger"));
+      return request;
+    },
+    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setMedia([]); setF({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" }); toast.push("Alteration requested", "ok"); },
   });
   const advance = useMutation({ mutationFn: (v: { id: string; toStatus?: string }) => api(p(projectId, `/alterations/${v.id}/advance`), { body: { toStatus: v.toStatus } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -75,6 +81,7 @@ export default function Alterations() {
           <Field label="Tailor"><Input value={f.tailorName} onChange={(e) => setF({ ...f, tailorName: e.target.value })} /></Field>
           <Field label="Priority"><Select value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })} options={meta?.priorities || []} /></Field>
           <Field label="Deadline" span2><Input type="datetime-local" value={f.deadline} onChange={(e) => setF({ ...f, deadline: e.target.value })} /></Field>
+          <Field label="Photos & video" span2 help="Shoot it now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>
         </div>
         <ErrorBox error={create.error} />
       </Modal>

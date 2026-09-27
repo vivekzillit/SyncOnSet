@@ -9,7 +9,7 @@ import { fmtDateTime, matches } from "@/lib/format";
 import type { Costume, MissingItem } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Spinner, Textarea, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
-import { CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
+import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, uploadMedia } from "@/components/domain";
 
 export default function Missing() {
   const { projectId, can } = useProject();
@@ -23,9 +23,15 @@ export default function Missing() {
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ costume: Costume | null; lastSeenLocation: string; lastAssignedTo: string; notes: string }>({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" });
   const [found, setFound] = useState<{ id: string; location: string } | null>(null);
+  const [media, setMedia] = useState<File[]>([]);
   const create = useMutation({
-    mutationFn: () => api(p(projectId, "/missing"), { body: { costumeId: f.costume!.id, lastSeenLocation: f.lastSeenLocation || null, lastAssignedTo: f.lastAssignedTo || null, notes: f.notes || null } }),
-    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setF({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" }); toast.push("Reported missing", "ok"); },
+    // The photos are picked before the report exists, so they are attached to it the moment it does.
+    mutationFn: async () => {
+      const report = await api<{ id: string }>(p(projectId, "/missing"), { body: { costumeId: f.costume!.id, lastSeenLocation: f.lastSeenLocation || null, lastAssignedTo: f.lastAssignedTo || null, notes: f.notes || null } });
+      if (media.length) await uploadMedia(projectId, "MISSING", report.id, media, "REFERENCE").catch((e: Error) => toast.push(`Reported missing, but the media did not attach: ${e.message}`, "danger"));
+      return report;
+    },
+    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setMedia([]); setF({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" }); toast.push("Reported missing", "ok"); },
   });
   const resolve = useMutation({ mutationFn: (v: { id: string; status: string; foundLocation?: string }) => api(p(projectId, `/missing/${v.id}`), { method: "PATCH", body: v }), onSuccess: () => { qc.invalidateQueries(); setFound(null); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -76,6 +82,7 @@ export default function Missing() {
           <Field label="Last seen location"><Input value={f.lastSeenLocation} onChange={(e) => setF({ ...f, lastSeenLocation: e.target.value })} placeholder="Set B" /></Field>
           <Field label="Last assigned to"><Input value={f.lastAssignedTo} onChange={(e) => setF({ ...f, lastAssignedTo: e.target.value })} /></Field>
           <Field label="Notes"><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
+          <Field label="Photos & video" help="Shoot it now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>
         </div>
         <ErrorBox error={create.error} />
       </Modal>
