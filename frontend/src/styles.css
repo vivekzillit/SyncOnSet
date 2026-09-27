@@ -345,3 +345,6 @@ a.tab.active, .tab.active > button { color: var(--text); border-bottom-color: va
 /* Discard-changes confirmation: sits above any open modal. */
 .modal-bg.discard-bg { z-index: 70; align-items: center; padding: 20px; }
 .modal.discard { max-width: 400px; border-radius: 16px; }
+/* A list row that is a button (it acts on the page instead of linking away) looks like any other row. */
+button.item { width: 100%; background: none; border: 0; text-align: left; font: inherit; color: inherit; }
+.list > * + button.item { border-top: 1px solid var(--border); }
