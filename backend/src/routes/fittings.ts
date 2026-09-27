@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { wrap, notFound } from "../lib/errors";
 import { parse, parseJson, zDate, zOptionalString } from "../lib/validate";
 import { requireRole } from "../middleware/auth";
-import { FITTING_ITEM_STATUSES, FITTING_STATUSES, OPS_ROLES, MANAGER_ROLES } from "../lib/constants";
+import { FITTING_ITEM_STATUSES, FITTING_STATUSES, OPS_ROLES, MANAGER_ROLES, PRODUCTION_ROLES } from "../lib/constants";
 import { audit } from "../services/audit";
 import { notify } from "../services/notify";
 
@@ -58,7 +58,7 @@ fittingsRouter.post(
       include,
     });
     await audit(req.user, req.projectId!, "FITTING_CREATE", "FITTING", fitting.id);
-    await notify({ projectId: req.projectId!, type: "FITTING", title: "Fitting scheduled", body: `${character.name}: ${fitting.scheduledAt.toLocaleString()}${fitting.location ? ` at ${fitting.location}` : ""}`, entityType: "FITTING", entityId: fitting.id, roles: OPS_ROLES });
+    await notify({ projectId: req.projectId!, type: "FITTING", title: "Fitting scheduled", body: `${character.name}: ${fitting.scheduledAt.toLocaleString()}${fitting.location ? ` at ${fitting.location}` : ""}`, entityType: "FITTING", entityId: fitting.id, roles: [...PRODUCTION_ROLES, ...OPS_ROLES] });
     res.status(201).json(fitting);
   }),
 );
@@ -146,7 +146,7 @@ fittingsRouter.patch(
       });
       await prisma.costume.update({ where: { id: req.params.costumeId }, data: { status: "ALTERATION", location: "Tailor" } });
       await prisma.costumeMovement.create({ data: { costumeId: req.params.costumeId, action: "ALTERATION_REQUESTED", toLocation: "Tailor", toStatus: "ALTERATION", note: alterationRequest.issue, byUserId: req.user!.id, byUserName: req.user!.name } });
-      await notify({ projectId: req.projectId!, type: "ALTERATION", severity: "WARNING", title: "Alteration required", body: `${item.costume.assetNumber} ${item.costume.name}: ${alterationRequest.issue}`, entityType: "ALTERATION", entityId: alterationRequest.id, roles: ["TAILOR", ...MANAGER_ROLES] });
+      await notify({ projectId: req.projectId!, type: "ALTERATION", severity: "WARNING", title: "Alteration required", body: `${item.costume.assetNumber} ${item.costume.name}: ${alterationRequest.issue}`, entityType: "ALTERATION", entityId: alterationRequest.id, roles: ["TAILOR", ...PRODUCTION_ROLES, ...MANAGER_ROLES] });
     }
     res.json({ item, alterationRequest });
   }),

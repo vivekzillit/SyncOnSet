@@ -1,5 +1,5 @@
 export type Role =
-  | "ADMIN" | "PRODUCTION_MANAGER" | "COSTUME_DESIGNER" | "COSTUME_SUPERVISOR" | "COSTUME_ASSISTANT"
+  | "ADMIN" | "PRODUCER" | "DIRECTOR" | "PRODUCTION_MANAGER" | "COSTUME_DESIGNER" | "COSTUME_SUPERVISOR" | "COSTUME_ASSISTANT"
   | "WARDROBE_ASSISTANT" | "DRESSER" | "TAILOR" | "LAUNDRY" | "CONTINUITY" | "ACTOR";
 
 export interface User { id: string; name: string; email: string; role: Role; phone?: string | null; isActive?: boolean }

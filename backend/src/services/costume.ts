@@ -4,7 +4,7 @@ import type { AuthUser } from "../middleware/auth";
 import type { CostumeStatus, MovementAction } from "../lib/constants";
 import { audit } from "./audit";
 import { notify } from "./notify";
-import { MANAGER_ROLES } from "../lib/constants";
+import { MANAGER_ROLES, PRODUCTION_ROLES } from "../lib/constants";
 
 /** Generate the next asset number for a project, e.g. CST-000245 */
 export async function nextAssetNumber(projectId: string, prefix = "CST") {
@@ -135,7 +135,7 @@ export async function applyCostumeAction(costumeId: string, input: ActionInput, 
       body: `${costume.assetNumber} ${costume.name} has been marked missing (last seen: ${costume.location}).`,
       entityType: "COSTUME",
       entityId: costumeId,
-      roles: MANAGER_ROLES,
+      roles: [...PRODUCTION_ROLES, ...MANAGER_ROLES],
     });
   }
   if (input.action === "FOUND") {

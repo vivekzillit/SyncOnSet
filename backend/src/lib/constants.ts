@@ -3,6 +3,8 @@
 
 export const ROLES = [
   "ADMIN",
+  "PRODUCER",
+  "DIRECTOR",
   "PRODUCTION_MANAGER",
   "COSTUME_DESIGNER",
   "COSTUME_SUPERVISOR",
@@ -16,6 +18,8 @@ export const ROLES = [
 ] as const;
 export type Role = (typeof ROLES)[number];
 
+/** Production office: told about every damage, missing costume, alteration and fitting. */
+export const PRODUCTION_ROLES: Role[] = ["PRODUCER", "DIRECTOR", "PRODUCTION_MANAGER"];
 /** Roles allowed to see money (budgets, purchase costs, expenses). */
 export const FINANCE_ROLES: Role[] = ["ADMIN", "PRODUCTION_MANAGER", "COSTUME_DESIGNER", "COSTUME_SUPERVISOR"];
 /** Roles allowed to manage project structure (scenes, characters, changes, users). */

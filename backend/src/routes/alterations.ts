@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { wrap, notFound, badRequest } from "../lib/errors";
 import { parse, zDate, zOptionalString } from "../lib/validate";
 import { requireRole } from "../middleware/auth";
-import { ALTERATION_PIPELINE, ALTERATION_STATUSES, MANAGER_ROLES, PRIORITIES, TAILOR_ROLES } from "../lib/constants";
+import { ALTERATION_PIPELINE, ALTERATION_STATUSES, MANAGER_ROLES, PRIORITIES, PRODUCTION_ROLES, TAILOR_ROLES } from "../lib/constants";
 import { audit } from "../services/audit";
 import { notify } from "../services/notify";
 import { applyCostumeAction } from "../services/costume";
@@ -49,7 +49,7 @@ alterationsRouter.post(
     if (!costume) throw notFound("Costume");
     const item = await prisma.alterationRequest.create({ data: { ...data, projectId: req.projectId!, characterId: data.characterId ?? costume.characterId, status: data.assignedToId || data.tailorName ? "ASSIGNED" : "REQUESTED" }, include });
     await applyCostumeAction(costume.id, { action: "ALTERATION_REQUESTED", note: `${data.issue} → ${data.required}` }, req.user);
-    await notify({ projectId: req.projectId!, type: "ALTERATION", severity: data.priority === "URGENT" ? "CRITICAL" : "WARNING", title: "Alteration requested", body: `${costume.assetNumber} ${costume.name}: ${data.issue}`, entityType: "ALTERATION", entityId: item.id, roles: ["TAILOR", ...MANAGER_ROLES] });
+    await notify({ projectId: req.projectId!, type: "ALTERATION", severity: data.priority === "URGENT" ? "CRITICAL" : "WARNING", title: "Alteration requested", body: `${costume.assetNumber} ${costume.name}: ${data.issue}`, entityType: "ALTERATION", entityId: item.id, roles: ["TAILOR", ...PRODUCTION_ROLES, ...MANAGER_ROLES] });
     res.status(201).json(item);
   }),
 );

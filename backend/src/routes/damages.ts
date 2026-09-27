@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { wrap, notFound } from "../lib/errors";
 import { parse, zMoney, zOptionalString } from "../lib/validate";
 import { requireRole } from "../middleware/auth";
-import { DAMAGE_RESPONSIBLE, DAMAGE_STATUSES, OPS_ROLES, MANAGER_ROLES } from "../lib/constants";
+import { DAMAGE_RESPONSIBLE, DAMAGE_STATUSES, OPS_ROLES, MANAGER_ROLES, PRODUCTION_ROLES } from "../lib/constants";
 import { applyCostumeAction } from "../services/costume";
 import { notify } from "../services/notify";
 
@@ -42,7 +42,7 @@ damagesRouter.post(
     if (!costume) throw notFound("Costume");
     const report = await prisma.damageReport.create({ data: { ...data, projectId: req.projectId! }, include });
     await applyCostumeAction(costume.id, { action: "MARK_DAMAGED", sceneId: data.sceneId, takeNumber: data.takeNumber, note: data.description }, req.user);
-    await notify({ projectId: req.projectId!, type: "DAMAGE", severity: "WARNING", title: "Costume damaged", body: `${costume.assetNumber} ${costume.name}: ${data.description}`, entityType: "DAMAGE", entityId: report.id, roles: MANAGER_ROLES });
+    await notify({ projectId: req.projectId!, type: "DAMAGE", severity: "WARNING", title: "Costume damaged", body: `${costume.assetNumber} ${costume.name}: ${data.description}`, entityType: "DAMAGE", entityId: report.id, roles: [...PRODUCTION_ROLES, ...MANAGER_ROLES] });
     res.status(201).json(report);
   }),
 );
