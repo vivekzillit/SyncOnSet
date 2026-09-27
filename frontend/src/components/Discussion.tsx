@@ -9,6 +9,8 @@ import { relativeTime } from "@/lib/format";
 import { ConfirmButton, Modal, Spinner, initials, useToast } from "@/components/ui";
 import "./discussion.css";
 
+const ZILLIT_WEB = "https://web.zillit.com";
+
 export type ChatEntity = "EXPENSE" | "ALTERATION" | "DAMAGE" | "MISSING" | "FITTING";
 interface Comment { id: string; userId: string; userName: string; body: string; createdAt: string }
 
@@ -70,11 +72,29 @@ function ShareModal({ open, onClose, title, summary, url }: { open: boolean; onC
   const native = async () => {
     try { await navigator.share({ title, text: summary, url }); onClose(); } catch { /* the share sheet was dismissed */ }
   };
+  /**
+   * Zillit takes shared text through its phone app's share extension, so on a phone this opens the share sheet
+   * (pick Zillit there). Zillit has no web address that accepts a message, so on a computer the message is
+   * copied and Zillit web opens in a new tab to paste it into a chat.
+   */
+  const zillit = async () => {
+    const ua = navigator.userAgent;
+    const phone = /Android|iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    if (phone && canNative) return native();
+    // Copy before opening: once the new tab has focus, the browser can refuse the clipboard.
+    let copied = true;
+    try { await navigator.clipboard.writeText(text); } catch { copied = false; }
+    window.open(ZILLIT_WEB, "_blank", "noopener");
+    if (!copied) return toast.push("Opened Zillit. Copy the message above to paste it there", "default");
+    toast.push("Copied. Paste it into a Zillit chat", "ok");
+    onClose();
+  };
   return (
     <Modal open={open} onClose={onClose} title={`Share · ${title}`}>
       <pre className="share-preview">{text}</pre>
       <div className="share-grid">
         {canNative && <button type="button" className="btn" onClick={native}><Share2 size={16} /> Share…</button>}
+        <button type="button" className="btn" onClick={zillit}><span className="zillit-mark" aria-hidden>Z</span> Zillit</button>
         <a className="btn" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer" onClick={onClose}>WhatsApp</a>
         <a className="btn" href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`} onClick={onClose}><Mail size={16} /> Email</a>
         <button type="button" className="btn" onClick={copy}><Copy size={16} /> Copy</button>
