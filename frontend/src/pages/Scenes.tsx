@@ -169,10 +169,11 @@ export default function Scenes() {
       <PageHead
         title={draftTitle}
         sub={revisions.length ? (rev ? `Script draft · ${draftCount}` : `${draftCount} · latest ${latestRevision}`) : "Script breakdown & costume readiness per scene"}
-        actions={(revisions.length > 0 || canEdit) && (
+        actions={(revisions.length > 0 || (canEdit && !editAll && !picking)) && (
           <>
             {revisions.length > 0 && <Select value={rev} onChange={(e) => setRev(e.target.value)} options={revisions} placeholder="All drafts" humanizeLabels={false} title="Script draft / revision" aria-label="Script draft" style={{ width: "auto", minWidth: 140 }} />}
-            {canEdit && <>
+            {/* Editing (all or a single scene) keeps the bar to the job in hand: no uploads or date filters until it is put down. */}
+            {canEdit && !editAll && !picking && <>
               <button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button>
               <div className="col" style={{ gap: 2 }}>
                 <button className="btn" onClick={() => setDocOpen("SCHEDULE")}><CalendarDays size={16} /> Upload schedule</button>
@@ -187,7 +188,7 @@ export default function Scenes() {
       <div className="filters">
         <SearchBox value={q} onChange={setQ} placeholder="Search scene, location, description, character…" />
         {episodes && episodeList.length > 0 && <Select value={ep} onChange={(e) => setEp(e.target.value)} options={episodeList.map((n) => ({ value: n, label: `Episode ${n}` }))} placeholder="All episodes" humanizeLabels={false} aria-label="Episode" style={{ width: "auto", minWidth: 150 }} />}
-        {!editAll && <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "scheduled", label: "Scheduled" }, { key: "all", label: "All scenes" }]} value={when} onChange={(v) => setWhen((v || "all") as "today" | "upcoming" | "scheduled" | "all")} />}
+        {!editAll && !picking && <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "scheduled", label: "Scheduled" }, { key: "all", label: "All scenes" }]} value={when} onChange={(v) => setWhen((v || "all") as "today" | "upcoming" | "scheduled" | "all")} />}
         {canEdit && (
           <div className="row gap-1" style={{ marginLeft: "auto" }}>
             {editAll ? (
