@@ -155,15 +155,15 @@ export function SearchBox({ value, onChange, placeholder = "Search…", autoFocu
  * One "Discard changes?" dialog for the whole app. Anything that throws away unsaved input (a modal's
  * Cancel / ✕ / Esc / backdrop, an inline row's Cancel, leaving the production wizard) asks through this.
  */
-type DiscardAsk = { message: string; resolve: (ok: boolean) => void };
+type DiscardAsk = { title: string; message: string; confirm: string; resolve: (ok: boolean) => void };
 let showDiscard: ((ask: DiscardAsk) => void) | null = null;
 let discardOpen = false;
-export function confirmDiscard(message = "You have unsaved changes. Discard them?"): Promise<boolean> {
+export function confirmDiscard(message = "You have unsaved changes. Discard them?", title = "Discard changes?", confirm = "Discard"): Promise<boolean> {
   if (!showDiscard) return Promise.resolve(window.confirm(message));
-  return new Promise((resolve) => showDiscard!({ message, resolve }));
+  return new Promise((resolve) => showDiscard!({ title, message, confirm, resolve }));
 }
-/** Asks only when `dirty`; resolves true straight away when there is nothing to lose. */
-export const discardIfDirty = (dirty: boolean, message?: string) => (dirty ? confirmDiscard(message) : Promise.resolve(true));
+/** Every Cancel asks before closing a form: "Discard changes?" once something was changed, otherwise "Close without saving?". */
+export const discardIfDirty = (dirty: boolean, message?: string) => (dirty ? confirmDiscard(message) : confirmDiscard("Nothing will be saved.", "Close without saving?", "Close"));
 
 /**
  * Pages and modals holding unsaved input register here while they do. One <LeaveGuard> then asks before any
@@ -210,11 +210,11 @@ function DiscardHost() {
   return (
     <div className="modal-bg discard-bg" onMouseDown={(e) => e.target === e.currentTarget && answer(false)}>
       <div className="modal discard" role="alertdialog" aria-modal aria-labelledby="discard-title">
-        <h2 id="discard-title">Discard changes?</h2>
+        <h2 id="discard-title">{ask.title}</h2>
         <p className="subtle mt-1">{ask.message}</p>
         <div className="modal-foot">
           <button ref={keepRef} type="button" className="btn" onClick={() => answer(false)}>Keep editing</button>
-          <button type="button" className="btn btn-danger" onClick={() => answer(true)}>Discard</button>
+          <button type="button" className="btn btn-danger" onClick={() => answer(true)}>{ask.confirm}</button>
         </div>
       </div>
     </div>
@@ -223,18 +223,21 @@ function DiscardHost() {
 
 /* ---------- Modal ---------- */
 /**
- * Once anything inside has been typed into, picked or ticked, closing the modal without saving asks first:
- * the ✕, Esc, a backdrop click and the footer's Cancel button all go through the discard confirmation.
- * Saving closes it through the caller's own state, which never asks. Pass `dirty` to override the detection.
+ * A modal holding a form always asks before closing without saving — "Discard changes?" once anything was
+ * typed, picked or ticked, "Close without saving?" otherwise. The ✕, Esc, a backdrop click and the footer's
+ * Cancel button all go through it. A modal with no fields just closes. Saving closes it through the caller's
+ * own state, which never asks. Pass `dirty` to override the change detection.
  */
 export function Modal({ open, onClose, title, children, footer, wide, dirty }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean; dirty?: boolean }) {
   const [touched, setTouched] = useState(false);
   const bypass = useRef(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const hasFields = () => !!bodyRef.current?.querySelector("input:not([type=hidden]):not([hidden]), select, textarea");
   useEffect(() => { if (!open) setTouched(false); }, [open]);
   const isDirty = () => dirty ?? touched;
   useUnsavedGuard(open && isDirty());
   const requestClose = useCallback(async () => {
-    if (await discardIfDirty(dirty ?? touched)) onClose();
+    if (!hasFields() || await discardIfDirty(dirty ?? touched)) onClose();
   }, [dirty, touched, onClose]);
   useEffect(() => {
     if (!open) return;
@@ -251,9 +254,9 @@ export function Modal({ open, onClose, title, children, footer, wide, dirty }: {
   /** A footer Cancel keeps its own handler (some reset state first); it is only held back until the discard is confirmed. */
   const guardCancel = (e: React.MouseEvent) => {
     const btn = (e.target as HTMLElement).closest("button");
-    if (!btn || bypass.current || !isDirty() || !(btn.dataset.dismiss != null || btn.textContent?.trim() === "Cancel")) return;
+    if (!btn || bypass.current || !hasFields() || !(btn.dataset.dismiss != null || btn.textContent?.trim() === "Cancel")) return;
     e.preventDefault(); e.stopPropagation();
-    confirmDiscard().then((ok) => { if (!ok) return; bypass.current = true; btn.click(); bypass.current = false; });
+    discardIfDirty(isDirty()).then((ok) => { if (!ok) return; bypass.current = true; btn.click(); bypass.current = false; });
   };
   return (
     <div className="modal-bg" onMouseDown={(e) => e.target === e.currentTarget && requestClose()}>
@@ -262,7 +265,7 @@ export function Modal({ open, onClose, title, children, footer, wide, dirty }: {
           <h2>{title}</h2>
           <button type="button" className="iconbtn" onClick={requestClose} aria-label="Close"><X size={18} /></button>
         </div>
-        <div className="modal-body" onInput={markTouched} onChange={markTouched}>{children}</div>
+        <div ref={bodyRef} className="modal-body" onInput={markTouched} onChange={markTouched}>{children}</div>
         {footer && <div className="modal-foot" onClickCapture={guardCancel}>{footer}</div>}
       </div>
     </div>
