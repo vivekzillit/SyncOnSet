@@ -200,23 +200,6 @@ export default function CharacterDetail() {
               <div className="list">{ch.fittings.map((f) => <Link key={f.id} to={`${base}/fittings/${f.id}`} className="item link"><div className="grow"><div className="title small">{fmtDate(f.scheduledAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div><div className="meta">{f.items.length} piece{f.items.length === 1 ? "" : "s"}{f.location ? ` · ${f.location}` : ""}</div></div></Link>)}</div>
             )}
           </Card>
-          <Card title="More details" actions={canEdit && <button className="btn btn-sm" onClick={() => openDetail(-1)}><Plus size={14} /> Add more</button>} pad0>
-            {details.length === 0 ? <div className="subtle" style={{ padding: 14 }}>Nothing yet. Add any detail this production tracks — wig, tattoo cover, prop watch, dresser.</div> : (
-              <div className="list">
-                {details.map((d, i) => (
-                  <div key={`${d.label}-${i}`} className="item">
-                    <div className="grow" style={{ minWidth: 0 }}><div className="title small">{d.label}</div><div className="meta" style={{ whiteSpace: "pre-wrap" }}>{d.value}</div></div>
-                    {canEdit && (
-                      <div className="row gap-1">
-                        <button className="btn btn-ghost btn-sm" aria-label={`Edit ${d.label}`} onClick={() => openDetail(i)}><Pencil size={14} /></button>
-                        <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" onConfirm={() => saveDetails.mutate(details.filter((_, x) => x !== i))}><Trash2 size={14} /></ConfirmButton>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
           <Card title={`Costume Changes (${ch.changes.length})`} actions={canEdit && <button className="btn btn-sm" onClick={() => setNewOpen(true)}><Plus size={14} /> Add change</button>}>
             {ch.changes.length === 0 ? <Empty icon="👗" title="No changes yet" hint="A change is a numbered outfit for this character. Add one, then attach costume pieces." /> : (
               <div className="col gap-2">
@@ -238,6 +221,23 @@ export default function CharacterDetail() {
           </Card>
           <Card title={`All pieces (${ch.costumes.length})`} actions={canEdit && <div className="row gap-1"><button className="btn btn-sm" onClick={() => setTagOpen(true)}>Pick existing</button><button className="btn btn-sm" onClick={() => setPieceOpen(true)}><Plus size={14} /> Add piece</button></div>} pad0>
             {ch.costumes.length === 0 ? <Empty title="No costumes tagged to this character" /> : <div className="list">{ch.costumes.map((c) => <CostumeRow key={c.id} c={c} noStatus />)}</div>}
+          </Card>
+          <Card title="More details" actions={canEdit && <button className="btn btn-sm" onClick={() => openDetail(-1)}><Plus size={14} /> Add more</button>} pad0>
+            {details.length === 0 ? <div className="subtle" style={{ padding: 14 }}>Nothing yet. Add any detail this production tracks — wig, tattoo cover, prop watch, dresser.</div> : (
+              <div className="list">
+                {details.map((d, i) => (
+                  <div key={`${d.label}-${i}`} className="item">
+                    <div className="grow" style={{ minWidth: 0 }}><div className="title small">{d.label}</div><div className="meta" style={{ whiteSpace: "pre-wrap" }}>{d.value}</div></div>
+                    {canEdit && (
+                      <div className="row gap-1">
+                        <button className="btn btn-ghost btn-sm" aria-label={`Edit ${d.label}`} onClick={() => openDetail(i)}><Pencil size={14} /></button>
+                        <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" onConfirm={() => saveDetails.mutate(details.filter((_, x) => x !== i))}><Trash2 size={14} /></ConfirmButton>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
           {ch.notes && <Card title="Notes"><div className="small">{ch.notes}</div></Card>}
         </div>
