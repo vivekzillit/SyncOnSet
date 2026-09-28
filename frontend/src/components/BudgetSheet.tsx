@@ -59,7 +59,7 @@ export function BudgetSheet({ groups, currency, fmt, onEdit, empty, lineActions 
                       {lines.map((l) => (
                         <tr key={l.id} className={onEdit ? "bs-line row-link" : "bs-line"} onClick={onEdit ? () => onEdit(l) : undefined} title={onEdit ? "Edit this line" : undefined}>
                           {codeCell("", false)}
-                          <td>{l.description}</td>
+                          <td>{l.description?.trim() ? l.description : <span className="subtle">{l.accountName || l.payee || "—"}</span>}</td>
                           <td className="right mono">{num(l.quantity)}</td>
                           <td>{l.unit || ""}</td>
                           <td className="right mono">{l.quantity != null ? num(l.multiplier ?? 1) : ""}</td>

@@ -21,6 +21,9 @@ const UNIT_LIST_ID = "budget-units";
 
 /** The add / edit form: numbers stay strings while typed, so a half-typed "6." is not lost. */
 type Form = { category: string; amount: string; description: string; date: string; characterId: string; sceneId: string; vendorId: string; accountCode: string; accountName: string; payee: string; quantity: string; unit: string; multiplier: string; rate: string; currency: string };
+/** A line's name for lists and sharing: its description, or failing that its account, payee or category (every field is optional). */
+export const lineTitle = (e: Pick<Expense, "description" | "accountName" | "accountCode" | "payee" | "category">) =>
+  e.description?.trim() || e.accountName || e.payee || e.accountCode || humanize(e.category) || "Budget line";
 const blankForm = (currency: string): Form => ({ category: "PURCHASE", amount: "", description: "", date: todayISO(), characterId: "", sceneId: "", vendorId: "", accountCode: "", accountName: "", payee: "", quantity: "", unit: "", multiplier: "1", rate: "", currency });
 const toForm = (e: Expense, currency: string): Form => ({ category: e.category, amount: String(e.amount), description: e.description, date: (e.date || "").slice(0, 10), characterId: e.characterId || "", sceneId: e.sceneId || "", vendorId: e.vendorId || "", accountCode: e.accountCode || "", accountName: e.accountName || "", payee: e.payee || "", quantity: e.quantity != null ? String(e.quantity) : "", unit: e.unit || "", multiplier: e.multiplier != null ? String(e.multiplier) : "1", rate: e.rate != null ? String(e.rate) : "", currency: e.currency || currency });
 const numOrNull = (v: string) => (v.trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -144,9 +147,9 @@ export default function Budget() {
   const allTitle = [sceneF && (sceneF === NONE ? "No scene" : null), charF && (charF === NONE ? "No character" : charById.get(charF)?.name), accountF && (accountF === NONE ? "No account code" : accountOptions.find((a) => a.value === accountF)?.label)].filter(Boolean);
   const lineActions = (e: Expense) => (
     <>
-      <RecordActions entityType="EXPENSE" entityId={e.id} title={e.description} path={`/p/${projectId}/budget`}
-        summary={`Expense: ${e.description} · ${fmtMoney(e.amount, e.currency || currency)}\n${[e.accountCode, fmtDate(e.date), humanize(e.category), e.scene ? `Sc ${e.scene.number}` : null, e.character?.name, e.vendor?.name].filter(Boolean).join(" · ")}`} />
-      <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" aria-label={`Delete ${e.description}`} onConfirm={() => del.mutate(e.id)}><Trash2 size={14} /></ConfirmButton>
+      <RecordActions entityType="EXPENSE" entityId={e.id} title={lineTitle(e)} path={`/p/${projectId}/budget`}
+        summary={`Expense: ${lineTitle(e)} · ${fmtMoney(e.amount, e.currency || currency)}\n${[e.accountCode, fmtDate(e.date), humanize(e.category), e.scene ? `Sc ${e.scene.number}` : null, e.character?.name, e.vendor?.name].filter(Boolean).join(" · ")}`} />
+      <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" aria-label={`Delete ${lineTitle(e)}`} onConfirm={() => del.mutate(e.id)}><Trash2 size={14} /></ConfirmButton>
     </>
   );
   const sceneLabel = (id: string) => { const s = sceneById.get(id); return s ? `Sc ${s.number}${s.name ? ` · ${s.name}` : ""}` : "Scene"; };
@@ -205,7 +208,7 @@ export default function Budget() {
 
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} projectId={projectId} currency={currency} />
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? "Edit budget line" : "Add budget line"} wide
-        footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={amount == null || amount < 0 || !f.description.trim() || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Saving…" : editing ? "Save" : "Add"}</button></>}>
+        footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={(amount != null && amount < 0) || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Saving…" : editing ? "Save" : "Add"}</button></>}>
         <datalist id={ACCOUNT_LIST_ID}>{[...new Map(knownAccounts.map((a) => [a.code, a])).values()].map((a) => <option key={a.code} value={a.code}>{a.name}</option>)}</datalist>
         <datalist id={UNIT_LIST_ID}>{BUDGET_UNITS.map((u) => <option key={u} value={u} />)}</datalist>
         <div className="form-grid">

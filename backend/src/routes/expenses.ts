@@ -16,10 +16,11 @@ export const expensesRouter = Router({ mergeParams: true });
 expensesRouter.use(requireRole(FINANCE_ROLES));
 
 const text = (max: number) => z.string().trim().max(max).optional().nullable().transform((v) => v || null);
+// Every field of a line is optional: a line added by hand can be just an account code, a name, or an amount.
 const schema = z.object({
-  category: z.enum(EXPENSE_CATEGORIES),
-  amount: z.number().min(0),
-  description: z.string().min(1),
+  category: z.enum(EXPENSE_CATEGORIES).default("OTHER"),
+  amount: z.number().min(0).default(0),
+  description: z.string().trim().max(500).default(""),
   date: zDate,
   costumeId: z.string().optional().nullable(),
   characterId: z.string().optional().nullable(),
