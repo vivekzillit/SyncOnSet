@@ -141,6 +141,13 @@ export function castNumbers(chars: Pick<SceneCharacter, "characterId" | "charact
   return { text: numbered.map((c) => c.castNumber).join(", "), title: numbered.map(castLabel).join("\n"), missing: sorted.length - numbered.length };
 }
 
+/** The change each one wears, in the same order ("#13, #8"). A character with no change yet is left out. */
+export function changesOf(chars: Pick<SceneCharacter, "characterId" | "character" | "change">[], byId: Map<string, Character>) {
+  const sorted = sortByCast(chars.map((c) => ({ name: c.character.name, castNumber: c.character.castNumber ?? byId.get(c.characterId)?.castNumber ?? null, change: c.change })));
+  const worn = sorted.filter((c) => c.change);
+  return { text: worn.map((c) => `#${c.change!.changeNumber}`).join(", "), title: worn.map((c) => `${c.name} · #${c.change!.changeNumber} ${c.change!.name}`).join("\n") };
+}
+
 /** The actors playing them, in the same order. A character with nobody cast yet is left out. */
 export function castMembers(chars: Pick<SceneCharacter, "characterId" | "character">[], byId: Map<string, Character>) {
   const sorted = sortByCast(chars.map((c) => {
@@ -152,7 +159,7 @@ export function castMembers(chars: Pick<SceneCharacter, "characterId" | "charact
 }
 
 /* ---------- Inline edit row (add + edit share it) ---------- */
-export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, people = [], error, episodes }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; people?: Character[]; error?: string; episodes?: boolean }) {
+export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, people = [], error, episodes, changes }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; people?: Character[]; error?: string; episodes?: boolean; changes?: { text: string; title: string } }) {
   const set = (patch: Partial<Draft>) => onChange({ ...d, ...patch });
   const castNumberOf = (c: Character) => d.cast[c.id]?.castNumber ?? (c.castNumber != null ? String(c.castNumber) : "");
   const actorOf = (c: Character) => d.cast[c.id]?.actorId ?? c.actorId ?? "";
@@ -241,6 +248,8 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
           </div>
         )}
       </td>
+      {/* The look each character wears is set per row in the breakdown view, not in the scene editor. */}
+      <td className="subtle" title={changes?.title || undefined}>{changes?.text || "—"}</td>
       <td><Input type="date" value={d.shootDate} onChange={(e) => set({ shootDate: e.target.value })} disabled={busy} style={{ minWidth: 150 }} /></td>
       <td className="right nowrap">
         {onSave && <button type="button" className="btn btn-sm" style={{ background: "var(--ok)", color: "#fff", borderColor: "var(--ok)" }} disabled={!canSave} onClick={onSave}>{busy ? "Saving…" : "Save"}</button>}

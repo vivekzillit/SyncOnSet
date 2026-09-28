@@ -1,22 +1,31 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, FileUp, CalendarDays } from "lucide-react";
+import { Plus, Upload, FileUp, CalendarDays, ChevronsDownUp, ChevronsUpDown, Pencil } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, hasEpisodes, humanize, todayISO } from "@/lib/format";
-import type { Character, Scene } from "@/api/types";
+import type { Character, Scene, SceneCharacter } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Modal, PageHead, SearchBox, Select, Spinner, Textarea, discardIfDirty, useToast, useUnsavedGuard } from "@/components/ui";
 import { ScriptUploadModal } from "@/components/ScriptUpload";
 import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
 import { PrincipalsModal, sortByCast } from "@/components/PrincipalsModal";
-import { EditRow, LOCATION_LIST_ID, NEW, PersistError, castMembers, castNumbers, characterNames, characterNamesOf, emptyDraft, persistDraft, planSaveOrder, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
+import { BreakdownRowModal, readinessOf, type BreakdownTarget } from "@/components/BreakdownRowModal";
+import { EditRow, LOCATION_LIST_ID, NEW, PersistError, castMembers, castNumbers, changesOf, characterNames, characterNamesOf, emptyDraft, persistDraft, planSaveOrder, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
 
 const SHOOT_DATE = { day: "2-digit", month: "short", year: "numeric" } as const;
+type View = "breakdown" | "scenes";
+/** A breakdown row: one character as they appear in one scene (a scene nobody is in yet gets a single empty row). */
+type BreakdownLine = { scene: Scene; sc: SceneCharacter | null };
 type SaveAllResult = { ok: string[]; failed: { key: string; number: string; message: string; createdId?: string }[] };
 
-export default function Scenes() {
+/**
+ * Scenes and the breakdown are one page: the same header, filters and editing, read either one row per
+ * scene ("scenes", collapsed) or one row per character in each scene ("breakdown"). The view lives in the
+ * query string, so switching keeps every filter and in-progress edit and never counts as leaving the page.
+ */
+export default function Scenes({ initialView = "scenes" }: { initialView?: View }) {
   const { projectId, can, project } = useProject();
   const { meta } = useAuth();
   const episodes = hasEpisodes(project?.type);
@@ -28,6 +37,10 @@ export default function Scenes() {
   const [rev, setRev] = useState("");
   const [ep, setEp] = useState("");
   const [q, setQ] = useState("");
+  const [characterId, setCharacterId] = useState("");
+  const [params, setParams] = useSearchParams();
+  const view: View = params.get("view") === "scenes" ? "scenes" : params.get("view") === "breakdown" ? "breakdown" : initialView;
+  const [rowModal, setRowModal] = useState<{ open: boolean; target: BreakdownTarget }>({ open: false, target: null });
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [editAll, setEditAll] = useState(false);
   const [principalsFor, setPrincipalsFor] = useState<string | null>(null);
@@ -58,10 +71,25 @@ export default function Scenes() {
     if (when === "upcoming") items = items.filter((s) => pinned(s) || (s.shootDate && dateKey(s.shootDate) >= today));
     // "Scheduled" means the scene has a shoot date at all, past or future — the same rule the Breakdown page uses.
     if (when === "scheduled") items = items.filter((s) => pinned(s) || !!s.shootDate);
+    if (characterId) items = items.filter((s) => pinned(s) || s.characters.some((c) => c.characterId === characterId));
     const needle = q.trim().toLowerCase();
-    if (needle) items = items.filter((s) => pinned(s) || [s.number, s.episode, s.name, s.location, s.synopsis, s.scriptDay, s.intExt, ...s.characters.flatMap((c) => [c.character.name, String(c.character.castNumber ?? charById.get(c.characterId)?.castNumber ?? "")])].some((v) => (v || "").toLowerCase().includes(needle)));
+    if (needle) items = items.filter((s) => pinned(s) || [s.number, s.episode, s.name, s.location, s.synopsis, s.scriptDay, s.intExt, ...s.characters.flatMap((c) => [c.character.name, String(c.character.castNumber ?? charById.get(c.characterId)?.castNumber ?? ""), charById.get(c.characterId)?.actor?.name, c.change?.name])].some((v) => (v || "").toLowerCase().includes(needle)));
     return items;
-  }, [data, drafts, rev, ep, when, q, today, charById]);
+  }, [data, drafts, rev, ep, when, q, today, charById, characterId]);
+
+  /** The breakdown view: each listed scene opened out into its characters, in cast order (only the filtered one when a character is picked). */
+  const lines = useMemo<BreakdownLine[]>(() => list.flatMap((scene): BreakdownLine[] => {
+    const cast = sortByCast(scene.characters.map((sc) => ({ ...sc, name: sc.character.name, castNumber: sc.character.castNumber ?? charById.get(sc.characterId)?.castNumber ?? null })))
+      .filter((sc) => !characterId || sc.characterId === characterId);
+    return cast.length ? cast.map((sc) => ({ scene, sc })) : [{ scene, sc: null }];
+  }), [list, charById, characterId]);
+  const linesByScene = useMemo(() => { const m = new Map<string, BreakdownLine[]>(); for (const l of lines) m.set(l.scene.id, [...(m.get(l.scene.id) || []), l]); return m; }, [lines]);
+  /** Every character that is in at least one scene, for the character filter. */
+  const castOptions = useMemo(() => {
+    const byId = new Map<string, { value: string; label: string }>();
+    for (const s of data || []) for (const c of s.characters) if (!byId.has(c.characterId)) byId.set(c.characterId, { value: c.characterId, label: c.character.name });
+    return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [data]);
 
   // Every draft (the add row first, then edited rows in table order); drafts of scenes deleted elsewhere drop out.
   const draftKeys = useMemo(() => [...(drafts[NEW] ? [NEW] : []), ...list.filter((s) => drafts[s.id]).map((s) => s.id)], [drafts, list]);
@@ -123,6 +151,11 @@ export default function Scenes() {
     },
     onError: (e: Error) => { invalidate(); fail(e); },
   });
+  const dropLine = useMutation({
+    mutationFn: (v: { sceneId: string; characterId: string }) => api(p(projectId, `/scenes/${v.sceneId}/characters/${v.characterId}`), { method: "DELETE" }),
+    onSuccess: (_r, v) => { invalidate(v.sceneId); toast.push("Removed from the scene", "ok"); },
+    onError: fail,
+  });
   const del = useMutation({ mutationFn: (id: string) => api(p(projectId, `/scenes/${id}`), { method: "DELETE" }), onSuccess: () => { qc.invalidateQueries(); toast.push("Scene deleted", "ok"); }, onError: fail });
   const importM = useMutation({
     mutationFn: () => {
@@ -154,6 +187,9 @@ export default function Scenes() {
   const picking = single !== null;
   const picked = single ? sceneById.get(single) : undefined;
   const endSingle = () => setSingle(null);
+  const lineKey = (l: BreakdownLine) => l.sc ? l.sc.id : `scene:${l.scene.id}`;
+  const setView = (v: View) => { setSingle(null); setParams((prev) => { const n = new URLSearchParams(prev); n.set("view", v); return n; }, { replace: true }); };
+  const openLine = (target: BreakdownTarget) => setRowModal({ open: true, target });
   const addRow = () => setDraft(NEW, emptyDraft());
 
   const emptyTitle = when === "today" ? "No scenes scheduled today" : when === "upcoming" ? "No upcoming scenes" : q || rev ? "No scenes match" : "No scenes yet";
@@ -166,7 +202,7 @@ export default function Scenes() {
     <div>
       <PageHead
         title={draftTitle}
-        sub={revisions.length ? (rev ? `Script draft · ${draftCount}` : `${draftCount} · latest ${latestRevision}`) : "Script breakdown & costume readiness per scene"}
+        sub={revisions.length ? (rev ? `Script draft · ${draftCount}` : `${draftCount} · latest ${latestRevision}`) : view === "breakdown" ? "Every scene against the characters in it, with the look each one wears." : "Script breakdown & costume readiness per scene"}
         actions={(revisions.length > 0 || (canEdit && !editAll && !picking)) && (
           <>
             {revisions.length > 0 && <Select value={rev} onChange={(e) => setRev(e.target.value)} options={revisions} placeholder="All drafts" humanizeLabels={false} title="Script draft / revision" aria-label="Script draft" style={{ width: "auto", minWidth: 140 }} />}
@@ -178,6 +214,7 @@ export default function Scenes() {
                 <span className="tiny" style={{ color: "var(--danger)" }}>Upload schedule to add characters and shoot date</span>
               </div>
               <button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button>
+              <button className="btn" onClick={() => openLine(null)}><Plus size={16} /> Add to breakdown</button>
             </>}
           </>
         )}
@@ -186,9 +223,13 @@ export default function Scenes() {
       <div className="filters">
         <SearchBox value={q} onChange={setQ} placeholder="Search scene, location, description, character…" />
         {episodes && episodeList.length > 0 && <Select value={ep} onChange={(e) => setEp(e.target.value)} options={episodeList.map((n) => ({ value: n, label: `Episode ${n}` }))} placeholder="All episodes" humanizeLabels={false} aria-label="Episode" style={{ width: "auto", minWidth: 150 }} />}
+        {castOptions.length > 0 && <Select value={characterId} onChange={(e) => setCharacterId(e.target.value)} options={castOptions} placeholder="All characters" humanizeLabels={false} aria-label="Character" style={{ width: "auto", minWidth: 160 }} />}
         {!editAll && !picking && <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "scheduled", label: "Scheduled" }, { key: "all", label: "All scenes" }]} value={when} onChange={(v) => setWhen((v || "all") as "today" | "upcoming" | "scheduled" | "all")} />}
         {canEdit && (
           <div className="row gap-1" style={{ marginLeft: "auto" }}>
+            {!picking && (view === "breakdown"
+              ? <button className="btn" onClick={() => setView("scenes")} title="One row per scene"><ChevronsDownUp size={16} /> Collapse</button>
+              : <button className="btn" onClick={() => setView("breakdown")} title="One row per character in each scene"><ChevronsUpDown size={16} /> Expand</button>)}
             {editAll ? (
               <><button className="btn btn-blue" disabled={busy || draftKeys.length === 0 || !!firstProblem} title={firstProblem} onClick={() => saveAll.mutate()}>{saveAll.isPending ? "Saving…" : `Save all (${draftKeys.length})`}</button><button className="btn" disabled={busy} onClick={cancelAll}>Cancel</button></>
             ) : picking ? (
@@ -204,7 +245,8 @@ export default function Scenes() {
             ) : (
               <>
                 <button className="btn" disabled={list.length === 0 || busy} onClick={startEditAll}>Edit All</button>
-                <button className="btn" disabled={list.length === 0 || busy} onClick={() => setSingle("")}>Edit Single</button>
+                {/* Breakdown rows carry their own edit / remove buttons, so picking a row is only needed for scenes. */}
+                {view === "scenes" && <button className="btn" disabled={list.length === 0 || busy} onClick={() => setSingle("")}>Edit Single</button>}
                 <button className="btn btn-blue" disabled={!!drafts[NEW] || busy} onClick={addRow}><Plus size={16} /> Add</button>
               </>
             )}
@@ -220,32 +262,79 @@ export default function Scenes() {
         ) : (
           <div className="table-wrap table-scroll">
             <table className="table">
-              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast number</th><th>Cast Name</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">Actions</span></th></tr></thead>
+              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast number</th><th>Cast Name</th><th>Change</th><th>Shoot Date</th><th style={{ width: view === "breakdown" ? 78 : 48 }}><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={characterNamesOf(drafts[NEW].principals, charById)} people={peopleIn(drafts[NEW])} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => cancelOne(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
                 {list.map((s) => {
                   const d = drafts[s.id];
-                  if (d) return <EditRow episodes={episodes} key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={characterNamesOf(d.principals, charById)} people={peopleIn(d)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => cancelOne(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
-                  const names = characterNames(s.characters, charById);
-                  const numbers = castNumbers(s.characters, charById);
-                  const cast = castMembers(s.characters, charById);
-                  const readiness = humanize(s.readiness);
-                  return (
-                    <tr key={s.id} className={picking ? `row-pick${single === s.id ? " is-picked" : ""}` : undefined} style={s.status === "OMITTED" ? { opacity: 0.55 } : undefined} onClick={picking ? () => setSingle(s.id) : undefined}>
-                      <td><span title={readiness} aria-label={readiness} role="img"><Dot status={s.readiness} pulse={s.readiness === "MISSING"} /></span></td>
+                  // A scene being edited is one editor row in either view: the scene fields belong to the scene, not to each character.
+                  if (d) return <EditRow episodes={episodes} key={s.id} d={d} onChange={(nd) => setDraft(s.id, nd)} meta={meta} principals={characterNamesOf(d.principals, charById)} people={peopleIn(d)} changes={changesOf(s.characters, charById)} onPrincipals={() => setPrincipalsFor(s.id)} onSave={editAll ? undefined : () => saveOne.mutate(s.id)} onCancel={editAll ? undefined : () => cancelOne(s.id)} busy={busy && (saveAll.isPending || saveOne.variables === s.id)} error={problems[s.id]} />;
+                  const sceneCells = (
+                    <>
                       {episodes && <td className="nowrap">{s.episode || ""}</td>}
                       <td className="nowrap"><Link to={`/p/${projectId}/scenes/${s.id}`} className="bold" title={s.name || `Scene ${s.number}`}>{s.number}</Link>{s.status !== "PLANNED" && <span className="hide-mobile" style={{ marginLeft: 8 }}><Badge status={s.status} /></span>}</td>
-                      {/* Day or Night only — the story day ("Day 3") is still edited here and shown on Breakdown and scene detail. */}
+                      {/* Day or Night only — the story day ("Day 3") is still edited here and shown on scene detail. */}
                       <td className="nowrap">{humanize(s.timeOfDay) || ""}</td>
                       <td className="nowrap">{scriptLoc(s)}</td>
                       <td title={s.synopsis || undefined}><div className="truncate" style={{ maxWidth: 340 }}>{truncate(s.synopsis)}</div></td>
+                    </>
+                  );
+                  const shootCell = <td className="nowrap">{s.shootDate ? fmtDate(s.shootDate, SHOOT_DATE) : ""}</td>;
+                  const pickCell = (key: string, label: string) => <td className="right">{picking && <input type="radio" name="scene-pick" aria-label={`Select ${label}`} checked={single === key} onChange={() => setSingle(key)} />}</td>;
+                  const rowProps = (key: string) => ({ className: picking ? `row-pick${single === key ? " is-picked" : ""}` : undefined, style: s.status === "OMITTED" ? { opacity: 0.55 } : undefined, onClick: picking ? () => setSingle(key) : undefined });
+
+                  if (view === "breakdown") {
+                    return (linesByScene.get(s.id) || []).map((l) => {
+                      const key = lineKey(l);
+                      if (!l.sc) {
+                        return (
+                          <tr key={key} {...rowProps(key)}>
+                            <td><span title="Nobody in this scene yet" aria-label="Nobody in this scene yet" role="img"><Dot status="NOT_ASSIGNED" /></span></td>
+                            {sceneCells}
+                            <td className="subtle">Nobody yet</td><td className="subtle">—</td><td className="subtle">—</td><td className="subtle">—</td>
+                            {shootCell}
+                            {pickCell(key, `scene ${s.number}`)}
+                          </tr>
+                        );
+                      }
+                      const sc = l.sc;
+                      const full = charById.get(sc.characterId);
+                      const readiness = readinessOf(sc);
+                      return (
+                        <tr key={key} {...rowProps(key)}>
+                          <td><span title={humanize(readiness)} aria-label={humanize(readiness)} role="img"><Dot status={readiness} pulse={readiness === "MISSING"} /></span></td>
+                          {sceneCells}
+                          <td className="nowrap"><Link to={`/p/${projectId}/characters/${sc.characterId}/scenes/${s.id}`}>{sc.character.name}</Link></td>
+                          <td className="subtle mono nowrap">{sc.character.castNumber ?? full?.castNumber ?? "—"}</td>
+                          <td className="subtle nowrap">{full?.actor?.name || "—"}</td>
+                          <td className="nowrap">{sc.change ? <Link to={`/p/${projectId}/changes/${sc.change.id}`}>#{sc.change.changeNumber} {sc.change.name}</Link> : <span className="subtle">No change assigned</span>}</td>
+                          {shootCell}
+                          <td className="right nowrap">
+                            {canEdit && <>
+                              <button className="btn btn-ghost btn-sm" aria-label={`Edit ${sc.character.name} in scene ${s.number}`} onClick={() => openLine({ sceneId: s.id, characterId: sc.characterId, changeId: sc.change?.id || "" })}><Pencil size={14} /></button>
+                              <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Remove?" aria-label={`Remove ${sc.character.name} from scene ${s.number}`} onConfirm={() => dropLine.mutate({ sceneId: s.id, characterId: sc.characterId })}>&times;</ConfirmButton>
+                            </>}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  }
+
+                  const names = characterNames(s.characters, charById);
+                  const numbers = castNumbers(s.characters, charById);
+                  const cast = castMembers(s.characters, charById);
+                  const worn = changesOf(s.characters, charById);
+                  const readiness = humanize(s.readiness);
+                  return (
+                    <tr key={s.id} {...rowProps(s.id)}>
+                      <td><span title={readiness} aria-label={readiness} role="img"><Dot status={s.readiness} pulse={s.readiness === "MISSING"} /></span></td>
+                      {sceneCells}
                       <td title={names.title || undefined}>{names.text}</td>
                       <td className="subtle mono nowrap" title={numbers.title || undefined}>{numbers.text || "—"}</td>
                       <td className="subtle" title={cast.title || undefined}>{cast.text || "—"}</td>
-                      <td className="nowrap">{s.shootDate ? fmtDate(s.shootDate, SHOOT_DATE) : ""}</td>
-                      <td className="right">
-                        {picking && <input type="radio" name="scene-pick" aria-label={`Select scene ${s.number}`} checked={single === s.id} onChange={() => setSingle(s.id)} />}
-                      </td>
+                      <td className="subtle nowrap" title={worn.title || undefined}>{worn.text || "—"}</td>
+                      {shootCell}
+                      {pickCell(s.id, `scene ${s.number}`)}
                     </tr>
                   );
                 })}
@@ -255,6 +344,7 @@ export default function Scenes() {
         )}
       </Card>
 
+      <BreakdownRowModal open={rowModal.open} target={rowModal.target} onClose={() => setRowModal((m) => ({ ...m, open: false }))} scenes={data || []} characters={characters || []} episodes={episodes} />
       <PrincipalsModal open={!!principalsDraft} onClose={() => setPrincipalsFor(null)} characters={characters || []} value={principalsDraft?.principals || []} onChange={(ids) => principalsFor && drafts[principalsFor] && setDraft(principalsFor, { ...drafts[principalsFor], principals: ids })} />
 
       <ScriptUploadModal open={scriptOpen} onClose={() => setScriptOpen(false)} onImported={() => { setWhen("all"); setRev(""); }} />

@@ -21,7 +21,8 @@ export function ProjectShell() {
 }
 
 interface MenuItem { to: string; label: string; count?: number; danger?: boolean; end?: boolean }
-interface Tab { key: string; label: string; to?: string; items?: MenuItem[]; end?: boolean }
+/** `also`: other paths that light the tab up (Scene Breakdown is one page reachable as /breakdown and /scenes). */
+interface Tab { key: string; label: string; to?: string; items?: MenuItem[]; end?: boolean; also?: string[] }
 
 function TabMenu({ tab, activePath }: { tab: Tab; activePath: string }) {
   const [open, setOpen] = useState(false);
@@ -69,9 +70,10 @@ function Shell() {
   const c = dash?.counts;
   const base = `/p/${projectId}`;
 
+  const sceneActive = [`${base}/breakdown`, `${base}/scenes`].some((path) => loc.pathname === path || loc.pathname.startsWith(`${path}/`));
   const tabs: Tab[] = [
     { key: "dash", label: "Dashboard", to: base, end: true },
-    { key: "scenes", label: "Scene Breakdown", items: [{ to: `${base}/scenes`, label: "Scene" }, { to: `${base}/breakdown`, label: "Breakdown" }] },
+    { key: "scenes", label: "Scene Breakdown", to: `${base}/breakdown`, also: [`${base}/scenes`] },
     { key: "characters", label: "Character Breakdown", items: [{ to: `${base}/characters`, label: "Characters", end: true }, { to: `${base}/actors`, label: "Actors" }] },
     { key: "costumes", label: "Costumes", items: [{ to: `${base}/costumes`, label: "Costumes", count: c?.costumes }, { to: `${base}/scan`, label: "Scan" }, { to: `${base}/cleaning`, label: "Sink / Cleaning", count: c?.cleaning }, { to: `${base}/fittings`, label: "Fittings", count: c?.fittingsToday }, { to: `${base}/alterations`, label: "Alterations", count: c?.alteration }, { to: `${base}/damages`, label: "Damage", count: c?.damaged, danger: true }, { to: `${base}/missing`, label: "Missing", count: c?.missing, danger: true }, { to: `${base}/labels`, label: "QR Labels" }, { to: `${base}/vendors`, label: "Vendors & Rentals", count: c?.rentalsDue, danger: true }] },
     { key: "continuity", label: "Continuity", items: [{ to: `${base}/continuity`, label: "On Set", end: true }, { to: `${base}/continuity/book`, label: "Book" }] },
@@ -112,7 +114,7 @@ function Shell() {
         <div className="topnav-row2 hide-mobile">
           <span className="dept-chip"><span className="dot tone-accent" /> Costumes</span>
           {tabs.map((t) => t.items ? <TabMenu key={t.key} tab={t} activePath={loc.pathname} /> : (
-            <NavLink key={t.key} to={t.to!} end={t.end} className={({ isActive }) => `tab ${isActive ? "active" : ""}`}>{t.label}</NavLink>
+            <NavLink key={t.key} to={t.to!} end={t.end} className={({ isActive }) => `tab ${isActive || t.also?.some((path) => loc.pathname === path || loc.pathname.startsWith(`${path}/`)) ? "active" : ""}`}>{t.label}</NavLink>
           ))}
         </div>
       </header>
@@ -127,7 +129,7 @@ function Shell() {
 
       <nav className="bottom-nav">
         <NavLink to={base} end><LayoutDashboard size={20} /><span>Home</span></NavLink>
-        <NavLink to={`${base}/scenes`}><Clapperboard size={20} /><span>Scenes</span></NavLink>
+        <NavLink to={`${base}/breakdown`} className={() => (sceneActive ? "active" : "")}><Clapperboard size={20} /><span>Scenes</span></NavLink>
         <NavLink to={`${base}/costumes`}><Shirt size={20} /><span>Costumes</span></NavLink>
         <NavLink to={`${base}/scan`} className="scan"><div className="scan-bubble"><ScanLine size={22} /></div><span>Scan</span></NavLink>
         <NavLink to={`${base}/cleaning`}><Droplets size={20} /><span>Sink</span></NavLink>
