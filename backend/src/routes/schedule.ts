@@ -99,6 +99,10 @@ const applySchema = z.object({
     cast: z.array(z.number().int().min(0)).max(200).optional(),
   })).max(2000),
   overwrite: z.boolean().optional(), // false (default): only fill in what is blank
+  /** A call sheet is remembered on the production (its day and file name) until the next one replaces it. */
+  kind: z.enum(["SCHEDULE", "CALLSHEET"]).optional(),
+  file: zOptionalString,
+  sheetDate: zDate,
 });
 
 /**
@@ -154,7 +158,11 @@ scheduleRouter.post(
         linked += 1;
       }
     }
-    await audit(req.user, projectId, "SCHEDULE_APPLY", "SCENE", "bulk", { updated, created, filled, linked, missing, overwrite: !!body.overwrite });
+    if (body.kind === "CALLSHEET") {
+      const sheetDate = body.sheetDate ?? body.assignments.map((a) => a.date).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+      await prisma.project.update({ where: { id: projectId }, data: { callsheetDate: sheetDate, callsheetFile: body.file || null, callsheetAt: new Date() } });
+    }
+    await audit(req.user, projectId, "SCHEDULE_APPLY", "SCENE", "bulk", { updated, created, filled, linked, missing, overwrite: !!body.overwrite, kind: body.kind });
     res.json({ updated, created, filled, linked, missing });
   }),
 );

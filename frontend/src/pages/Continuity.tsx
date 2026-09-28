@@ -1,11 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, Images, Keyboard, Printer, Video, X } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, FileText, Images, Keyboard, Printer, Video, X } from "lucide-react";
 import { api, ApiError, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { CONTINUITY_ROLES } from "@/state/auth";
-import { dateKey, fmtDate, fmtDateTime, todayISO } from "@/lib/format";
+import { dateKey, fmtDate, fmtDateTime, relativeTime, todayISO } from "@/lib/format";
 import { characterReadiness, itemLevel } from "@/lib/readiness";
 import type { Character, ContinuityRecord, Costume, Scene } from "@/api/types";
 import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, PageHead, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
@@ -97,6 +97,7 @@ function useContinuity() {
  */
 function ShootDay({ c, day, onDay, detail }: { c: ReturnType<typeof useContinuity>; day: string; onDay: (d: string) => void; detail?: ReactNode }) {
   const { project } = useProject();
+  const sheetDay = dateKey(project?.callsheetDate);
   const scenes = useMemo(() => (c.scenes || []).filter((s) => dateKey(s.shootDate) === day && s.status !== "OMITTED"), [c.scenes, day]);
   const rows = scenes.flatMap((s) => s.characters.map((sc) => ({ scene: s, sc, r: characterReadiness(sc) })));
   const notReady = rows.filter((x) => x.r.level !== "READY");
@@ -108,6 +109,13 @@ function ShootDay({ c, day, onDay, detail }: { c: ReturnType<typeof useContinuit
       actions={<Input type="date" value={day} onChange={(e) => onDay(e.target.value || todayISO())} style={{ width: "auto" }} aria-label="Shooting day" />}
       className="mb-2"
     >
+      {project?.callsheetAt && (
+        <div className="row gap-2 wrap mb-2 small">
+          <span className="row gap-1"><FileText size={14} /> Call sheet{project.callsheetFile ? <b>{project.callsheetFile}</b> : null}{sheetDay ? <> · for {fmtDate(sheetDay, { weekday: "short", day: "2-digit", month: "short" })}</> : null}</span>
+          <span className="subtle">uploaded {relativeTime(project.callsheetAt)} · stays until a new call sheet replaces it</span>
+          {sheetDay && sheetDay !== day && <button type="button" className="btn btn-sm" onClick={() => onDay(sheetDay)}>Show call sheet day</button>}
+        </div>
+      )}
       {scenes.length === 0 ? (
         <Empty icon="📋" title="Nothing scheduled for this day" hint="Upload the call sheet and its scenes land here with the date on them." />
       ) : (
@@ -208,7 +216,7 @@ function TagSomeone({ c }: { c: ReturnType<typeof useContinuity> }) {
 /** On set: the day board, with the record-take form under whichever scene is open. */
 export default function ContinuityOnSet() {
   const c = useContinuity();
-  const { can } = useProject();
+  const { can, project } = useProject();
   const qc = useQueryClient();
   const toast = useToast();
   const mayRecord = can(CONTINUITY_ROLES);
@@ -219,7 +227,11 @@ export default function ContinuityOnSet() {
   const [touched, setTouched] = useState(false);
   const [media, setMedia] = useState<File[]>([]);
   const [callsheetOpen, setCallsheetOpen] = useState(false);
-  const [day, setDay] = useState(todayISO());
+  // The board opens on the day of the latest call sheet, which stays until a new one replaces it; picking a
+  // date (or following a scene in) moves it for this visit only.
+  const [pickedDay, setDay] = useState<string | null>(null);
+  const sheetDay = dateKey(project?.callsheetDate);
+  const day = pickedDay ?? (sheetDay || todayISO());
 
   // The book and the scene pages link straight to a scene, which may sit on another day. The form lives
   // inside that scene's card on the day board, so the board has to follow the link in or nothing opens.

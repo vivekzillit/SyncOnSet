@@ -51,9 +51,12 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
   const links = included.reduce((n, s) => n + s.cast.filter((c) => c.id).length, 0);
   const skipped = rows.filter((s) => !s.exists && !createMissing).length;
 
+  // The day this upload is for: the earliest date it gives a scene, or the date printed on it.
+  const sheetDay = included.map((sc) => dates[sc.number]).filter(Boolean).sort()[0] || result?.date || null;
   const apply = useMutation({
     mutationFn: () => api<{ updated: number; created: number; filled: number; linked: number }>(p(projectId, "/schedule/apply"), {
       body: {
+        kind, file: result?.file || null, sheetDate: sheetDay ? localMidnightISO(sheetDay) : null,
         assignments: included.map((s) => ({
           sceneId: s.id, number: s.number,
           date: dates[s.number] ? localMidnightISO(dates[s.number]) : null,
@@ -67,10 +70,10 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["scenes", projectId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
       const bits = [r.created ? `${r.created} scene${r.created === 1 ? "" : "s"} added` : "", r.updated ? `${r.updated} updated` : "", r.filled ? `${r.filled} detail${r.filled === 1 ? "" : "s"} filled in` : "", r.linked ? `${r.linked} cast link${r.linked === 1 ? "" : "s"}` : ""].filter(Boolean);
       toast.push(`${bits.join(", ") || "Nothing to change"} from the ${LABEL[kind]}`, "ok");
-      const applied = included.map((sc) => dates[sc.number]).filter(Boolean).sort()[0] || result?.date || null;
-      onApplied?.(applied); reset(); onClose();
+      onApplied?.(sheetDay); reset(); onClose();
     },
   });
   const reset = () => { setFile(null); setResult(null); setDates({}); setExcluded(new Set()); if (fileRef.current) fileRef.current.value = ""; };

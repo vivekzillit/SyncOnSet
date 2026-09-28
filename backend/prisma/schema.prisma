@@ -47,6 +47,9 @@ model Project {
   startDate       DateTime? // shoot window
   endDate         DateTime?
   wrapDate        DateTime? // last day of principal photography
+  callsheetDate   DateTime? // the day the latest uploaded call sheet is for; On set opens on it until a new one replaces it
+  callsheetFile   String?   // that call sheet's file name (the file itself is not kept)
+  callsheetAt     DateTime? // when it was applied
   notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
