@@ -6,13 +6,16 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 const SELECTOR = ".table-wrap, .table-scroll";
 const SIZE = 36;
 const GAP = 8;
+/** The small buttons sit in the 18px the stylesheet leaves free at each end of the sideways scrollbar. */
+const MINI = 18;
 
-type Arrow = { key: string; el: HTMLElement; dir: -1 | 1; x: number; y: number };
+type Arrow = { key: string; el: HTMLElement; dir: -1 | 1; x: number; y: number; mini?: { h: number; off: boolean } };
 
 /**
  * ◀ ▶ buttons on any table that is wider than its box, mounted once for the whole app so no page has to opt in.
- * They float over the scroller's visible middle, show only in a direction there is more to see, and hide when
- * something (a modal, the sticky header, a dropdown) covers the spot they would sit on.
+ * Two kinds: round ones floating over the scroller's visible middle (only in a direction there is more to see), and
+ * small ones at the two ends of its scrollbar, like a classic Windows bar (always there, dimmed at the end).
+ * Both hide when something (a modal, the sticky header, a dropdown) covers the spot they would sit on.
  */
 export function ScrollArrows() {
   const [arrows, setArrows] = useState<Arrow[]>([]);
@@ -44,9 +47,19 @@ export function ScrollArrows() {
         const id = ids.get(el)!;
         if (el.scrollLeft > 2 && clearAt(el, r.left + GAP, y)) out.push({ key: `${id}-l`, el, dir: -1, x: r.left + GAP, y });
         if (el.scrollLeft < max - 2 && clearAt(el, r.right - GAP - SIZE, y)) out.push({ key: `${id}-r`, el, dir: 1, x: r.right - GAP - SIZE, y });
+        // The scrollbar's own row: only where the browser draws a real bar (not a thin overlay one).
+        const barTop = r.top + el.clientTop + el.clientHeight;
+        const h = el.offsetHeight - el.clientHeight - el.clientTop * 2;
+        if (h >= 8 && barTop >= 0 && barTop + h <= window.innerHeight) {
+          const barY = barTop + h / 2;
+          const lx = r.left + el.clientLeft;
+          const rx = lx + el.clientWidth - MINI;
+          if (clearAt(el, lx - SIZE / 2 + MINI / 2, barY)) out.push({ key: `${id}-ml`, el, dir: -1, x: lx, y: barY, mini: { h, off: el.scrollLeft <= 2 } });
+          if (clearAt(el, rx - SIZE / 2 + MINI / 2, barY)) out.push({ key: `${id}-mr`, el, dir: 1, x: rx, y: barY, mini: { h, off: el.scrollLeft >= max - 2 } });
+        }
       });
       // Only re-render when something moved, so our own buttons appearing never loops back through the observer.
-      const sig = out.map((a) => `${a.key}:${Math.round(a.x)},${Math.round(a.y)}`).join("|");
+      const sig = out.map((a) => `${a.key}:${Math.round(a.x)},${Math.round(a.y)},${a.mini?.off ?? ""}`).join("|");
       if (sig !== last.current) { last.current = sig; setArrows(out); }
     };
     const schedule = () => { if (!raf) raf = requestAnimationFrame(measure); };
@@ -67,7 +80,13 @@ export function ScrollArrows() {
   return createPortal(
     <div ref={layer} className="scroll-arrows">
       <style>{"@media print { .scroll-arrows { display: none; } }"}</style>
-      {arrows.map((a) => (
+      {arrows.map((a) => a.mini ? (
+        <button key={a.key} type="button" aria-label={a.dir < 0 ? "Scroll left" : "Scroll right"} disabled={a.mini.off}
+          onClick={() => a.el.scrollBy({ left: a.dir * 80, behavior: "smooth" })}
+          style={{ position: "fixed", left: a.x, top: a.y - a.mini.h / 2, width: MINI, height: a.mini.h, zIndex: 40, border: "none", borderRadius: 3, background: "var(--surface-2)", color: "var(--text-2)", display: "grid", placeItems: "center", cursor: a.mini.off ? "default" : "pointer", padding: 0, opacity: a.mini.off ? 0.35 : 1 }}>
+          {a.dir < 0 ? <ChevronLeft size={Math.min(14, a.mini.h + 2)} strokeWidth={3} /> : <ChevronRight size={Math.min(14, a.mini.h + 2)} strokeWidth={3} />}
+        </button>
+      ) : (
         <button key={a.key} type="button" aria-label={a.dir < 0 ? "Scroll left" : "Scroll right"} title={a.dir < 0 ? "Scroll left" : "Scroll right"}
           onClick={() => a.el.scrollBy({ left: a.dir * Math.max(120, a.el.clientWidth * 0.7), behavior: "smooth" })}
           style={{ position: "fixed", left: a.x, top: a.y - SIZE / 2, width: SIZE, height: SIZE, zIndex: 40, borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", boxShadow: "0 2px 10px rgba(0,0,0,0.14)", display: "grid", placeItems: "center", cursor: "pointer", padding: 0 }}>
