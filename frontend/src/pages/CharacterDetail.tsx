@@ -10,6 +10,7 @@ import type { Actor, Character, Costume, CostumeChange, Fitting, Photo } from "@
 import { Badge, Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ActorSelect, Avatar, CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
 import { ActorModal } from "@/components/ActorModal";
+import { CostumeFormModal } from "@/components/costume";
 
 type CharacterDetailRow = { label: string; value: string };
 type Detail = Character & { actor?: Actor | null; details?: CharacterDetailRow[]; scenes: { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string }; change?: { id: string; changeNumber: number; name: string } | null }[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
@@ -27,6 +28,7 @@ export default function CharacterDetail() {
   const base = `/p/${projectId}`;
   const { data: ch, isLoading } = useQuery({ queryKey: ["character", id], queryFn: () => api<Detail>(p(projectId, `/characters/${id}`)) });
   const [newOpen, setNewOpen] = useState(false);
+  const [pieceOpen, setPieceOpen] = useState(false);
   const [nf, setNf] = useState<{ name: string; description: string; costumes: Costume[] }>({ name: "", description: "", costumes: [] });
   const [pick, setPick] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -182,7 +184,7 @@ export default function CharacterDetail() {
               </div>
             )}
           </Card>
-          <Card title={`Costume Changes (${ch.changes.length})`}>
+          <Card title={`Costume Changes (${ch.changes.length})`} actions={canEdit && <button className="btn btn-sm" onClick={() => setNewOpen(true)}><Plus size={14} /> Add change</button>}>
             {ch.changes.length === 0 ? <Empty icon="👗" title="No changes yet" hint="A change is a numbered outfit for this character. Add one, then attach costume pieces." /> : (
               <div className="col gap-2">
                 {ch.changes.map((c) => (
@@ -201,13 +203,15 @@ export default function CharacterDetail() {
               </div>
             )}
           </Card>
-          <Card title={`All pieces (${ch.costumes.length})`} pad0>
+          <Card title={`All pieces (${ch.costumes.length})`} actions={canEdit && <button className="btn btn-sm" onClick={() => setPieceOpen(true)}><Plus size={14} /> Add piece</button>} pad0>
             {ch.costumes.length === 0 ? <Empty title="No costumes tagged to this character" /> : <div className="list">{ch.costumes.map((c) => <CostumeRow key={c.id} c={c} noStatus />)}</div>}
           </Card>
           {ch.notes && <Card title="Notes"><div className="small">{ch.notes}</div></Card>}
         </div>
       </div>
 
+      {/* A piece added here belongs to this character from the start. */}
+      <CostumeFormModal open={pieceOpen} onClose={() => setPieceOpen(false)} defaultCharacterId={ch.id} onSaved={() => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["costumes", projectId] }); }} />
       <Modal open={newOpen} onClose={() => setNewOpen(false)} title={`New change for ${ch.name}`} footer={<><button className="btn" onClick={() => setNewOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!nf.name || createChange.isPending} onClick={() => createChange.mutate()}>Create</button></>}>
         <div className="col">
           <Field label="Name" help="e.g. Restaurant - white shirt & jeans"><Input value={nf.name} onChange={(e) => setNf({ ...nf, name: e.target.value })} /></Field>
