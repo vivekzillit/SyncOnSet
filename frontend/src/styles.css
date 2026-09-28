@@ -354,3 +354,6 @@ button.item { width: 100%; background: none; border: 0; text-align: left; font: 
 .take-media-item img, .take-media-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .take-media-badge { position: absolute; left: 4px; bottom: 4px; background: rgba(0,0,0,.6); color: #fff; border-radius: 4px; padding: 2px 4px; display: flex; }
 .take-media-remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; display: grid; place-items: center; cursor: pointer; }
+/* Script upload review: what this draft would change, against what the scene says now. */
+.diff-new { background: var(--warn-bg); box-shadow: inset 0 -2px 0 var(--warn); border-radius: 4px; padding: 0 3px; }
+.diff-old { color: var(--text-3); text-decoration: line-through; }

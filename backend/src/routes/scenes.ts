@@ -179,7 +179,8 @@ scenesRouter.post(
     const result = parseScript(format, content);
     const existing = await prisma.character.findMany({ where: { projectId: req.projectId }, select: { name: true } });
     const existingNames = new Set(existing.map((c) => c.name.trim().toLowerCase()));
-    const stored = new Map((await prisma.scene.findMany({ where: { projectId: req.projectId }, select: { number: true, scriptText: true, revision: true } })).map((sc) => [sc.number, sc]));
+    // The stored values travel with the preview so the reviewer can see what each scene would become.
+    const stored = new Map((await prisma.scene.findMany({ where: { projectId: req.projectId }, select: { number: true, scriptText: true, revision: true, name: true, location: true, intExt: true, timeOfDay: true, scriptDay: true, synopsis: true, pages: true } })).map((sc) => [sc.number, sc]));
     const norm = (t: string | null | undefined) => (t || "").replace(/\s+/g, " ").trim().toLowerCase();
     await audit(req.user, req.projectId!, "SCRIPT_PARSE", "SCENE", "preview", { file: req.file.originalname, format, scenes: result.scenes.length });
     const existingList = await prisma.character.findMany({ where: { projectId: req.projectId }, select: { id: true, name: true, castNumber: true }, orderBy: { name: "asc" } });
@@ -193,7 +194,8 @@ scenesRouter.post(
       scenes: result.scenes.map((sc) => {
         const prev = stored.get(sc.number);
         const change = !prev ? "new" : norm(prev.scriptText) === norm(sc.text) ? "unchanged" : "updated";
-        return { ...sc, exists: !!prev, change, previousRevision: prev?.revision || null };
+        const previous = prev ? { name: prev.name, location: prev.location, intExt: prev.intExt, timeOfDay: prev.timeOfDay, scriptDay: prev.scriptDay, synopsis: prev.synopsis, pages: prev.pages } : null;
+        return { ...sc, exists: !!prev, change, previousRevision: prev?.revision || null, previous };
       }),
     });
   }),
