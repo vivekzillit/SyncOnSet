@@ -155,12 +155,17 @@ export function SearchBox({ value, onChange, placeholder = "Search…", autoFocu
  * One "Discard changes?" dialog for the whole app. Anything that throws away unsaved input (a modal's
  * Cancel / ✕ / Esc / backdrop, an inline row's Cancel, leaving the production wizard) asks through this.
  */
-type DiscardAsk = { title: string; message: string; confirm: string; resolve: (ok: boolean) => void };
+type DiscardAsk = { title: string; message: string; confirm: string; cancel?: string; danger?: boolean; resolve: (ok: boolean) => void };
 let showDiscard: ((ask: DiscardAsk) => void) | null = null;
 let discardOpen = false;
 export function confirmDiscard(message = "You have unsaved changes. Discard them?", title = "Discard changes?", confirm = "Discard"): Promise<boolean> {
   if (!showDiscard) return Promise.resolve(window.confirm(message));
   return new Promise((resolve) => showDiscard!({ title, message, confirm, resolve }));
+}
+/** The same dialog for any other "are you sure?" — its own title, message and button labels. */
+export function confirmAction({ title, message, confirm, cancel = "Cancel", danger = false }: { title: string; message: string; confirm: string; cancel?: string; danger?: boolean }): Promise<boolean> {
+  if (!showDiscard) return Promise.resolve(window.confirm(message));
+  return new Promise((resolve) => showDiscard!({ title, message, confirm, cancel, danger, resolve }));
 }
 /** Every Cancel asks before closing a form: "Discard changes?" once something was changed, otherwise "Close without saving?". */
 export const discardIfDirty = (dirty: boolean, message?: string) => (dirty ? confirmDiscard(message) : confirmDiscard("Nothing will be saved.", "Close without saving?", "Close"));
@@ -213,8 +218,8 @@ function DiscardHost() {
         <h2 id="discard-title">{ask.title}</h2>
         <p className="subtle mt-1">{ask.message}</p>
         <div className="modal-foot">
-          <button ref={keepRef} type="button" className="btn" onClick={() => answer(false)}>Keep editing</button>
-          <button type="button" className="btn btn-danger" onClick={() => answer(true)}>{ask.confirm}</button>
+          <button ref={keepRef} type="button" className="btn" onClick={() => answer(false)}>{ask.cancel ?? "Keep editing"}</button>
+          <button type="button" className={`btn ${ask.danger === false ? "btn-primary" : "btn-danger"}`} onClick={() => answer(true)}>{ask.confirm}</button>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES, OPS_ROLES } from "@/state/auth";
 import { fmtDate, humanize } from "@/lib/format";
 import type { Actor, Character, Costume, CostumeChange, Fitting, Photo } from "@/api/types";
-import { Badge, Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { Badge, Card, ConfirmButton, confirmAction, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { ActorSelect, Avatar, CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
 import { ActorModal } from "@/components/ActorModal";
 import { CostumeFormModal } from "@/components/costume";
@@ -68,10 +68,16 @@ export default function CharacterDetail() {
     onSuccess: (_r, c) => {
       qc.invalidateQueries({ queryKey: ["character", id] });
       qc.invalidateQueries({ queryKey: ["costumes", projectId] });
-      toast.push(c.character?.name ? `${c.assetNumber} moved here from ${c.character.name}` : `${c.assetNumber} added`, "ok");
+      toast.push(c.character?.name ? `${c.assetNumber} moved from ${c.character.name}` : `${c.assetNumber} added`, "ok");
     },
     onError: (e: Error) => toast.push(e.message, "danger"),
   });
+  const pickPiece = async (c: Costume) => {
+    setTagOpen(false);
+    const owner = c.character && c.character.id !== id ? c.character.name : null;
+    if (owner && !(await confirmAction({ title: "Move this piece?", message: `${c.assetNumber} ${c.name} belongs to ${owner}. Moving it takes it off ${owner} and tags it to ${ch?.name}.`, confirm: "Move piece" }))) return;
+    tagPiece.mutate(c);
+  };
   const update = useMutation({
     mutationFn: () => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { name: ef.name, type: ef.type, actorId: ef.actorId || null, age: ef.age ? Number(ef.age) : null, description: ef.description || null, notes: ef.notes || null, castNumber: ef.castNumber ? Number(ef.castNumber) : null } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["characters", projectId] }); setEditOpen(false); toast.push("Saved", "ok"); },
@@ -222,7 +228,7 @@ export default function CharacterDetail() {
       </div>
 
       {/* A piece added here belongs to this character from the start. */}
-      <CostumePicker open={tagOpen} onClose={() => setTagOpen(false)} title={`Pick a piece for ${ch.name}`} filter={(c) => c.characterId !== ch.id} onPick={(c) => { tagPiece.mutate(c); setTagOpen(false); }} />
+      <CostumePicker open={tagOpen} onClose={() => setTagOpen(false)} title={`Pick a piece for ${ch.name}`} filter={(c) => c.characterId !== ch.id} onPick={pickPiece} />
       <CostumeFormModal open={pieceOpen} onClose={() => setPieceOpen(false)} defaultCharacterId={ch.id} onSaved={() => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["costumes", projectId] }); }} />
       <Modal open={newOpen} onClose={() => setNewOpen(false)} title={`New change for ${ch.name}`} footer={<><button className="btn" onClick={() => setNewOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!nf.name || createChange.isPending} onClick={() => createChange.mutate()}>Create</button></>}>
         <div className="col">
