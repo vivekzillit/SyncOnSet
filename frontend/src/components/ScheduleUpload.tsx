@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ClipboardList, FileText, Upload } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarDays, ClipboardList, FileText, PenLine, Plus, Upload, X } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { dateKey, fmtDate, humanize } from "@/lib/format";
+import { dateKey, fmtDate, humanize, todayISO } from "@/lib/format";
+import type { Scene } from "@/api/types";
 import { Badge, ErrorBox, Input, Modal, useToast } from "./ui";
 
 export type DocKind = "SCHEDULE" | "CALLSHEET";
@@ -13,6 +14,8 @@ interface PreviewScene {
   current: SceneFields | null; read: SceneFields; fills: string[];
   cast: { castNumber: number; id: string | null; name: string | null }[];
   date: string | null; dayNumber: number | null;
+  /** Added by hand in the review, because the file did not name it (or no file was read at all). */
+  manual?: boolean;
 }
 interface ParseResult { kind: DocKind; file: string; format: string; date: string | null; dayNumber: number | null; days: number; scenes: PreviewScene[]; warnings: string[]; breakdownEmpty: boolean; knownCastNumbers: number }
 
@@ -33,6 +36,9 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [createMissing, setCreateMissing] = useState(true);
   const [fillBlanks, setFillBlanks] = useState(true);
+  const [manualNo, setManualNo] = useState("");
+  const [manualDate, setManualDate] = useState("");
+  const { data: breakdown } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")), enabled: open && !!result });
 
   const parse = useMutation({
     mutationFn: (f: File) => { const fd = new FormData(); fd.append("file", f); fd.append("kind", kind); return api<ParseResult>(p(projectId, "/schedule/parse"), { formData: fd }); },
@@ -44,7 +50,8 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
     },
   });
   const rows = result?.scenes || [];
-  const included = useMemo(() => rows.filter((s) => !excluded.has(s.number) && (s.exists || createMissing)), [rows, excluded, createMissing]);
+  // A scene added by hand is always meant: it is created if the breakdown does not have it, whatever the tick box says.
+  const included = useMemo(() => rows.filter((s) => !excluded.has(s.number) && (s.exists || createMissing || s.manual)), [rows, excluded, createMissing]);
   const newScenes = included.filter((s) => !s.exists).length;
   const scheduled = included.filter((s) => s.exists && dates[s.number]).length;
   const fills = fillBlanks ? included.filter((s) => s.exists).reduce((n, s) => n + s.fills.length, 0) : 0;
@@ -60,7 +67,7 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
         assignments: included.map((s) => ({
           sceneId: s.id, number: s.number,
           date: dates[s.number] ? localMidnightISO(dates[s.number]) : null,
-          create: !s.exists && createMissing,
+          create: !s.exists && (createMissing || !!s.manual),
           // A new scene always takes what the file says; an existing one only where "fill in blanks" is ticked.
           fields: fillBlanks || !s.exists ? { name: s.read.name, location: s.read.location, intExt: s.read.intExt, timeOfDay: s.read.timeOfDay, pages: s.read.pages, scriptDay: s.read.scriptDay } : undefined,
           cast: s.cast.filter((c) => c.id).map((c) => c.castNumber),
@@ -76,7 +83,29 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
       onApplied?.(sheetDay); reset(); onClose();
     },
   });
-  const reset = () => { setFile(null); setResult(null); setDates({}); setExcluded(new Set()); if (fileRef.current) fileRef.current.value = ""; };
+  const reset = () => { setFile(null); setResult(null); setDates({}); setExcluded(new Set()); setManualNo(""); setManualDate(""); if (fileRef.current) fileRef.current.value = ""; };
+  /** No file, or a file that named nothing: start an empty review and add the scenes by hand. */
+  const byHand = () => {
+    setResult({ kind, file: "", format: "manual", date: kind === "CALLSHEET" ? todayISO() : null, dayNumber: null, days: 0, scenes: [], warnings: [], breakdownEmpty: false, knownCastNumbers: 0 });
+    setDates({}); setExcluded(new Set()); setCreateMissing(true);
+  };
+  const manualKey = manualNo.trim().toUpperCase().replace(/^0+(?=\d)/, "");
+  const manualDup = !!manualKey && rows.some((s) => s.number.toUpperCase() === manualKey);
+  const defaultManualDate = manualDate || rows.map((sc) => dates[sc.number]).filter(Boolean).sort()[0] || result?.date || todayISO();
+  /** A scene the file missed: matched to the breakdown by number, otherwise it will be a new scene. */
+  const addManual = () => {
+    if (!result || !manualKey || manualDup) return;
+    const found = (breakdown || []).find((sc) => sc.number.toUpperCase() === manualKey);
+    const current = found ? { intExt: found.intExt || null, location: found.location || null, timeOfDay: found.timeOfDay || null, name: found.name || null, pages: found.pages || null, scriptDay: found.scriptDay || null } : null;
+    const row: PreviewScene = {
+      number: found?.number || manualNo.trim(), id: found?.id || null, exists: !!found, status: found?.status || null, currentShootDate: found?.shootDate || null,
+      current, read: { intExt: null, location: null, timeOfDay: null, name: null, pages: null, scriptDay: null }, fills: [], cast: [], date: defaultManualDate, dayNumber: null, manual: true,
+    };
+    setResult({ ...result, scenes: [...result.scenes, row] });
+    setDates((d) => ({ ...d, [row.number]: defaultManualDate }));
+    setManualNo("");
+  };
+  const removeManual = (n: string) => { if (result) setResult({ ...result, scenes: result.scenes.filter((s) => !(s.manual && s.number === n)) }); setDates((d) => { const x = { ...d }; delete x[n]; return x; }); };
   const pick = (f: File | null) => { if (!f) return; setFile(f); parse.mutate(f); };
   const toggle = (n: string) => setExcluded((s) => { const x = new Set(s); x.has(n) ? x.delete(n) : x.add(n); return x; });
   const title = kind === "CALLSHEET" ? "Upload callsheet" : "Upload schedule";
@@ -97,15 +126,18 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
             <div className="subtle mt-1">PDF from Movie Magic, StudioBinder, Celtx, Word or Excel · CSV · plain text</div>
             <input ref={fileRef} type="file" accept=".pdf,.csv,.tsv,.txt,application/pdf,text/csv,text/plain" hidden onChange={(e) => pick(e.target.files?.[0] || null)} />
           </div>
-          <div className="subtle">Scenes already in the breakdown keep what they have; only blanks are filled in. Nothing is ever deleted.</div>
+          <div className="row between wrap gap-2">
+            <div className="subtle">Scenes already in the breakdown keep what they have; only blanks are filled in. Nothing is ever deleted.</div>
+            <button type="button" className="btn btn-sm" onClick={byHand}><PenLine size={14} /> Add the scenes by hand</button>
+          </div>
           <ErrorBox error={parse.error} />
         </div>
       ) : (
         <div className="col gap-2">
           <div className="row gap-2 wrap">
-            <FileText size={16} /><span className="bold">{result.file}</span><Badge status="INFO">{result.format.toUpperCase()}</Badge>
+            {result.file ? <><FileText size={16} /><span className="bold">{result.file}</span><Badge status="INFO">{result.format.toUpperCase()}</Badge></> : <><PenLine size={16} /><span className="bold">Scenes added by hand</span></>}
             <span className="subtle">{rows.length} scene{rows.length === 1 ? "" : "s"} · {result.days} shoot day{result.days === 1 ? "" : "s"}{result.dayNumber != null ? ` · Day ${result.dayNumber}` : ""}</span>
-            <button className="btn btn-sm" style={{ marginLeft: "auto" }} onClick={reset}>Choose another file</button>
+            <button className="btn btn-sm" style={{ marginLeft: "auto" }} onClick={reset}>{result.file ? "Choose another file" : "Upload a file instead"}</button>
           </div>
           {result.warnings.map((w, i) => <div key={i} className="notice">{w}</div>)}
           <div className="notice ok">
@@ -121,18 +153,21 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
               <thead><tr><th></th><th>Sc</th><th>Slugline</th><th>Shoot date</th><th className="hide-mobile">From the file</th><th>Status</th></tr></thead>
               <tbody>
                 {rows.map((s) => {
-                  const on = !excluded.has(s.number) && (s.exists || createMissing);
+                  const on = !excluded.has(s.number) && (s.exists || createMissing || !!s.manual);
                   const line = slug(s.read) || slug(s.current);
                   const extras = [s.read.pages, s.cast.length ? `cast ${s.cast.map((c) => c.castNumber).join(", ")}` : "", s.read.scriptDay].filter(Boolean) as string[];
                   return (
                     <tr key={s.number} style={{ opacity: on ? 1 : 0.45 }}>
-                      <td><input type="checkbox" checked={on} disabled={!s.exists && !createMissing} onChange={() => toggle(s.number)} aria-label={`Include scene ${s.number}`} /></td>
+                      <td>{s.manual
+                        ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeManual(s.number)} aria-label={`Remove scene ${s.number}`} title="Remove this scene"><X size={14} /></button>
+                        : <input type="checkbox" checked={on} disabled={!s.exists && !createMissing} onChange={() => toggle(s.number)} aria-label={`Include scene ${s.number}`} />}</td>
                       <td className="mono bold nowrap">{s.number}</td>
                       <td><div className="bold">{line || "—"}</div>{s.read.timeOfDay && <span className="subtle tiny">{humanize(s.read.timeOfDay)}</span>}{s.read.description && <div className="subtle tiny truncate" style={{ maxWidth: 320 }} title={s.read.description}>{s.read.description}</div>}</td>
                       <td><Input type="date" value={dates[s.number] || ""} disabled={!on} onChange={(e) => setDates((d) => ({ ...d, [s.number]: e.target.value }))} style={{ minWidth: 150 }} aria-label={`Shoot date for scene ${s.number}`} /></td>
                       <td className="hide-mobile"><div className="chips">{extras.map((x) => <span key={x} className="chip" style={{ padding: "2px 8px", fontSize: 12 }}>{x}</span>)}{!extras.length && <span className="subtle">—</span>}</div></td>
                       <td>
-                        {!s.exists ? (createMissing ? <Badge status="READY">New scene</Badge> : <Badge status="MUTED">Not in breakdown</Badge>)
+                        {s.manual && <div className="tiny subtle">added by hand</div>}
+                        {!s.exists ? (createMissing || s.manual ? <Badge status="READY">New scene</Badge> : <Badge status="MUTED">Not in breakdown</Badge>)
                           : !dates[s.number] && !(fillBlanks && s.fills.length) ? <Badge status="MUTED">No change</Badge>
                           : dateKey(s.currentShootDate) && dateKey(s.currentShootDate) !== dates[s.number] ? <Badge status="WARNING">Date changes</Badge>
                           : <Badge status="READY">{fillBlanks && s.fills.length ? `Fills ${s.fills.length}` : "Scheduled"}</Badge>}
@@ -141,9 +176,15 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
                     </tr>
                   );
                 })}
-                {rows.length === 0 && <tr><td colSpan={6} className="subtle">No scene numbers were found in this file.</td></tr>}
+                {rows.length === 0 && <tr><td colSpan={6} className="subtle">{result.file ? "No scene numbers were found in this file. Add the scenes below." : "Add the scenes for this day below."}</td></tr>}
               </tbody>
             </table>
+          </div>
+          <div className="row gap-2 wrap" style={{ alignItems: "flex-end" }}>
+            <div className="field" style={{ width: 130 }}><label>Scene #</label><Input value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }} placeholder="e.g. 47" aria-label="Scene number to add" /></div>
+            <div className="field"><label>Shoot date</label><Input type="date" value={defaultManualDate} onChange={(e) => setManualDate(e.target.value)} style={{ minWidth: 150 }} aria-label="Shoot date for the scene to add" /></div>
+            <button type="button" className="btn" disabled={!manualKey || manualDup} onClick={addManual} title={manualDup ? "That scene is already in the list" : undefined}><Plus size={16} /> Add scene</button>
+            <span className="subtle small">{manualDup ? "That scene is already in the list." : `Missed a scene? Add it by hand: a scene in the breakdown gets this date, a new number is added as a new scene.`}</span>
           </div>
           {result.breakdownEmpty && <div className="subtle">This production has no scenes yet, so every scene here will be added.</div>}
           {!result.knownCastNumbers && rows.some((s) => s.cast.length) && <div className="subtle">Cast numbers were found but no character has a cast number yet, so they cannot be linked. Set cast numbers on the Characters page first.</div>}
