@@ -5,15 +5,15 @@ import { Film, Tv, Upload, FileText } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useAuth } from "@/state/auth";
 import { ErrorBox, Field, Input, useUnsavedGuard } from "@/components/ui";
-import { CharacterConfirmation, buildCharacterImport, initialRows, manualCharacters, type ConfirmRow, type DetectedCharacter, type ExistingCharacter } from "@/components/CharacterConfirmation";
+import { buildCharacterImport, initialRows, type ConfirmRow, type DetectedCharacter, type ExistingCharacter } from "@/components/CharacterConfirmation";
 
-const STEPS = 4;
+const STEPS = 3;
 
 interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; scriptDay?: string | null; synopsis: string | null; status?: string; characters: string[]; text?: string; pages?: string | null }
 interface ParseResult { format: string; file: string; scenes: ParsedScene[]; characters: DetectedCharacter[]; existingCharacters: ExistingCharacter[]; warnings: string[] }
 type DateKey = "prepStartDate" | "prepEndDate" | "prepWrapDate" | "startDate" | "endDate" | "wrapDate";
 
-/** SyncOnSet-style production setup: type → prep & shoot dates → script upload (optional) → character confirmation. */
+/** SyncOnSet-style production setup: type → prep & shoot dates → script upload (optional), then straight in. */
 export default function ProductionWizard() {
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -23,6 +23,9 @@ export default function ProductionWizard() {
   const [withPrep, setWithPrep] = useState(false);
   const [withWrap, setWithWrap] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
+  // Read straight after they are set, in the same tick parseFile hands over to finish, where state has not landed yet.
+  const projectIdRef = useRef<string | null>(null);
+  const nameRef = useRef("");
   const [parsed, setParsed] = useState<ParseResult | null>(null);
   const [rows, setRows] = useState<ConfirmRow[]>([]);
   const [busy, setBusy] = useState(false);
@@ -37,9 +40,11 @@ export default function ProductionWizard() {
 
   /** The project is created the first time a script is read (the parser needs a project); later steps reuse it. */
   async function ensureProject(name: string): Promise<string> {
-    if (projectId) return projectId;
+    if (projectIdRef.current) return projectIdRef.current;
     setF((prev) => ({ ...prev, name }));
+    nameRef.current = name;
     const pr = await api<{ id: string }>("/projects", { body: { ...projectBody(name), code: code(name), status: "PREP" } });
+    projectIdRef.current = pr.id;
     setProjectId(pr.id);
     await refresh();
     return pr.id;
@@ -51,28 +56,32 @@ export default function ProductionWizard() {
       const id = await ensureProject(nameFor(file));
       const fd = new FormData(); fd.append("file", file);
       const r = await api<ParseResult>(p(id, "/scenes/parse-script"), { formData: fd });
-      setParsed(r); setRows(initialRows(r.characters, r.existingCharacters)); setStep(3);
+      const detected = initialRows(r.characters, r.existingCharacters);
+      setParsed(r); setRows(detected);
+      // The characters the reader found are taken as they come; the Characters page is where they are tidied.
+      await finish({ parsed: r, rows: detected });
     } catch (e) { setError(e); } finally { setBusy(false); }
   }
-  /** Create/update the production, import the confirmed breakdown if a script was read, and open the Scenes list. */
-  async function finish() {
+  /** Create/update the production, import the breakdown if a script was read, and open the production. */
+  async function finish(from?: { parsed: ParseResult; rows: ConfirmRow[] }) {
+    // parseFile calls this in the same tick it reads the script, before its own state has landed.
+    const script = from?.parsed ?? parsed;
+    const cast = from?.rows ?? rows;
     setBusy(true); setError(null);
     try {
-      const existed = !!projectId;
-      const name = nameFor();
+      const existed = !!projectIdRef.current;
+      // A production named after its script keeps that name: the later save must not rename it "Untitled".
+      const name = nameRef.current || nameFor();
       const id = await ensureProject(name);
       // Dates edited after going Back are saved before the import.
       if (existed) await api(`/projects/${id}`, { method: "PATCH", body: projectBody(name) });
-      if (parsed) {
-        const { characterMap, castNumbers } = buildCharacterImport(rows, parsed.existingCharacters);
-        const scenes = parsed.scenes.map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, scriptDay: s.scriptDay || null, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
+      if (script) {
+        const { characterMap, castNumbers } = buildCharacterImport(cast, script.existingCharacters);
+        const scenes = script.scenes.map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, scriptDay: s.scriptDay || null, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
         await api(p(id, "/scenes/import"), { body: { scenes, revision: f.revision || null, characterMap, castNumbers } });
-        for (const c of manualCharacters(rows, parsed.existingCharacters, parsed.characters)) {
-          await api(p(id, "/characters"), { body: { name: c.name, type: "SUPPORTING", castNumber: c.castNumber } });
-        }
       }
       qc.invalidateQueries();
-      nav(`/p/${id}/scenes`);
+      nav(`/p/${id}`);
     } catch (e) { setError(e); } finally { setBusy(false); }
   }
 
@@ -170,19 +179,8 @@ export default function ProductionWizard() {
             </div>
           </div>
           <ErrorBox error={error} />
-          {/* The script is optional: with one read, Continue goes to Character Confirmation; without, it creates the production as is. */}
-          {navRow(() => (parsed ? setStep(3) : finish()))}
-        </>)}
-        {step === 3 && parsed && (<>
-          <div className="row between wrap gap-2">
-            <h2>🎭 Character Name</h2>
-            <div className="row gap-2"><button type="button" className="btn btn-ghost" onClick={finish} disabled={busy}>Skip</button><button type="button" className="btn btn-primary" onClick={finish} disabled={busy}>{busy ? "Importing…" : "Continue"}</button></div>
-          </div>
-          <div className="subtle mb-2">{parsed.file} · {parsed.scenes.length} scenes · draft "{f.revision || "—"}"</div>
-          {parsed.warnings.map((w, i) => <div key={i} className="notice mb-2">{w}</div>)}
-          <CharacterConfirmation rows={rows} onChange={setRows} detected={parsed.characters} existing={parsed.existingCharacters} />
-          <ErrorBox error={error} />
-          <div className="row between mt-3">{backAndCancel}<div className="row gap-2"><button type="button" className="btn btn-ghost" onClick={finish} disabled={busy}>Skip</button><button type="button" className="btn btn-primary" onClick={finish} disabled={busy}>{busy ? "Importing…" : "Continue"}</button></div></div>
+          {/* The script is optional: reading one imports it and opens the production; Continue without one creates it as is. */}
+          {navRow(() => finish())}
         </>)}
       </div>
     </div>
