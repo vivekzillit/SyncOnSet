@@ -4,7 +4,7 @@ import { FileText, Upload } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { humanize } from "@/lib/format";
-import { Badge, ErrorBox, Input, Modal, useToast } from "./ui";
+import { Badge, ErrorBox, Input, Modal, Select, useToast } from "./ui";
 import { useAuth } from "@/state/auth";
 import { CueProgress, engineLabel, useCueExtraction } from "./AiCues";
 import type { Scene } from "@/api/types";
@@ -69,8 +69,10 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
   const importM = useMutation({
     mutationFn: (replace: boolean) => {
       const scenes = (result?.scenes || []).filter((s) => actionOf(s) !== "keep").map((s) => {
-        const v = actionOf(s) === "edit" ? { ...s, ...(edits[s.number] || {}) } : s;
-        return { number: s.number, name: v.name, location: v.location, intExt: v.intExt, timeOfDay: v.timeOfDay, scriptDay: v.scriptDay, synopsis: v.synopsis, status: s.status, pages: v.pages || null, characters: s.characters, scriptText: s.text || null };
+        const edited = actionOf(s) === "edit";
+        const v = edited ? { ...s, ...(edits[s.number] || {}) } : s;
+        // `force` matters when the scene text has not moved: without it the server leaves the scene alone.
+        return { number: s.number, name: v.name, location: v.location, intExt: v.intExt, timeOfDay: v.timeOfDay, scriptDay: v.scriptDay, synopsis: v.synopsis, status: s.status, pages: v.pages || null, characters: s.characters, scriptText: s.text || null, ...(edited ? { force: true } : {}) };
       });
       const { characterMap, castNumbers } = buildCharacterImport(rows, result?.existingCharacters || []);
       return api<{ scenes: number; created: number; updated: number; unchanged: number; removed: number; charactersCreated: number }>(p(projectId, "/scenes/import"), { body: { scenes, revision: revision || null, characterMap, castNumbers, replace } });
@@ -179,7 +181,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
           </div>
           {tab === "scenes" ? (
             <div className="table-wrap card flat pad-0" style={{ maxHeight: "46vh", overflowY: "auto" }}>
-              <table className="table">
+              <table className="table script-review">
                 <thead><tr><th>Sc</th><th>Script Day</th><th>Slugline</th><th>Pages</th><th>Characters</th><th>Status</th><th>This scene</th></tr></thead>
                 <tbody>
                   {result.scenes.map((s) => {
@@ -194,13 +196,13 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
                       const show = changed && action !== "keep"; // a kept scene is not changing, so nothing is marked
                       return (
                         <>
-                          <span className={show ? "diff-new" : undefined}>{(action === "keep" ? before : now) || "—"}</span>
+                          <span className={show ? "diff-new" : undefined}>{(action === "keep" && s.previous ? before : now) || "—"}</span>
                           {show && <div className="diff-old tiny">was {before || "—"}</div>}
                         </>
                       );
                     };
                     return (
-                      <tr key={s.number} style={{ opacity: action === "keep" ? 0.5 : 1 }}>
+                      <tr key={s.number} className={action === "keep" ? "row-kept" : undefined}>
                         <td className="mono bold nowrap">{s.number}</td>
                         <td className="nowrap">
                           {diffCell(changedKey("scriptDay"), v.scriptDay || "", s.previous?.scriptDay || "")}
@@ -215,8 +217,10 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
                           {action === "edit" && edit && (
                             <div className="col gap-1 mt-1" style={{ maxWidth: 420 }}>
                               <div className="row gap-1">
-                                <Input value={edit.intExt || ""} onChange={(e) => editField(s.number, { intExt: e.target.value })} placeholder="INT" style={{ width: 90 }} aria-label={`INT/EXT for scene ${s.number}`} />
+                                {/* The server takes these two as fixed lists, so they are chosen rather than typed. */}
+                                <Select value={edit.intExt || ""} onChange={(e) => editField(s.number, { intExt: e.target.value || null })} options={meta?.intExt || ["INT", "EXT", "INT/EXT"]} placeholder="—" humanizeLabels={false} style={{ width: 110 }} aria-label={`INT/EXT for scene ${s.number}`} />
                                 <Input value={edit.location || ""} onChange={(e) => editField(s.number, { location: e.target.value })} placeholder="Location" aria-label={`Location for scene ${s.number}`} />
+                                <Select value={edit.timeOfDay || ""} onChange={(e) => editField(s.number, { timeOfDay: e.target.value || null })} options={meta?.timesOfDay || []} placeholder="—" style={{ width: 130 }} aria-label={`Time of day for scene ${s.number}`} />
                               </div>
                               <div className="row gap-1">
                                 <Input value={edit.scriptDay || ""} onChange={(e) => editField(s.number, { scriptDay: e.target.value })} placeholder="Day 1" style={{ width: 90 }} aria-label={`Script day for scene ${s.number}`} />
@@ -237,7 +241,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
                         <td className="nowrap">
                           <div className="chips" style={{ flexWrap: "nowrap" }}>
                             {(["replace", "keep", "edit"] as SceneAction[]).map((a) => (
-                              <button key={a} type="button" className={`chip ${action === a ? "active" : ""}`} onClick={() => setAction(s, a)} title={a === "replace" ? "Take the script's version" : a === "keep" ? "Leave this scene as it is" : "Correct it by hand before importing"}>
+                              <button key={a} type="button" aria-pressed={action === a} className={`chip ${action === a ? "active" : ""}`} onClick={() => setAction(s, a)} title={a === "replace" ? "Take the script's version" : a === "keep" ? "Leave this scene as it is" : "Correct it by hand before importing"}>
                                 {a === "replace" ? (s.change === "new" ? "Add" : "Replace") : a === "keep" ? "Keep" : "Edit"}
                               </button>
                             ))}

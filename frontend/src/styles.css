@@ -357,3 +357,9 @@ button.item { width: 100%; background: none; border: 0; text-align: left; font: 
 /* Script upload review: what this draft would change, against what the scene says now. */
 .diff-new { background: var(--warn-bg); box-shadow: inset 0 -2px 0 var(--warn); border-radius: 4px; padding: 0 3px; }
 .diff-old { color: var(--text-3); text-decoration: line-through; }
+.diff-new { color: var(--text); }
+/* A scene set to Keep steps back, but the choice that was made stays readable. */
+.row-kept > td { opacity: 0.6; }
+.row-kept > td:last-child { opacity: 1; }
+/* 150-scene scripts scroll a long way: the column names come with you. */
+.script-review thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }

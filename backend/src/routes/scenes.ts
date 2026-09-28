@@ -28,6 +28,8 @@ const schema = z.object({
   shootDate: zDate,
   status: z.enum(SCENE_STATUSES).optional(),
   scriptText: z.string().max(60000).optional().nullable(),
+  /** Import only: these values were set by hand in the review, so apply them even when the text is unchanged. */
+  force: z.boolean().optional(),
 });
 
 function sceneSort(n: string) {
@@ -117,15 +119,15 @@ scenesRouter.post(
       return ci !== undefined ? body.characterMap![ci] : key;
     };
     for (const s of body.scenes) {
-      const { characters = [], ...sceneData } = s;
+      const { characters = [], force, ...sceneData } = s;
       const prev = await prisma.scene.findUnique({ where: { projectId_number: { projectId, number: sceneData.number } } });
       const textChanged = !prev || norm(prev.scriptText) !== norm(sceneData.scriptText);
       let scene;
       if (!prev) {
         scene = await prisma.scene.create({ data: { ...sceneData, projectId, sortOrder: sceneData.sortOrder ?? sceneSort(sceneData.number), revision: body.revision || null, revisedAt: body.revision ? new Date() : null } });
         created += 1;
-      } else if (textChanged || !sceneData.scriptText) {
-        // revised (or manual breakdown without text): update slugline data, never remove anything
+      } else if (textChanged || !sceneData.scriptText || force) {
+        // revised, a manual breakdown without text, or corrected by hand in the review: update slugline data, never remove anything
         scene = await prisma.scene.update({ where: { id: prev.id }, data: { ...sceneData, revision: body.revision || prev.revision, revisedAt: body.revision ? new Date() : prev.revisedAt } });
         updated += 1;
       } else {
