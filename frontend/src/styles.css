@@ -197,16 +197,6 @@ p { margin: 0; }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 /* A table that scrolls inside its own box (both ways) with a visible scrollbar; the page scrolls around it. */
 .table-scroll { overflow: auto; max-height: max(320px, calc(100vh - 240px)); }
-/* Tables that scroll sideways draw an always-on bar (Chrome/Safari; the standard properties would override
-   these there, so only Firefox gets those), with small arrow buttons at each end like a classic Windows bar. */
-@supports not selector(::-webkit-scrollbar) { .table-wrap, .table-scroll { scrollbar-width: auto; scrollbar-color: var(--text-3) var(--surface-2); } }
-.table-wrap::-webkit-scrollbar, .table-scroll::-webkit-scrollbar { width: 12px; height: 12px; }
-.table-wrap::-webkit-scrollbar-track, .table-scroll::-webkit-scrollbar-track { background: var(--surface-2); }
-.table-wrap::-webkit-scrollbar-thumb, .table-scroll::-webkit-scrollbar-thumb { background: var(--text-3); border-radius: 999px; border: 3px solid var(--surface-2); }
-.table-wrap::-webkit-scrollbar-thumb:hover, .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-2); }
-.table-wrap::-webkit-scrollbar-corner, .table-scroll::-webkit-scrollbar-corner { background: var(--surface-2); }
-/* Room at each end of the sideways bar for the small ◀ ▶ buttons ScrollArrows draws there. */
-.table-wrap::-webkit-scrollbar-track:horizontal, .table-scroll::-webkit-scrollbar-track:horizontal { margin: 0 18px; }
 .table-scroll thead th { position: sticky; top: 0; z-index: 1; background: var(--surface); box-shadow: inset 0 -1px 0 var(--border); }
 table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; font-weight: 600; }
@@ -394,3 +384,17 @@ button.item { width: 100%; background: none; border: 0; text-align: left; font: 
 .budget-sheet .bs-group-total td { font-weight: 800; border-top: 1px solid var(--text); }
 .budget-sheet .bs-grand td { font-weight: 800; background: var(--ink); color: var(--ink-text); }
 .table tr.row-link { cursor: pointer; } .table tr.row-link:hover td:not(.bs-code) { background: var(--info-bg); }
+
+/* Scrollbars: one look everywhere, both axes. An always-on bar (Chrome/Safari; the standard properties would
+   override these there, so only Firefox gets those), with room at each end for the small ◀ ▶ ▲ ▼ buttons
+   ScrollArrows draws over it, like a classic Windows bar. */
+@supports not selector(::-webkit-scrollbar) { * { scrollbar-width: auto; scrollbar-color: var(--text-3) var(--surface-2); } }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--surface-2); }
+::-webkit-scrollbar-thumb { background: var(--text-3); border-radius: 999px; border: 3px solid var(--surface-2); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-2); }
+::-webkit-scrollbar-corner { background: var(--surface-2); }
+::-webkit-scrollbar-track:horizontal { margin: 0 18px; }
+::-webkit-scrollbar-track:vertical { margin: 18px 0; }
+/* The floating layer must never grow one of its own. */
+.scroll-arrows::-webkit-scrollbar { width: 0; height: 0; }
