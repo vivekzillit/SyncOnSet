@@ -59,12 +59,12 @@ export function ScrollArrows() {
       const add = (el: HTMLElement, round: boolean) => {
         if (seen.has(el) || ours(el)) return;
         seen.add(el);
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height || r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth) return;
         const overX = el.scrollWidth - el.clientWidth;
         const overY = el.scrollHeight - el.clientHeight;
         if (overX < 4 && overY < 4) return;
         const style = getComputedStyle(el);
-        const r = el.getBoundingClientRect();
-        if (!r.width || !r.height) return;
         if (!ids.has(el)) ids.set(el, next++);
         const id = ids.get(el)!;
 
@@ -80,30 +80,28 @@ export function ScrollArrows() {
               if (el.scrollLeft < overX - 2 && clearAt(el, r.right - GAP - SIZE / 2, y)) out.push({ key: `${id}-r`, el, axis: "x", dir: 1, x: r.right - GAP - SIZE, y });
             }
           }
-          const thick = barH >= REAL_BAR ? barH : fine ? MINI : 0;
-          const barTop = barH >= REAL_BAR ? r.top + el.clientTop + el.clientHeight : r.top + el.clientTop + el.clientHeight - thick;
+          const thick = barH >= REAL_BAR && fine ? barH : 0;
+          const barTop = r.top + el.clientTop + el.clientHeight;
           if (thick && barTop >= 0 && barTop + thick <= window.innerHeight) {
             const barY = barTop + thick / 2;
             const lx = r.left + el.clientLeft;
             const rx = lx + el.clientWidth - MINI;
-            const over = barH < REAL_BAR;
-            if (clearAt(el, lx + MINI / 2, barY)) out.push({ key: `${id}-ml`, el, axis: "x", dir: -1, x: lx, y: barTop, mini: { size: thick, off: el.scrollLeft <= 2, over } });
-            if (clearAt(el, rx + MINI / 2, barY)) out.push({ key: `${id}-mr`, el, axis: "x", dir: 1, x: rx, y: barTop, mini: { size: thick, off: el.scrollLeft >= overX - 2, over } });
+            if (clearAt(el, lx + MINI / 2, barY)) out.push({ key: `${id}-ml`, el, axis: "x", dir: -1, x: lx, y: barTop, mini: { size: thick, off: el.scrollLeft <= 2, over: false } });
+            if (clearAt(el, rx + MINI / 2, barY)) out.push({ key: `${id}-mr`, el, axis: "x", dir: 1, x: rx, y: barTop, mini: { size: thick, off: el.scrollLeft >= overX - 2, over: false } });
           }
         }
 
         // Up and down: the bar runs along the right inside edge.
         const barW = el.offsetWidth - el.clientWidth - el.clientLeft * 2;
         if (overY >= 4 && scrolls(style.overflowY)) {
-          const thick = barW >= REAL_BAR ? barW : fine ? MINI : 0;
-          const barLeft = barW >= REAL_BAR ? r.left + el.clientLeft + el.clientWidth : r.left + el.clientLeft + el.clientWidth - thick;
+          const thick = barW >= REAL_BAR && fine ? barW : 0;
+          const barLeft = r.left + el.clientLeft + el.clientWidth;
           if (thick && barLeft >= 0 && barLeft + thick <= window.innerWidth) {
             const barX = barLeft + thick / 2;
             const ty = r.top + el.clientTop;
             const by = ty + el.clientHeight - MINI;
-            const over = barW < REAL_BAR;
-            if (ty >= 0 && clearAt(el, barX, ty + MINI / 2)) out.push({ key: `${id}-mu`, el, axis: "y", dir: -1, x: barLeft, y: ty, mini: { size: thick, off: el.scrollTop <= 2, over } });
-            if (by + MINI <= window.innerHeight && clearAt(el, barX, by + MINI / 2)) out.push({ key: `${id}-md`, el, axis: "y", dir: 1, x: barLeft, y: by, mini: { size: thick, off: el.scrollTop >= overY - 2, over } });
+            if (ty >= 0 && clearAt(el, barX, ty + MINI / 2)) out.push({ key: `${id}-mu`, el, axis: "y", dir: -1, x: barLeft, y: ty, mini: { size: thick, off: el.scrollTop <= 2, over: false } });
+            if (by + MINI <= window.innerHeight && clearAt(el, barX, by + MINI / 2)) out.push({ key: `${id}-md`, el, axis: "y", dir: 1, x: barLeft, y: by, mini: { size: thick, off: el.scrollTop >= overY - 2, over: false } });
           }
         }
       };
@@ -115,12 +113,14 @@ export function ScrollArrows() {
       const root = (document.scrollingElement as HTMLElement) || document.documentElement;
       const pageOver = root.scrollHeight - root.clientHeight;
       const pageBar = window.innerWidth - document.documentElement.clientWidth;
-      if (pageOver >= 4 && (pageBar >= REAL_BAR || fine)) {
+      const pageLocked = getComputedStyle(document.body).overflowY === "hidden" || getComputedStyle(document.documentElement).overflowY === "hidden";
+      if (pageOver >= 4 && fine && !pageLocked) {
         const over = pageBar < REAL_BAR;
         const thick = over ? MINI : pageBar;
         const x = over ? window.innerWidth - thick : document.documentElement.clientWidth;
-        out.push({ key: "page-u", el: root, axis: "y", dir: -1, x, y: 0, mini: { size: thick, off: root.scrollTop <= 2, over } });
-        out.push({ key: "page-d", el: root, axis: "y", dir: 1, x, y: window.innerHeight - MINI, mini: { size: thick, off: root.scrollTop >= pageOver - 2, over } });
+        const free = (y: number) => { const hit = document.elementsFromPoint(x + thick / 2, y).find((n) => !ours(n)); return !hit || root.contains(hit); };
+        if (free(MINI / 2)) out.push({ key: "page-u", el: root, axis: "y", dir: -1, x, y: 0, mini: { size: thick, off: root.scrollTop <= 2, over } });
+        if (free(window.innerHeight - MINI / 2)) out.push({ key: "page-d", el: root, axis: "y", dir: 1, x, y: window.innerHeight - MINI, mini: { size: thick, off: root.scrollTop >= pageOver - 2, over } });
       }
 
       // Only re-render when something moved, so our own buttons appearing never loops back through the observer.
@@ -157,13 +157,13 @@ export function ScrollArrows() {
     <div ref={layer} className="scroll-arrows">
       <style>{"@media print { .scroll-arrows { display: none; } }"}</style>
       {arrows.map((a) => a.mini ? (
-        <button key={a.key} type="button" aria-label={label(a)} disabled={a.mini.off} onClick={() => nudge(a, false)}
-          style={{ position: "fixed", left: a.x, top: a.y, width: a.axis === "x" ? MINI : a.mini.size, height: a.axis === "x" ? a.mini.size : MINI, zIndex: 40, border: a.mini.over ? "1px solid var(--border)" : "none", borderRadius: a.mini.over ? 6 : 3, background: "var(--surface-2)", color: "var(--text-2)", display: "grid", placeItems: "center", cursor: a.mini.off ? "default" : "pointer", padding: 0, opacity: a.mini.off ? 0.35 : a.mini.over ? 0.85 : 1, boxShadow: a.mini.over ? "0 1px 4px rgba(0,0,0,0.12)" : undefined }}>
+        <button key={a.key} type="button" aria-label={label(a)} tabIndex={-1} disabled={a.mini.off} onClick={() => nudge(a, false)}
+          style={{ position: "fixed", left: a.x, top: a.y, width: a.axis === "x" ? MINI : a.mini.size, height: a.axis === "x" ? a.mini.size : MINI, zIndex: 60, border: a.mini.over ? "1px solid var(--border)" : "none", borderRadius: a.mini.over ? 6 : 3, background: "var(--surface-2)", color: "var(--text-2)", display: "grid", placeItems: "center", cursor: a.mini.off ? "default" : "pointer", padding: 0, opacity: a.mini.off ? 0.35 : a.mini.over ? 0.85 : 1, boxShadow: a.mini.over ? "0 1px 4px rgba(0,0,0,0.12)" : undefined }}>
           {Icon(a, Math.min(14, a.mini.size + 2))}
         </button>
       ) : (
         <button key={a.key} type="button" aria-label={label(a)} title={label(a)} onClick={() => nudge(a, true)}
-          style={{ position: "fixed", left: a.x, top: a.y - SIZE / 2, width: SIZE, height: SIZE, zIndex: 40, borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", boxShadow: "0 2px 10px rgba(0,0,0,0.14)", display: "grid", placeItems: "center", cursor: "pointer", padding: 0 }}>
+          style={{ position: "fixed", left: a.x, top: a.y - SIZE / 2, width: SIZE, height: SIZE, zIndex: 60, borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", boxShadow: "0 2px 10px rgba(0,0,0,0.14)", display: "grid", placeItems: "center", cursor: "pointer", padding: 0 }}>
           {Icon(a, 20)}
         </button>
       ))}

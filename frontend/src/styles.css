@@ -398,3 +398,7 @@ button.item { width: 100%; background: none; border: 0; text-align: left; font: 
 ::-webkit-scrollbar-track:vertical { margin: 18px 0; }
 /* The floating layer must never grow one of its own. */
 .scroll-arrows::-webkit-scrollbar { width: 0; height: 0; }
+/* The sidebar is dark, so the light track and thumb would sit on it like a scar. */
+.sidebar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.06); }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.28); border-color: transparent; }
+.sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.42); }
