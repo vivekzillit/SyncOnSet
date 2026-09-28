@@ -78,7 +78,7 @@ function Shell() {
     { key: "costumes", label: "Costumes", items: [{ to: `${base}/costumes`, label: "Costumes", count: c?.costumes }, { to: `${base}/scan`, label: "Scan" }, { to: `${base}/cleaning`, label: "Sink / Cleaning", count: c?.cleaning }, { to: `${base}/fittings`, label: "Fittings", count: c?.fittingsToday }, { to: `${base}/alterations`, label: "Alterations", count: c?.alteration }, { to: `${base}/damages`, label: "Damage", count: c?.damaged, danger: true }, { to: `${base}/missing`, label: "Missing", count: c?.missing, danger: true }, { to: `${base}/labels`, label: "QR Labels" }, { to: `${base}/vendors`, label: "Vendors & Rentals", count: c?.rentalsDue, danger: true }] },
     { key: "continuity", label: "Continuity", items: [{ to: `${base}/continuity`, label: "On Set", end: true }, { to: `${base}/continuity/book`, label: "Book" }] },
     { key: "reports", label: "Reports", to: `${base}/reports` },
-    ...(can(FINANCE_ROLES) ? [{ key: "budget", label: "Budget & Expenses", to: `${base}/budget` }] : []),
+    ...(can(FINANCE_ROLES) ? [{ key: "budget", label: "Budget", to: `${base}/budget` }] : []),
     { key: "gallery", label: "Gallery", to: `${base}/gallery` },
   ];
 

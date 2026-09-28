@@ -75,7 +75,7 @@ export default function Budget() {
 
   return (
     <div>
-      <PageHead title="Budget & Expenses" sub="Spend for the whole production, scene by scene or by character." actions={<button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Expense</button>} />
+      <PageHead title="Budget" sub="Spend for the whole production, scene by scene or by character." actions={<button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Budget</button>} />
       <div className="grid grid-stats mb-2">
         <Stat label="Total spend" value={m(data.total)} />
         {cats.map((c) => <Stat key={c} label={humanize(c)} value={m(data.byCategory[c] || 0)} />)}

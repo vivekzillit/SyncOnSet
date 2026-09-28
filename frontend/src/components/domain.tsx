@@ -10,6 +10,7 @@ import { fmtDateTime, humanize, tone } from "@/lib/format";
 import type { Actor, Costume, Photo, Role, TimelineEvent } from "@/api/types";
 import { Badge, Dot, Empty, ErrorBox, Field, Input, Modal, SearchBox, Select, Spinner, Textarea, initials, useToast } from "./ui";
 import { ActorModal } from "./ActorModal";
+import { ScanButton } from "./DocumentScanner";
 
 /* ---------- QR Scanner (camera) ---------- */
 export function QRScanner({ onScan, active }: { onScan: (text: string) => void; active: boolean }) {
@@ -130,6 +131,7 @@ export function MediaPicker({ files, onChange, disabled }: { files: File[]; onCh
         <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => photoRef.current?.click()} title="Take a photo with the camera"><Camera size={15} /> Photo</button>
         <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => videoRef.current?.click()} title="Record a video with the camera"><Video size={15} /> Video</button>
         <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => galleryRef.current?.click()} title="Choose photos or videos from the gallery"><Images size={15} /> Gallery</button>
+        <ScanButton disabled={disabled} onScans={(scans) => onChange([...files, ...scans])} />
         <input ref={photoRef} type="file" accept="image/*" capture="environment" hidden onChange={add} />
         <input ref={videoRef} type="file" accept="video/*" capture="environment" hidden onChange={add} />
         <input ref={galleryRef} type="file" accept="image/*,video/*" multiple hidden onChange={add} />
@@ -212,7 +214,8 @@ export function PhotoGrid({ photos, entityType, entityId, kinds, compact, attach
   const editable = can(editRoles);
 
   const upload = useMutation({
-    mutationFn: async (files: File[]) => {
+    /** Scans always go up as DOCUMENT, whatever kind is picked for photos. */
+    mutationFn: async ({ files, kind: as = kind }: { files: File[]; kind?: string }) => {
       const tooBig = files.find((f) => f.size > MAX_UPLOAD);
       if (tooBig) throw new Error(`${tooBig.name || "That file"} is over 250 MB. Trim the clip, or share it as a link.`);
       for (const f of files) {
@@ -220,11 +223,11 @@ export function PhotoGrid({ photos, entityType, entityId, kinds, compact, attach
         fd.append("file", f);
         fd.append("entityType", entityType);
         fd.append("entityId", entityId);
-        fd.append("kind", kind);
+        fd.append("kind", as);
         await api(p(projectId, "/photos"), { formData: fd });
       }
     },
-    onSuccess: (_r, files) => { qc.invalidateQueries(); toast.push(`${files.length} file${files.length === 1 ? "" : "s"} attached`, "ok"); },
+    onSuccess: (_r, { files }) => { qc.invalidateQueries(); toast.push(`${files.length} file${files.length === 1 ? "" : "s"} attached`, "ok"); },
     onError: (e: Error) => toast.push(e.message, "danger"),
   });
   const addLink = useMutation({
@@ -237,7 +240,7 @@ export function PhotoGrid({ photos, entityType, entityId, kinds, compact, attach
   const images = photos.filter(isMedia);
   const others = photos.filter((ph) => !isMedia(ph));
   // Reset the input so picking the same file twice still uploads it.
-  const pickFiles = (e: ChangeEvent<HTMLInputElement>) => { const files = Array.from(e.target.files || []); e.target.value = ""; if (files.length) upload.mutate(files); };
+  const pickFiles = (e: ChangeEvent<HTMLInputElement>) => { const files = Array.from(e.target.files || []); e.target.value = ""; if (files.length) upload.mutate({ files }); };
 
   return (
     <div>
@@ -249,6 +252,7 @@ export function PhotoGrid({ photos, entityType, entityId, kinds, compact, attach
           </button>
           <button type="button" className="btn btn-sm" onClick={() => videoRef.current?.click()} disabled={upload.isPending} title="Record a video with the camera"><Video size={15} /> Video</button>
           <button type="button" className="btn btn-sm" onClick={() => galleryRef.current?.click()} disabled={upload.isPending} title="Choose photos or videos from the gallery"><Images size={15} /> Gallery</button>
+          <ScanButton disabled={upload.isPending} onScans={(files) => upload.mutateAsync({ files, kind: "DOCUMENT" })} />
           {attachments && <>
             <button type="button" className="btn btn-sm" onClick={() => fileRef.current?.click()} disabled={upload.isPending}><Paperclip size={15} /> Add file</button>
             <button type="button" className="btn btn-sm" onClick={() => setLinkOpen(true)}><LinkIcon size={15} /> Add link</button>

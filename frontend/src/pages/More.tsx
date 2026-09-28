@@ -24,7 +24,7 @@ export default function More() {
     [`${base}/damages`, <AlertTriangle size={18} />, "Damage reports"],
     [`${base}/missing`, <SearchX size={18} />, "Missing items"],
     [`${base}/vendors`, <Store size={18} />, "Vendors & Rentals"],
-    ...(can(FINANCE_ROLES) ? [[`${base}/budget`, <Wallet size={18} />, "Budget & Expenses"]] : []),
+    ...(can(FINANCE_ROLES) ? [[`${base}/budget`, <Wallet size={18} />, "Budget"]] : []),
     [`${base}/reports`, <FileBarChart size={18} />, "Reports"],
     [`${base}/labels`, <Tag size={18} />, "QR labels"],
     [`${base}/notifications`, <Bell size={18} />, "Notifications"],

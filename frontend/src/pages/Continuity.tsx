@@ -11,6 +11,7 @@ import type { Character, ContinuityRecord, Costume, Scene } from "@/api/types";
 import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, PageHead, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
 import { PhotoGrid, QRScanner } from "@/components/domain";
 import { ScheduleUploadModal } from "@/components/ScheduleUpload";
+import { ScanButton } from "@/components/DocumentScanner";
 
 const DEFAULT_DETAILS = ["Shirt", "Sleeves", "Collar", "Trousers", "Hair", "Accessories"];
 const MAX_UPLOAD = 250 * 1024 * 1024;
@@ -48,6 +49,7 @@ function TakeMedia({ files, onChange, disabled }: { files: File[]; onChange: (fi
         <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => photoRef.current?.click()} title="Take a photo with the camera"><Camera size={14} /> Photo</button>
         <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => videoRef.current?.click()} title="Record a video with the camera"><Video size={14} /> Video</button>
         <button type="button" className="btn btn-sm" disabled={disabled} onClick={() => galleryRef.current?.click()} title="Choose photos or videos from the gallery"><Images size={14} /> Gallery</button>
+        <ScanButton iconSize={14} disabled={disabled} onScans={(scans) => onChange([...files, ...scans])} />
       </div>
       {/* On a phone `capture` opens the camera straight away; the gallery input leaves it off so the library is offered. */}
       <input ref={photoRef} type="file" accept="image/*" capture="environment" hidden onChange={pick} />

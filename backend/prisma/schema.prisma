@@ -97,7 +97,10 @@ model Actor {
   email          String?
   email2         String?
   agency         String?
-  talentRep      String?   // talent representative (agent / manager contact)
+  talentRep      String?   // talent representative's name (agent / manager contact)
+  talentRepEmail String?
+  talentRepPhone String?
+  talentRepDetails String? // JSON [{ label, value }]: anything else about the rep, named by the user
   startWorkDate  DateTime?
   nextFittingAt  DateTime? // next costume fitting (as entered on the actor record)
   fittingComment String?

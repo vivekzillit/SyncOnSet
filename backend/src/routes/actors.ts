@@ -19,6 +19,10 @@ const schema = z.object({
   email2: zOptionalString,
   agency: zOptionalString,
   talentRep: zOptionalString,
+  talentRepEmail: zOptionalString,
+  talentRepPhone: zOptionalString,
+  /** free-form "Add more" rows for the talent representative, like a character's More details */
+  talentRepDetails: z.array(z.object({ label: z.string().trim().min(1).max(120), value: z.string().trim().max(4000) })).max(50).optional().nullable(),
   startWorkDate: zDate,
   nextFittingAt: zDate,
   fittingComment: zOptionalString,
@@ -28,7 +32,8 @@ const schema = z.object({
   notes: zOptionalString,
 });
 
-const shape = <T extends { measurements: string | null }>(a: T) => ({ ...a, measurements: parseJson<Record<string, string | number>>(a.measurements, {}) });
+const shape = <T extends { measurements: string | null; talentRepDetails: string | null }>(a: T) => ({ ...a, measurements: parseJson<Record<string, string | number>>(a.measurements, {}), talentRepDetails: parseJson<{ label: string; value: string }[]>(a.talentRepDetails, []) });
+const repDetails = (d: { label: string; value: string }[] | null | undefined) => (d === undefined ? undefined : d && d.length ? JSON.stringify(d) : null);
 
 actorsRouter.get(
   "/",
@@ -47,7 +52,7 @@ actorsRouter.post(
   requireRole(MANAGER_ROLES),
   wrap(async (req, res) => {
     const { characterIds, ...data } = parse(schema, req.body);
-    const actor = await prisma.actor.create({ data: { ...data, projectId: req.projectId!, measurements: data.measurements ? JSON.stringify(data.measurements) : null } });
+    const actor = await prisma.actor.create({ data: { ...data, projectId: req.projectId!, measurements: data.measurements ? JSON.stringify(data.measurements) : null, talentRepDetails: repDetails(data.talentRepDetails) } });
     if (characterIds?.length) await prisma.character.updateMany({ where: { projectId: req.projectId, id: { in: characterIds } }, data: { actorId: actor.id } });
     await audit(req.user, req.projectId!, "ACTOR_CREATE", "ACTOR", actor.id);
     const full = await prisma.actor.findUnique({ where: { id: actor.id }, include: { characters: { select: { id: true, name: true, type: true, castNumber: true } } } });
@@ -76,7 +81,7 @@ actorsRouter.patch(
     if (!existing) throw notFound("Actor");
     const actor = await prisma.actor.update({
       where: { id: existing.id },
-      data: { ...data, measurements: data.measurements === undefined ? undefined : data.measurements ? JSON.stringify(data.measurements) : null },
+      data: { ...data, measurements: data.measurements === undefined ? undefined : data.measurements ? JSON.stringify(data.measurements) : null, talentRepDetails: repDetails(data.talentRepDetails) },
     });
     if (characterIds) {
       await prisma.character.updateMany({ where: { projectId: req.projectId, actorId: existing.id, id: { notIn: characterIds } }, data: { actorId: null } });

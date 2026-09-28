@@ -108,7 +108,7 @@ A change is one numbered outfit for one character, made of pieces from the inven
 
 ## 7. Money and reports (finance roles)
 
-1. **Budget & Expenses**: totals by category, character and scene. **+ Expense** for anything not booked automatically. Purchases, rental returns and completed repairs post their own expense lines.
+1. **Budget**: totals by category, character and scene. **+ Budget** for anything not booked automatically. Purchases, rental returns and completed repairs post their own expense lines.
 2. **Reports → Inventory / assets**: every piece with source, vendor, cost, status and location; **CSV** for the accountant or insurer.
 3. **Notifications** (bell): cleaning completed, replacements, alterations, damage, missing, rentals due. **Mark all read** when caught up.
 4. **Gallery**: every photo in the production in one grid, filterable by what it shows (costume, look, character, fitting, continuity take, cleaning, damage), by character or scene, and by search. Click a photo to see it large and jump to its record.

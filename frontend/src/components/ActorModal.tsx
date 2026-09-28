@@ -5,14 +5,14 @@ import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { humanize, toLocalInput } from "@/lib/format";
 import type { Character } from "@/api/types";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { ErrorBox, Field, Input, Modal, Select, Textarea, useToast } from "@/components/ui";
 
-export interface ActorRow { id: string; name: string; gender?: string | null; age?: number | null; phone?: string | null; phone2?: string | null; email?: string | null; email2?: string | null; agency?: string | null; talentRep?: string | null; startWorkDate?: string | null; nextFittingAt?: string | null; nextFitting?: string | null; nextFittingId?: string | null; fittingComment?: string | null; notes?: string | null; measurements: Record<string, string | number>; characters: { id: string; name: string; castNumber?: number | null }[] }
+export interface ActorRow { id: string; name: string; gender?: string | null; age?: number | null; phone?: string | null; phone2?: string | null; email?: string | null; email2?: string | null; agency?: string | null; talentRep?: string | null; talentRepEmail?: string | null; talentRepPhone?: string | null; talentRepDetails?: { label: string; value: string }[]; startWorkDate?: string | null; nextFittingAt?: string | null; nextFitting?: string | null; nextFittingId?: string | null; fittingComment?: string | null; notes?: string | null; measurements: Record<string, string | number>; characters: { id: string; name: string; castNumber?: number | null }[] }
 
 const MEASURES = ["height", "chest", "bust", "waist", "hips", "inseam", "sleeve", "collar", "shoe", "head"];
 const blankCharacter = { name: "", type: "SUPPORTING", age: "", castNumber: "", description: "" };
-const blank = { first: "", last: "", gender: "", age: "", characterIds: [] as string[], notes: "", nextFittingAt: "", fittingComment: "", phone: "", phone2: "", email: "", email2: "", startWorkDate: "", agency: "", talentRep: "", measurements: {} as Record<string, string> };
+const blank = { first: "", last: "", gender: "", age: "", characterIds: [] as string[], notes: "", nextFittingAt: "", fittingComment: "", phone: "", phone2: "", email: "", email2: "", startWorkDate: "", agency: "", talentRep: "", talentRepEmail: "", talentRepPhone: "", talentRepDetails: [] as { label: string; value: string }[], measurements: {} as Record<string, string> };
 
 export const charLabel = (c: { name: string; castNumber?: number | null }) => `${c.castNumber != null ? `(${c.castNumber}) ` : ""}${c.name}`;
 
@@ -28,12 +28,13 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
   const qc = useQueryClient();
   const toast = useToast();
   const [f, setF] = useState(blank);
+  const setRep = (talentRepDetails: typeof blank.talentRepDetails) => setF((prev) => ({ ...prev, talentRepDetails }));
   const [addAnother, setAddAnother] = useState(false);
   const [charOpen, setCharOpen] = useState(false);
   const [cf, setCf] = useState(blankCharacter);
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")), enabled: open });
 
-  const body = () => ({ name: `${f.first.trim()} ${f.last.trim()}`.trim(), gender: f.gender || null, age: f.age ? Number(f.age) : null, characterIds: f.characterIds, notes: f.notes || null, nextFittingAt: f.nextFittingAt || null, fittingComment: f.fittingComment || null, phone: f.phone || null, phone2: f.phone2 || null, email: f.email || null, email2: f.email2 || null, startWorkDate: f.startWorkDate || null, agency: f.agency || null, talentRep: f.talentRep || null, measurements: Object.fromEntries(Object.entries(f.measurements).filter(([, v]) => v)) });
+  const body = () => ({ name: `${f.first.trim()} ${f.last.trim()}`.trim(), gender: f.gender || null, age: f.age ? Number(f.age) : null, characterIds: f.characterIds, notes: f.notes || null, nextFittingAt: f.nextFittingAt || null, fittingComment: f.fittingComment || null, phone: f.phone || null, phone2: f.phone2 || null, email: f.email || null, email2: f.email2 || null, startWorkDate: f.startWorkDate || null, agency: f.agency || null, talentRep: f.talentRep || null, talentRepEmail: f.talentRepEmail || null, talentRepPhone: f.talentRepPhone || null, talentRepDetails: f.talentRepDetails.map((d) => ({ label: d.label.trim(), value: d.value.trim() })).filter((d) => d.label), measurements: Object.fromEntries(Object.entries(f.measurements).filter(([, v]) => v)) });
   const save = useMutation({
     mutationFn: () => (editing ? api<ActorRow>(p(projectId, `/actors/${editing.id}`), { method: "PATCH", body: body() }) : api<ActorRow>(p(projectId, "/actors"), { body: body() })),
     onSuccess: (actor) => {
@@ -65,7 +66,7 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
     save.reset();
     if (!editing) return setF(forCharacter ? { ...blank, characterIds: [forCharacter.id] } : blank);
     const [first, ...rest] = editing.name.split(" ");
-    setF({ first, last: rest.join(" "), gender: editing.gender || "", age: editing.age != null ? String(editing.age) : "", characterIds: editing.characters.map((c) => c.id), notes: editing.notes || "", nextFittingAt: toLocalInput(editing.nextFittingAt), fittingComment: editing.fittingComment || "", phone: editing.phone || "", phone2: editing.phone2 || "", email: editing.email || "", email2: editing.email2 || "", startWorkDate: editing.startWorkDate ? toLocalInput(editing.startWorkDate).slice(0, 10) : "", agency: editing.agency || "", talentRep: editing.talentRep || "", measurements: Object.fromEntries(Object.entries(editing.measurements || {}).map(([k, v]) => [k, String(v)])) });
+    setF({ first, last: rest.join(" "), gender: editing.gender || "", age: editing.age != null ? String(editing.age) : "", characterIds: editing.characters.map((c) => c.id), notes: editing.notes || "", nextFittingAt: toLocalInput(editing.nextFittingAt), fittingComment: editing.fittingComment || "", phone: editing.phone || "", phone2: editing.phone2 || "", email: editing.email || "", email2: editing.email2 || "", startWorkDate: editing.startWorkDate ? toLocalInput(editing.startWorkDate).slice(0, 10) : "", agency: editing.agency || "", talentRep: editing.talentRep || "", talentRepEmail: editing.talentRepEmail || "", talentRepPhone: editing.talentRepPhone || "", talentRepDetails: editing.talentRepDetails || [], measurements: Object.fromEntries(Object.entries(editing.measurements || {}).map(([k, v]) => [k, String(v)])) });
   }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -94,7 +95,23 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
         <Field label="Start Work Date"><Input type="date" value={f.startWorkDate} onChange={(e) => setF({ ...f, startWorkDate: e.target.value })} /></Field>
         <Field label="Comment"><Input value={f.fittingComment} onChange={(e) => setF({ ...f, fittingComment: e.target.value })} placeholder="Fitting Comment" /></Field>
         <Field label="Agency"><Input value={f.agency} onChange={(e) => setF({ ...f, agency: e.target.value })} placeholder="Agency" /></Field>
-        <Field label="Talent representative"><Input value={f.talentRep} onChange={(e) => setF({ ...f, talentRep: e.target.value })} placeholder="Talent representative" /></Field>
+        <div />
+        <div className="span-2 row between" style={{ marginTop: 4 }}>
+          <span className="bold small">Talent representative</span>
+          <button type="button" className="btn btn-sm" onClick={() => setRep([...f.talentRepDetails, { label: "", value: "" }])}><Plus size={14} /> Add more</button>
+        </div>
+        <Field label="Name"><Input value={f.talentRep} onChange={(e) => setF({ ...f, talentRep: e.target.value })} placeholder="Representative's name" /></Field>
+        <Field label="Email"><Input type="email" value={f.talentRepEmail} onChange={(e) => setF({ ...f, talentRepEmail: e.target.value })} placeholder="Representative's email" /></Field>
+        <Field label="Phone"><Input value={f.talentRepPhone} onChange={(e) => setF({ ...f, talentRepPhone: e.target.value })} placeholder="Representative's phone" /></Field>
+        <div />
+        {/* Anything else about the rep (agency office, assistant, notes), named by the user like a character's More details. */}
+        {f.talentRepDetails.map((d, i) => (
+          <div key={i} className="span-2 row gap-1">
+            <Input value={d.label} onChange={(e) => setRep(f.talentRepDetails.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} placeholder="Detail, e.g. Assistant" aria-label="Detail name" style={{ flex: "0 0 38%" }} />
+            <Input value={d.value} onChange={(e) => setRep(f.talentRepDetails.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))} placeholder="Value" aria-label="Detail value" />
+            <button type="button" className="btn btn-ghost btn-sm" aria-label="Remove detail" onClick={() => setRep(f.talentRepDetails.filter((_, j) => j !== i))}><Trash2 size={14} /></button>
+          </div>
+        ))}
         <div className="span-2 bold small">Measurements</div>
         {MEASURES.map((m) => <Field key={m} label={humanize(m)}><Input value={f.measurements[m] || ""} onChange={(e) => setF({ ...f, measurements: { ...f.measurements, [m]: e.target.value } })} /></Field>)}
       </div>
