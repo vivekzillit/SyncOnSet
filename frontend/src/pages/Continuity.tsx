@@ -7,8 +7,8 @@ import { useProject } from "@/state/project";
 import { CONTINUITY_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, fmtDateTime, relativeTime, todayISO } from "@/lib/format";
 import { characterReadiness, itemLevel } from "@/lib/readiness";
-import type { Character, ContinuityRecord, Costume, Scene } from "@/api/types";
-import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, PageHead, Select, Spinner, Tabs, Textarea, discardIfDirty, useToast } from "@/components/ui";
+import type { ContinuityRecord, Costume, Scene } from "@/api/types";
+import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, PageHead, Spinner, Tabs, Textarea, discardIfDirty, useToast } from "@/components/ui";
 import { PhotoGrid, QRScanner } from "@/components/domain";
 import { ScheduleUploadModal } from "@/components/ScheduleUpload";
 import { ScanButton } from "@/components/DocumentScanner";
@@ -191,31 +191,18 @@ function SelectedScene({ c }: { c: ReturnType<typeof useContinuity> }) {
   );
 }
 
-/** A scene nobody is tagged to yet: pick who is in it, which both tags them and opens the take form. */
+/**
+ * A scene nobody is tagged to yet. A take is only ever recorded against someone who is in the scene, so there is
+ * nobody to choose here: the scene gets its cast from the script, the call sheet's cast numbers or the breakdown.
+ */
 function TagSomeone({ c }: { c: ReturnType<typeof useContinuity> }) {
-  const qc = useQueryClient();
-  const toast = useToast();
-  const [pick, setPick] = useState("");
-  const { data: characters } = useQuery({ queryKey: ["characters", c.projectId], queryFn: () => api<Character[]>(p(c.projectId, "/characters")) });
-  const add = useMutation({
-    mutationFn: (characterId: string) => api(p(c.projectId, `/scenes/${c.sceneId}/characters/${characterId}`), { method: "PUT", body: {} }),
-    onSuccess: async (_r, characterId) => {
-      await Promise.all([qc.invalidateQueries({ queryKey: ["scene", c.sceneId] }), qc.invalidateQueries({ queryKey: ["scenes", c.projectId] })]);
-      c.goTo(c.sceneId, characterId);
-      toast.push("Added to the scene", "ok");
-    },
-    onError: (e: Error) => toast.push(e.message, "danger"),
-  });
   return (
-    <Card title={`Sc ${c.scene?.number || ""} · nobody is tagged to this scene yet`}>
+    <Card title={`Sc ${c.scene?.number || ""} · nobody is in this scene yet`}>
       <div className="col gap-2">
-        <div className="subtle">A take is recorded against a character. Pick who is in this scene and the form opens; they are added to the scene at the same time.</div>
+        <div className="subtle">A take is recorded against a character in the scene, and this scene has none yet. Add who is in it on the scene, or upload the script or a call sheet with cast numbers, and they appear here to pick.</div>
         <div className="row gap-2 wrap">
-          <Select value={pick} onChange={(e) => setPick(e.target.value)} options={(characters || []).map((ch) => ({ value: ch.id, label: `${ch.castNumber != null ? `${ch.castNumber}. ` : ""}${ch.name}` }))} placeholder="Choose a character" style={{ minWidth: 240 }} />
-          <button className="btn btn-primary" disabled={!pick || add.isPending} onClick={() => add.mutate(pick)}>{add.isPending ? "Adding…" : "Add to scene"}</button>
-          <Link to={`/p/${c.projectId}/scenes/${c.sceneId}`} className="btn btn-ghost">Open the scene</Link>
+          <Link to={`/p/${c.projectId}/scenes/${c.sceneId}`} className="btn btn-primary">Add characters to the scene</Link>
         </div>
-        {!characters?.length && <div className="notice">This production has no characters yet. Upload the script, or add them on the Characters page.</div>}
       </div>
     </Card>
   );
