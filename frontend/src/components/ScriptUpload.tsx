@@ -23,6 +23,13 @@ const FIELD_LABELS: { key: keyof SceneFields; label: string }[] = [
   { key: "pages", label: "Pages" },
   { key: "synopsis", label: "Synopsis" },
 ];
+/** The parser names a scene "Location - Time", so a hand-edited slugline renames it the same way. */
+function named(s: ParsedScene, edit?: SceneFields) {
+  if (!edit) return {};
+  if (same(edit.location, s.location) && same(edit.timeOfDay, s.timeOfDay)) return {};
+  const time = edit.timeOfDay ? edit.timeOfDay.charAt(0) + edit.timeOfDay.slice(1).toLowerCase() : null;
+  return { name: [edit.location, time].filter(Boolean).join(" - ") || s.name };
+}
 const same = (a: unknown, b: unknown) => String(a ?? "").replace(/\s+/g, " ").trim().toLowerCase() === String(b ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 /** Which of the compared fields the script would change — empty when only the scene text moved. */
 function changedFields(s: ParsedScene, edited?: SceneFields) {
@@ -70,9 +77,11 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
     mutationFn: (replace: boolean) => {
       const scenes = (result?.scenes || []).filter((s) => actionOf(s) !== "keep").map((s) => {
         const edited = actionOf(s) === "edit";
-        const v = edited ? { ...s, ...(edits[s.number] || {}) } : s;
-        // `force` matters when the scene text has not moved: without it the server leaves the scene alone.
-        return { number: s.number, name: v.name, location: v.location, intExt: v.intExt, timeOfDay: v.timeOfDay, scriptDay: v.scriptDay, synopsis: v.synopsis, status: s.status, pages: v.pages || null, characters: s.characters, scriptText: s.text || null, ...(edited ? { force: true } : {}) };
+        const v = edited ? { ...s, ...(edits[s.number] || {}), ...named(s, edits[s.number]) } : s;
+        // A scene whose text has not moved is left alone by the server — which is right for a re-upload and
+        // wrong for a row the review has promised to change, so those carry `force`.
+        const force = edited || changedFields(s).length > 0;
+        return { number: s.number, name: v.name, location: v.location, intExt: v.intExt, timeOfDay: v.timeOfDay, scriptDay: v.scriptDay, synopsis: v.synopsis, status: s.status, pages: v.pages || null, characters: s.characters, scriptText: s.text || null, ...(force ? { force: true } : {}) };
       });
       const { characterMap, castNumbers } = buildCharacterImport(rows, result?.existingCharacters || []);
       return api<{ scenes: number; created: number; updated: number; unchanged: number; removed: number; charactersCreated: number }>(p(projectId, "/scenes/import"), { body: { scenes, revision: revision || null, characterMap, castNumbers, replace } });
@@ -201,7 +210,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
                         </>
                       );
                     };
-                    return (
+                    const row = (
                       <tr key={s.number} className={action === "keep" ? "row-kept" : undefined}>
                         <td className="mono bold nowrap">{s.number}</td>
                         <td className="nowrap">
@@ -214,21 +223,6 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
                             {s.status === "OMITTED" && <span>Omitted · </span>}
                             {diffCell(changedKey("synopsis"), v.synopsis || "", s.previous?.synopsis || "")}
                           </div>
-                          {action === "edit" && edit && (
-                            <div className="col gap-1 mt-1" style={{ maxWidth: 420 }}>
-                              <div className="row gap-1">
-                                {/* The server takes these two as fixed lists, so they are chosen rather than typed. */}
-                                <Select value={edit.intExt || ""} onChange={(e) => editField(s.number, { intExt: e.target.value || null })} options={meta?.intExt || ["INT", "EXT", "INT/EXT"]} placeholder="—" humanizeLabels={false} style={{ width: 110 }} aria-label={`INT/EXT for scene ${s.number}`} />
-                                <Input value={edit.location || ""} onChange={(e) => editField(s.number, { location: e.target.value })} placeholder="Location" aria-label={`Location for scene ${s.number}`} />
-                                <Select value={edit.timeOfDay || ""} onChange={(e) => editField(s.number, { timeOfDay: e.target.value || null })} options={meta?.timesOfDay || []} placeholder="—" style={{ width: 130 }} aria-label={`Time of day for scene ${s.number}`} />
-                              </div>
-                              <div className="row gap-1">
-                                <Input value={edit.scriptDay || ""} onChange={(e) => editField(s.number, { scriptDay: e.target.value })} placeholder="Day 1" style={{ width: 90 }} aria-label={`Script day for scene ${s.number}`} />
-                                <Input value={edit.pages || ""} onChange={(e) => editField(s.number, { pages: e.target.value })} placeholder="1/8" style={{ width: 80 }} className="mono" aria-label={`Pages for scene ${s.number}`} />
-                              </div>
-                              <Input value={edit.synopsis || ""} onChange={(e) => editField(s.number, { synopsis: e.target.value })} placeholder="Synopsis" aria-label={`Synopsis for scene ${s.number}`} />
-                            </div>
-                          )}
                         </td>
                         <td className="nowrap mono">{diffCell(changedKey("pages"), v.pages || "", s.previous?.pages || "")}</td>
                         <td><div className="chips">{s.characters.map((c) => <span key={c} className="chip" style={{ padding: "2px 8px", fontSize: 12, opacity: charPlan[c] === null ? 0.4 : 1 }}>{displayName(c)}</span>)}{!s.characters.length && <span className="subtle">—</span>}</div></td>
@@ -249,6 +243,24 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
                         </td>
                       </tr>
                     );
+                    // The fields get the whole width of the table rather than one squeezed column.
+                    const editor = action === "edit" && edit ? (
+                      <tr key={`${s.number}-edit`} className="row-editing">
+                        <td />
+                        <td colSpan={6}>
+                          <div className="row gap-1 wrap" style={{ alignItems: "flex-end" }}>
+                            {/* The server takes these two as fixed lists, so they are chosen rather than typed. */}
+                            <Select value={edit.intExt || ""} onChange={(e) => editField(s.number, { intExt: e.target.value || null })} options={meta?.intExt || ["INT", "EXT", "INT/EXT"]} placeholder="—" humanizeLabels={false} style={{ width: 110 }} aria-label={`INT/EXT for scene ${s.number}`} />
+                            <Input value={edit.location || ""} onChange={(e) => editField(s.number, { location: e.target.value })} placeholder="Location" style={{ flex: "1 1 160px", minWidth: 140 }} aria-label={`Location for scene ${s.number}`} />
+                            <Select value={edit.timeOfDay || ""} onChange={(e) => editField(s.number, { timeOfDay: e.target.value || null })} options={meta?.timesOfDay || []} placeholder="—" style={{ width: 130 }} aria-label={`Time of day for scene ${s.number}`} />
+                            <Input value={edit.scriptDay || ""} onChange={(e) => editField(s.number, { scriptDay: e.target.value })} placeholder="Day 1" style={{ width: 100 }} aria-label={`Script day for scene ${s.number}`} />
+                            <Input value={edit.pages || ""} onChange={(e) => editField(s.number, { pages: e.target.value })} placeholder="1/8" style={{ width: 84 }} className="mono" aria-label={`Pages for scene ${s.number}`} />
+                            <Input value={edit.synopsis || ""} onChange={(e) => editField(s.number, { synopsis: e.target.value })} placeholder="Synopsis" style={{ flex: "2 1 200px", minWidth: 160 }} aria-label={`Synopsis for scene ${s.number}`} />
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null;
+                    return editor ? [row, editor] : row;
                   })}
                 </tbody>
               </table>
