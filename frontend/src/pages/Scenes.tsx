@@ -202,6 +202,9 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
             {revisions.length > 0 && <Select value={rev} onChange={(e) => setRev(e.target.value)} options={revisions} placeholder="All drafts" humanizeLabels={false} title="Script draft / revision" aria-label="Script draft" style={{ width: "auto", minWidth: 140 }} />}
             {/* Editing (all or a single scene) keeps the bar to the job in hand: no uploads or date filters until it is put down. */}
             {canEdit && !editAll && !picking && <>
+              {view === "breakdown"
+                ? <button className="btn" onClick={() => setView("scenes")} title="One row per scene"><ChevronsDownUp size={16} /> Collapse Scene</button>
+                : <button className="btn" onClick={() => setView("breakdown")} title="One row per character in each scene"><ChevronsUpDown size={16} /> Expand Scene</button>}
               <button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button>
               <div className="col" style={{ gap: 2 }}>
                 <button className="btn" onClick={() => setDocOpen("SCHEDULE")}><CalendarDays size={16} /> Upload schedule</button>
@@ -220,9 +223,6 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
         {!editAll && !picking && <Chips options={[{ key: "today", label: "Today" }, { key: "upcoming", label: "Upcoming" }, { key: "scheduled", label: "Scheduled" }, { key: "all", label: "All scenes" }]} value={when} onChange={(v) => setWhen((v || "all") as "today" | "upcoming" | "scheduled" | "all")} />}
         {canEdit && (
           <div className="row gap-1" style={{ marginLeft: "auto" }}>
-            {!picking && (view === "breakdown"
-              ? <button className="btn" onClick={() => setView("scenes")} title="One row per scene"><ChevronsDownUp size={16} /> Collapse</button>
-              : <button className="btn" onClick={() => setView("breakdown")} title="One row per character in each scene"><ChevronsUpDown size={16} /> Expand</button>)}
             {editAll ? (
               <><button className="btn btn-blue" disabled={busy || draftKeys.length === 0 || !!firstProblem} title={firstProblem} onClick={() => saveAll.mutate()}>{saveAll.isPending ? "Saving…" : `Save all (${draftKeys.length})`}</button><button className="btn" disabled={busy} onClick={cancelAll}>Cancel</button></>
             ) : picking ? (
@@ -237,7 +237,8 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
               </>
             ) : (
               <>
-                <button className="btn" disabled={list.length === 0 || busy} onClick={startEditAll}>Edit All</button>
+                {/* The expanded view is one row per character, edited row by row with its pencil, so Edit All lives only in the collapsed view. */}
+                {view === "scenes" && <button className="btn" disabled={list.length === 0 || busy} onClick={startEditAll}>Edit All</button>}
                 {/* Breakdown rows carry their own edit / remove buttons, so picking a row is only needed for scenes. */}
                 {view === "scenes" && <button className="btn" disabled={list.length === 0 || busy} onClick={() => setSingle("")}>Edit Single</button>}
                 <button className="btn btn-blue" disabled={!!drafts[NEW] || busy} onClick={addRow}><Plus size={16} /> Add</button>
