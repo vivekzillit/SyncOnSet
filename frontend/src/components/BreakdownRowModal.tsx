@@ -45,7 +45,6 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
   const set = (patch: Partial<Draft>) => setD((prev) => ({ ...prev, ...patch }));
   const scene = sceneById.get(af.sceneId);
   const castProblem = castNumberProblem(af.castNumber);
-  const numberProblem = locked && !d.number.trim() ? "Scene # is required" : null;
   // Always keep the scene's current INT/EXT selectable, even if it is not in the configured list (older / imported data).
   const intExtOptions = Array.from(new Set([...(meta?.intExt || INT_EXT_FALLBACK), ...(d.intExt ? [d.intExt] : [])]));
 
@@ -81,12 +80,13 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
   const character = charById.get(af.characterId);
   return (
     <Modal open={open} onClose={onClose} title={locked ? `Edit ${character?.name || "row"} · Sc ${scene?.number || ""}` : "Add to breakdown"} wide={locked}
-      footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!af.sceneId || !af.characterId || !!castProblem || !!numberProblem || putRow.isPending} onClick={() => putRow.mutate()}>{putRow.isPending ? "Saving…" : locked ? "Save" : "Add"}</button></>}>
+      footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!af.sceneId || !af.characterId || !!castProblem || putRow.isPending} onClick={() => putRow.mutate()}>{putRow.isPending ? "Saving…" : locked ? "Save" : "Add"}</button></>}>
       <div className="col">
         {locked ? (<>
           <div className="grid grid-2">
             {episodes && <Field label="Episode"><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} placeholder="Ep" /></Field>}
-            <Field label="Scene #" help={numberProblem || undefined}><Input value={d.number} onChange={(e) => set({ number: e.target.value })} placeholder="Scene #" aria-invalid={!!numberProblem} /></Field>
+            {/* A row edits the scene it sits in, never which scene that is: the number is shown, not changed, here. */}
+            <Field label="Scene #"><Input value={d.number} readOnly disabled aria-readonly title="The scene number can't be changed from a breakdown row" /></Field>
             {/* Day/Night and its number each carry a label, so a filled-in number still says what it is. */}
             <div className="row gap-1" style={{ alignItems: "flex-start" }}>
               <div style={{ width: 110, flexShrink: 0 }}>
