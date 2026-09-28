@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth } from "@/state/auth";
@@ -8,6 +8,7 @@ import { fmtDate, fmtMoney, humanize, matches, todayISO, inCurrency } from "@/li
 import type { Character, Expense, Rental, Scene } from "@/api/types";
 import { Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Stat, Tabs, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
+import { BudgetUpload } from "@/components/BudgetUpload";
 
 interface BudgetReport { total: number; byCategory: Record<string, number>; byCharacter: Record<string, number>; byScene: Record<string, number>; inventoryValue: number; rentalCommitted: number; expenses: Expense[]; rentals: Rental[] }
 type TabKey = "all" | "scenes" | "characters";
@@ -39,6 +40,7 @@ export default function Budget() {
   const [sceneF, setSceneF] = useState("");
   const [charF, setCharF] = useState("");
   const [open, setOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [f, setF] = useState({ category: "PURCHASE", amount: "", description: "", date: todayISO(), characterId: "", sceneId: "" });
   const create = useMutation({
     mutationFn: () => api(p(projectId, "/expenses"), { body: { ...f, amount: Number(f.amount), characterId: f.characterId || null, sceneId: f.sceneId || null } }),
@@ -75,7 +77,7 @@ export default function Budget() {
 
   return (
     <div>
-      <PageHead title="Budget" sub="Spend for the whole production, scene by scene or by character." actions={<button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Budget</button>} />
+      <PageHead title="Budget" sub="Spend for the whole production, scene by scene or by character." actions={<><button className="btn" onClick={() => setUploadOpen(true)}><FileSpreadsheet size={16} /> Upload budget sheet</button><button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Budget</button></>} />
       <div className="grid grid-stats mb-2">
         <Stat label="Total spend" value={m(data.total)} />
         {cats.map((c) => <Stat key={c} label={humanize(c)} value={m(data.byCategory[c] || 0)} />)}
@@ -175,6 +177,7 @@ export default function Budget() {
         )}
       </Card>
 
+      <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} projectId={projectId} currency={currency} />
       <Modal open={open} onClose={() => setOpen(false)} title="Add expense" footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!f.amount || !f.description || create.isPending} onClick={() => create.mutate()}>Add</button></>}>
         <div className="form-grid">
           <Field label="Category"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={cats} /></Field>

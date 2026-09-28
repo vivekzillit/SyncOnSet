@@ -531,6 +531,15 @@ model Expense {
   characterId String?
   sceneId     String?
   vendorId    String?
+  // Budget-sheet columns (Movie Magic style: 30-001 COSTUME DESIGNER · Amt × X × Rate = Subtotal). All optional, so a plain expense still works.
+  accountCode String?  // "30-001"
+  accountName String?  // "COSTUME DESIGNER"
+  payee       String?  // the "Name:" a line is paid to (crew member, supplier)
+  quantity    Float?   // Amt
+  unit        String?  // Weeks | Days | Allow | Fee | CAP …
+  multiplier  Float?   // X
+  rate        Float?
+  currency    String   @default("") // ISO code; empty = the production's currency
   createdAt   DateTime @default(now())
 
   project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)

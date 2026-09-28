@@ -381,3 +381,16 @@ button.item { width: 100%; background: none; border: 0; text-align: left; font: 
 
 /* A long form keeps its buttons in reach: the footer stays pinned to the bottom of a scrolling modal. */
 .modal-foot { position: sticky; bottom: -20px; background: var(--surface); margin-bottom: -20px; padding: 12px 0 20px; z-index: 2; }
+
+/* ---------- Budget sheet (printed-budget layout: account code · description · Amt · Unit · X · Rate · Subtotal) ---------- */
+.budget-sheet td { padding-top: 6px; padding-bottom: 6px; }
+.budget-sheet .bs-code { background: var(--surface-2); font-weight: 700; white-space: nowrap; }
+.budget-sheet .bs-code-mark { background: var(--accent); color: var(--accent-ink); padding: 1px 5px; border-radius: 3px; font-family: var(--mono); font-size: 12.5px; }
+.budget-sheet .bs-group td { font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; background: var(--surface); border-top: 2px solid var(--text); }
+.budget-sheet .bs-account td:last-child { font-weight: 700; text-transform: uppercase; }
+.budget-sheet .bs-name td:last-child { font-weight: 700; }
+.budget-sheet .bs-line:nth-child(even) td:not(.bs-code) { background: var(--surface-2); }
+.budget-sheet .bs-total td:not(.bs-code) { background: var(--muted-bg); font-weight: 700; }
+.budget-sheet .bs-group-total td { font-weight: 800; border-top: 1px solid var(--text); }
+.budget-sheet .bs-grand td { font-weight: 800; background: var(--ink); color: var(--ink-text); }
+.table tr.row-link { cursor: pointer; } .table tr.row-link:hover td:not(.bs-code) { background: var(--info-bg); }

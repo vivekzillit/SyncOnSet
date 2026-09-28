@@ -27,6 +27,7 @@
     "multer": "^1.4.5-lts.1",
     "pdf-parse": "^1.1.1",
     "qrcode": "^1.5.4",
+    "read-excel-file": "^6.0.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
