@@ -167,8 +167,8 @@ export function confirmAction({ title, message, confirm, cancel = "Cancel", dang
   if (!showDiscard) return Promise.resolve(window.confirm(message));
   return new Promise((resolve) => showDiscard!({ title, message, confirm, cancel, danger, resolve }));
 }
-/** Every Cancel asks before closing a form: "Discard changes?" once something was changed, otherwise "Close without saving?". */
-export const discardIfDirty = (dirty: boolean, message?: string) => (dirty ? confirmDiscard(message) : confirmDiscard("Nothing will be saved.", "Close without saving?", "Close"));
+/** Closing a form asks only when there is something to lose: an untouched one just closes. */
+export const discardIfDirty = (dirty: boolean, message?: string) => (dirty ? confirmDiscard(message) : Promise.resolve(true));
 
 /**
  * Pages and modals holding unsaved input register here while they do. One <LeaveGuard> then asks before any
@@ -228,10 +228,9 @@ function DiscardHost() {
 
 /* ---------- Modal ---------- */
 /**
- * A modal holding a form always asks before closing without saving — "Discard changes?" once anything was
- * typed, picked or ticked, "Close without saving?" otherwise. The ✕, Esc, a backdrop click and the footer's
- * Cancel button all go through it. A modal with no fields just closes. Saving closes it through the caller's
- * own state, which never asks. Pass `dirty` to override the change detection.
+ * A modal holding a form asks before closing only once something was typed, picked or ticked; until then the
+ * ✕, Esc, a backdrop click and the footer's Cancel just close it. Saving closes it through the caller's own
+ * state, which never asks. Pass `dirty` to override the change detection.
  */
 export function Modal({ open, onClose, title, children, footer, wide, dirty }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean; dirty?: boolean }) {
   const [touched, setTouched] = useState(false);
