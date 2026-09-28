@@ -87,12 +87,15 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
           <div className="grid grid-2">
             {episodes && <Field label="Episode"><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} placeholder="Ep" /></Field>}
             <Field label="Scene #" help={numberProblem || undefined}><Input value={d.number} onChange={(e) => set({ number: e.target.value })} placeholder="Scene #" aria-invalid={!!numberProblem} /></Field>
-            <Field label="Script day">
-              <div className="row gap-1">
-                <Select value={d.dayPrefix} onChange={(e) => set({ dayPrefix: e.target.value })} options={DAY_PREFIXES} placeholder="—" humanizeLabels={false} style={{ width: 110 }} />
-                <Input value={d.dayN} onChange={(e) => set({ dayN: e.target.value })} placeholder="3" inputMode="numeric" style={{ flex: 1 }} />
+            {/* Day/Night and its number each carry a label, so a filled-in number still says what it is. */}
+            <div className="row gap-1" style={{ alignItems: "flex-start" }}>
+              <div style={{ width: 110, flexShrink: 0 }}>
+                <Field label="Script day"><Select value={d.dayPrefix} onChange={(e) => set({ dayPrefix: e.target.value })} options={DAY_PREFIXES} placeholder="—" humanizeLabels={false} /></Field>
               </div>
-            </Field>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Field label="Day number"><Input value={d.dayN} onChange={(e) => set({ dayN: e.target.value })} placeholder="Day number, e.g. 3" inputMode="numeric" aria-label="Script day number" /></Field>
+              </div>
+            </div>
             <Field label="Script location">
               <div className="row gap-1">
                 <Select value={d.intExt} onChange={(e) => set({ intExt: e.target.value })} options={intExtOptions} placeholder="—" humanizeLabels={false} style={{ width: 110 }} />

@@ -200,7 +200,7 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
       <td>
         <div className="row gap-1" style={{ minWidth: 168 }}>
           <Select value={d.dayPrefix} onChange={(e) => set({ dayPrefix: e.target.value })} options={DAY_PREFIXES} placeholder="—" humanizeLabels={false} disabled={busy} style={{ width: 96 }} />
-          <Input value={d.dayN} onChange={(e) => set({ dayN: e.target.value })} placeholder="3" inputMode="numeric" pattern="[0-9A-Za-z]*" disabled={busy} style={{ width: 66 }} />
+          <Input value={d.dayN} onChange={(e) => set({ dayN: e.target.value })} placeholder="No." title="Script day number" aria-label="Script day number" inputMode="numeric" pattern="[0-9A-Za-z]*" disabled={busy} style={{ width: 66 }} />
         </div>
       </td>
       <td>
