@@ -53,9 +53,6 @@ export default function Budget() {
   const { data: vendors } = useQuery({ queryKey: ["vendors", projectId], queryFn: () => api<Vendor[]>(p(projectId, "/vendors")) });
   const [tab, setTab] = useState<TabKey>("all");
   const [q, setQ] = useState("");
-  const [sceneF, setSceneF] = useState("");
-  const [charF, setCharF] = useState("");
-  const [accountF, setAccountF] = useState("");
   const [open, setOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [f, setF] = useState<Form>(() => blankForm(currency));
@@ -87,14 +84,10 @@ export default function Budget() {
   const byScene = useMemo(() => rollup(expenses, (e) => e.sceneId), [expenses]);
   const byChar = useMemo(() => rollup(expenses, (e) => e.characterId), [expenses]);
   const sceneById = useMemo(() => new Map((scenes || []).map((s) => [s.id, s])), [scenes]);
-  const charById = useMemo(() => new Map((characters || []).map((c) => [c.id, c])), [characters]);
   const needle = q.trim();
 
   const shownExpenses = useMemo(() => expenses.filter((e) =>
-    (!sceneF || (sceneF === NONE ? !e.sceneId : e.sceneId === sceneF)) &&
-    (!charF || (charF === NONE ? !e.characterId : e.characterId === charF)) &&
-    (!accountF || (accountF === NONE ? !e.accountCode : e.accountCode === accountF)) &&
-    matches(needle, e.description, humanize(e.category), e.accountCode, e.accountName, e.payee, e.character?.name, e.scene?.number, e.costume?.assetNumber, e.costume?.name, e.vendor?.name)), [expenses, sceneF, charF, accountF, needle]);
+    matches(needle, e.description, humanize(e.category), e.accountCode, e.accountName, e.payee, e.character?.name, e.scene?.number, e.costume?.assetNumber, e.costume?.name, e.vendor?.name)), [expenses, needle]);
   /** Every account code used on this production, in chart order, for the account filter. */
   const accountOptions = useMemo(() => {
     const by = new Map<string, string>();
@@ -110,7 +103,7 @@ export default function Budget() {
   const cats = meta?.expenseCategories || Object.keys(data.byCategory);
   const untaggedScene = byScene.get(NONE);
   const untaggedChar = byChar.get(NONE);
-  const openAdd = () => { setEditing(null); create.reset(); setF({ ...f, amount: "", description: "", quantity: "", rate: "", multiplier: "1", currency: f.currency || currency, sceneId: sceneF && sceneF !== NONE ? sceneF : f.sceneId, characterId: charF && charF !== NONE ? charF : f.characterId }); setOpen(true); };
+  const openAdd = () => { setEditing(null); create.reset(); setF({ ...f, amount: "", description: "", quantity: "", rate: "", multiplier: "1", currency: f.currency || currency }); setOpen(true); };
   const openEdit = (e: Expense) => { setEditing(e.id); create.reset(); setF(toForm(e, currency)); setOpen(true); };
   /** Picking a known code fills its account name (only when the name is blank or still the old code's name). */
   const knownAccounts = [...WARDROBE_ACCOUNTS, ...expenses.filter((e) => e.accountCode && e.accountName).map((e) => ({ code: e.accountCode!, name: e.accountName! }))];
@@ -144,7 +137,6 @@ export default function Budget() {
     }
     return [...by.values()].sort((a, b) => (a.key === NONE ? 1 : b.key === NONE ? -1 : a.key.localeCompare(b.key, undefined, { numeric: true })));
   })();
-  const allTitle = [sceneF && (sceneF === NONE ? "No scene" : null), charF && (charF === NONE ? "No character" : charById.get(charF)?.name), accountF && (accountF === NONE ? "No account code" : accountOptions.find((a) => a.value === accountF)?.label)].filter(Boolean);
   const lineActions = (e: Expense) => (
     <>
       <RecordActions entityType="EXPENSE" entityId={e.id} title={lineTitle(e)} path={`/p/${projectId}/budget`}
@@ -152,7 +144,6 @@ export default function Budget() {
       <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" aria-label={`Delete ${lineTitle(e)}`} onConfirm={() => del.mutate(e.id)}><Trash2 size={14} /></ConfirmButton>
     </>
   );
-  const sceneLabel = (id: string) => { const s = sceneById.get(id); return s ? `Sc ${s.number}${s.name ? ` · ${s.name}` : ""}` : "Scene"; };
 
   return (
     <div>
@@ -168,24 +159,18 @@ export default function Budget() {
       <Tabs tabs={[{ key: "all", label: `All (${expenses.length})` }, { key: "scenes", label: `Scene by scene (${scenes?.length ?? 0})` }, { key: "characters", label: `By character (${characters?.length ?? 0})` }, { key: "accounts", label: `By account code (${accountOptions.length})` }]} value={tab} onChange={(t) => { setTab(t); setQ(""); }} />
       <div className="filters">
         <SearchBox value={q} onChange={setQ} placeholder={tab === "all" ? "Search description, account, name, vendor, piece…" : tab === "scenes" ? "Search scene number, name, location…" : tab === "accounts" ? "Search account code, account name, description…" : "Search character, actor, cast number…"} />
-        {tab === "all" && <>
-          <Select value={sceneF} onChange={(e) => setSceneF(e.target.value)} options={[...(scenes || []).map((s) => ({ value: s.id, label: `Sc ${s.number}` })), { value: NONE, label: "No scene" }]} placeholder="All scenes" humanizeLabels={false} aria-label="Scene" style={{ width: "auto", minWidth: 140 }} />
-          <Select value={charF} onChange={(e) => setCharF(e.target.value)} options={[...(characters || []).map((c) => ({ value: c.id, label: c.name })), { value: NONE, label: "No character" }]} placeholder="All characters" humanizeLabels={false} aria-label="Character" style={{ width: "auto", minWidth: 160 }} />
-          <Select value={accountF} onChange={(e) => setAccountF(e.target.value)} options={[...accountOptions, { value: NONE, label: "No account code" }]} placeholder="All account codes" humanizeLabels={false} aria-label="Account code" style={{ width: "auto", minWidth: 180 }} />
-        </>}
       </div>
 
-      {tab === "all" && (sceneF || charF || accountF || needle) && (
+      {tab === "all" && needle && (
         <div className="subtle mb-2">
-          {[sceneF && (sceneF === NONE ? "No scene" : sceneLabel(sceneF)), ...allTitle].filter(Boolean).join(" · ") || "Matching"} · <b>{sumByCurrency(shownExpenses, currency, fmtMoney)}</b> across {shownExpenses.length} expense{shownExpenses.length === 1 ? "" : "s"}
-          {(sceneF || charF || accountF) && <> · <button className="btn btn-ghost btn-sm" onClick={() => { setSceneF(""); setCharF(""); setAccountF(""); }}>Show all</button></>}
+          Matching · <b>{sumByCurrency(shownExpenses, currency, fmtMoney)}</b> across {shownExpenses.length} expense{shownExpenses.length === 1 ? "" : "s"}
         </div>
       )}
 
       <Card pad0>
         {tab === "all" ? (
           !expenses.length ? <Empty icon="💸" title="No budget lines yet" hint="Add a budget line or upload a budget, and tag lines to a scene or character to see spend broken down." /> : !shownExpenses.length ? <Empty icon="🔍" title="No budget lines match" /> : (
-            <BudgetSheet groups={[{ key: "all", title: allTitle.length || sceneF ? [sceneF && sceneF !== NONE ? sceneLabel(sceneF) : null, ...allTitle].filter(Boolean).join(" · ") : "All budget lines", lines: shownExpenses }]} currency={currency} fmt={money} onEdit={openEdit} lineActions={lineActions} />
+            <BudgetSheet groups={[{ key: "all", title: "All budget lines", lines: shownExpenses }]} currency={currency} fmt={money} onEdit={openEdit} lineActions={lineActions} />
           )
         ) : tab === "scenes" ? (
           !scenes?.length ? <Empty icon="🎬" title="No scenes yet" /> : (
