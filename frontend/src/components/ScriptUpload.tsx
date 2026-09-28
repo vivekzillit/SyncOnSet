@@ -4,7 +4,7 @@ import { FileText, Upload } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { humanize } from "@/lib/format";
-import { Badge, ErrorBox, Input, Modal, Select, useToast } from "./ui";
+import { Badge, ErrorBox, Field, Input, Modal, Select, Textarea, useToast } from "./ui";
 import { useAuth } from "@/state/auth";
 import { CueProgress, engineLabel, useCueExtraction } from "./AiCues";
 import type { Scene } from "@/api/types";
@@ -119,7 +119,19 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
   const setAction = (s: ParsedScene, a: SceneAction) => {
     setActions((prev) => ({ ...prev, [s.number]: a }));
     // Editing starts from what the script says, so a correction is a tweak rather than a retype.
-    if (a === "edit") setEdits((prev) => (prev[s.number] ? prev : { ...prev, [s.number]: { name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, scriptDay: s.scriptDay, synopsis: s.synopsis, pages: s.pages ?? null } }));
+    if (a === "edit") {
+      setEdits((prev) => (prev[s.number] ? prev : { ...prev, [s.number]: { name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, scriptDay: s.scriptDay, synopsis: s.synopsis, pages: s.pages ?? null } }));
+      // The fields open under the row, often below the fold of the scrolling table: bring the scene and its fields
+      // into view together, or on a short screen at least the whole of the fields (their heading names the scene).
+      requestAnimationFrame(() => {
+        const editor = document.getElementById(`scene-edit-${s.number}`);
+        const row = editor?.previousElementSibling as HTMLElement | null;
+        const box = editor?.closest(".table-wrap");
+        if (!editor || !row || !box) return;
+        const fits = row.offsetHeight + editor.offsetHeight <= box.clientHeight - 40;
+        (fits ? row : editor).scrollIntoView({ block: fits ? "start" : "nearest", behavior: "smooth" });
+      });
+    }
   };
   const editField = (n: string, patch: Partial<SceneFields>) => setEdits((prev) => ({ ...prev, [n]: { ...prev[n], ...patch } }));
   const included = (result?.scenes || []).filter((s) => actionOf(s) !== "keep");
@@ -189,9 +201,9 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
             <button type="button" className={tab === "characters" ? "active" : ""} onClick={() => setTab("characters")}>Characters ({result.characters.length}){newChars.length ? <span className="badge tone-warn" style={{ marginLeft: 6 }}>{newChars.length} new</span> : null}</button>
           </div>
           {tab === "scenes" ? (
-            <div className="table-wrap card flat pad-0" style={{ maxHeight: "46vh", overflowY: "auto" }}>
+            <div className="table-wrap card flat pad-0" style={{ maxHeight: "max(240px, min(56vh, calc(92vh - 470px)))", overflowY: "auto" }}>
               <table className="table script-review">
-                <thead><tr><th>Sc</th><th>Script Day</th><th>Slugline</th><th>Pages</th><th>Characters</th><th>Status</th><th>This scene</th></tr></thead>
+                <thead><tr><th>Sc</th><th>Script Day</th><th style={{ minWidth: 190 }}>Slugline</th><th>Pages</th><th>Characters</th><th>Status</th><th>This scene</th></tr></thead>
                 <tbody>
                   {result.scenes.map((s) => {
                     const action = actionOf(s);
@@ -219,7 +231,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
                         </td>
                         <td>
                           <div className="bold">{diffCell(changedKey("intExt", "location"), slug(v) || v.name || "", s.previous ? slug(s.previous) : "")}</div>
-                          <div className="subtle">
+                          <div className="subtle clamp-3" title={v.synopsis || undefined}>
                             {s.status === "OMITTED" && <span>Omitted · </span>}
                             {diffCell(changedKey("synopsis"), v.synopsis || "", s.previous?.synopsis || "")}
                           </div>
@@ -245,17 +257,17 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
                     );
                     // The fields get the whole width of the table rather than one squeezed column.
                     const editor = action === "edit" && edit ? (
-                      <tr key={`${s.number}-edit`} className="row-editing">
-                        <td />
-                        <td colSpan={6}>
-                          <div className="row gap-1 wrap" style={{ alignItems: "flex-end" }}>
+                      <tr key={`${s.number}-edit`} id={`scene-edit-${s.number}`} className="row-editing">
+                        <td colSpan={7}>
+                          <div className="small bold mb-1">Correct scene {s.number} before importing</div>
+                          <div className="scene-edit-grid">
                             {/* The server takes these two as fixed lists, so they are chosen rather than typed. */}
-                            <Select value={edit.intExt || ""} onChange={(e) => editField(s.number, { intExt: e.target.value || null })} options={meta?.intExt || ["INT", "EXT", "INT/EXT"]} placeholder="—" humanizeLabels={false} style={{ width: 110 }} aria-label={`INT/EXT for scene ${s.number}`} />
-                            <Input value={edit.location || ""} onChange={(e) => editField(s.number, { location: e.target.value })} placeholder="Location" style={{ flex: "1 1 160px", minWidth: 140 }} aria-label={`Location for scene ${s.number}`} />
-                            <Select value={edit.timeOfDay || ""} onChange={(e) => editField(s.number, { timeOfDay: e.target.value || null })} options={meta?.timesOfDay || []} placeholder="—" style={{ width: 130 }} aria-label={`Time of day for scene ${s.number}`} />
-                            <Input value={edit.scriptDay || ""} onChange={(e) => editField(s.number, { scriptDay: e.target.value })} placeholder="Day 1" style={{ width: 100 }} aria-label={`Script day for scene ${s.number}`} />
-                            <Input value={edit.pages || ""} onChange={(e) => editField(s.number, { pages: e.target.value })} placeholder="1/8" style={{ width: 84 }} className="mono" aria-label={`Pages for scene ${s.number}`} />
-                            <Input value={edit.synopsis || ""} onChange={(e) => editField(s.number, { synopsis: e.target.value })} placeholder="Synopsis" style={{ flex: "2 1 200px", minWidth: 160 }} aria-label={`Synopsis for scene ${s.number}`} />
+                            <Field label="INT / EXT"><Select value={edit.intExt || ""} onChange={(e) => editField(s.number, { intExt: e.target.value || null })} options={meta?.intExt || ["INT", "EXT", "INT/EXT"]} placeholder="—" humanizeLabels={false} aria-label={`INT/EXT for scene ${s.number}`} /></Field>
+                            <Field label="Location"><Input value={edit.location || ""} onChange={(e) => editField(s.number, { location: e.target.value })} placeholder="Location" aria-label={`Location for scene ${s.number}`} /></Field>
+                            <Field label="Time of day"><Select value={edit.timeOfDay || ""} onChange={(e) => editField(s.number, { timeOfDay: e.target.value || null })} options={meta?.timesOfDay || []} placeholder="—" aria-label={`Time of day for scene ${s.number}`} /></Field>
+                            <Field label="Script day"><Input value={edit.scriptDay || ""} onChange={(e) => editField(s.number, { scriptDay: e.target.value })} placeholder="Day 1" aria-label={`Script day for scene ${s.number}`} /></Field>
+                            <Field label="Pages"><Input value={edit.pages || ""} onChange={(e) => editField(s.number, { pages: e.target.value })} placeholder="1/8" className="mono" aria-label={`Pages for scene ${s.number}`} /></Field>
+                            <div className="scene-edit-synopsis"><Field label="Synopsis"><Textarea value={edit.synopsis || ""} onChange={(e) => editField(s.number, { synopsis: e.target.value })} placeholder="Synopsis" rows={2} aria-label={`Synopsis for scene ${s.number}`} /></Field></div>
                           </div>
                         </td>
                       </tr>
