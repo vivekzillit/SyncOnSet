@@ -152,10 +152,8 @@ export default function CharacterDetail() {
       />
       {viaScene && (
         <Card className="mb-2">
-          <div className="row between wrap gap-2">
-            <div><div className="bold">Scene {viaScene.scene.number} · {viaScene.scene.name || "Untitled"}</div><div className="subtle">{viaScene.change ? `Wears change #${viaScene.change.changeNumber} ${viaScene.change.name}` : "No change assigned for this scene"}</div></div>
-            <Link to={`${base}/scenes/${viaScene.scene.id}`} className="btn btn-sm">Open scene</Link>
-          </div>
+          <div className="bold">Scene {viaScene.scene.number} · {viaScene.scene.name || "Untitled"}</div>
+          <div className="subtle">{viaScene.change ? `Wears change #${viaScene.change.changeNumber} ${viaScene.change.name}` : "No change assigned for this scene"}</div>
         </Card>
       )}
       <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
