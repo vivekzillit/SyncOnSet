@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, FileUp, CalendarDays, ChevronsDownUp, ChevronsUpDown, Pencil } from "lucide-react";
+import { Plus, FileUp, CalendarDays, ChevronsDownUp, ChevronsUpDown, Pencil } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, hasEpisodes, humanize, todayISO } from "@/lib/format";
 import type { Character, Scene, SceneCharacter } from "@/api/types";
-import { Badge, Card, Chips, ConfirmButton, Dot, Empty, ErrorBox, Modal, PageHead, SearchBox, Select, Spinner, Textarea, discardIfDirty, useToast, useUnsavedGuard } from "@/components/ui";
+import { Badge, Card, Chips, ConfirmButton, Dot, Empty, PageHead, SearchBox, Select, Spinner, discardIfDirty, useToast, useUnsavedGuard } from "@/components/ui";
 import { ScriptUploadModal } from "@/components/ScriptUpload";
 import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
 import { PrincipalsModal, sortByCast } from "@/components/PrincipalsModal";
@@ -46,10 +46,8 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
   const [principalsFor, setPrincipalsFor] = useState<string | null>(null);
   // "Edit single" mode: pick one row, then act on it from the toolbar (null = mode off, "" = on but nothing picked yet).
   const [single, setSingle] = useState<string | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
   const [docOpen, setDocOpen] = useState<DocKind | null>(null);
-  const [importText, setImportText] = useState("24 | Restaurant - the dinner | Restaurant Set | INT | NIGHT | Day 3 | Raj, Priya, Waiter\n25 | Parking lot | Backlot | EXT | NIGHT | Day 3 | Raj, Priya");
 
   const { data, isLoading } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
@@ -157,16 +155,6 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
     onError: fail,
   });
   const del = useMutation({ mutationFn: (id: string) => api(p(projectId, `/scenes/${id}`), { method: "DELETE" }), onSuccess: () => { qc.invalidateQueries(); toast.push("Scene deleted", "ok"); }, onError: fail });
-  const importM = useMutation({
-    mutationFn: () => {
-      const scenes = importText.split("\n").map((l) => l.trim()).filter(Boolean).map((line) => {
-        const [number, name, location, intExt, timeOfDay, scriptDay, chars] = line.split("|").map((s) => s.trim());
-        return { number, name: name || null, location: location || null, intExt: intExt || null, timeOfDay: timeOfDay || null, scriptDay: scriptDay || null, characters: chars ? chars.split(",").map((c) => c.trim()).filter(Boolean) : [] };
-      });
-      return api<{ scenes: number; charactersCreated: number }>(p(projectId, "/scenes/import"), { body: { scenes } });
-    },
-    onSuccess: (r) => { qc.invalidateQueries(); setImportOpen(false); toast.push(`Imported ${r.scenes} scenes, ${r.charactersCreated} new characters`, "ok"); },
-  });
 
   const startEdit = (s: Scene) => setDraft(s.id, toDraft(s));
   // Rows already being edited keep their in-progress values; only untouched rows get a fresh snapshot.
@@ -193,7 +181,7 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
   const addRow = () => setDraft(NEW, emptyDraft());
 
   const emptyTitle = when === "today" ? "No scenes scheduled today" : when === "upcoming" ? "No upcoming scenes" : q || rev ? "No scenes match" : "No scenes yet";
-  const emptyHint = when === "today" ? "Once a schedule and callsheet is uploaded it will appear here." : when === "upcoming" ? "Once a schedule is uploaded it will appear here." : "Upload the script to build the breakdown automatically, paste a breakdown, or add scenes one by one.";
+  const emptyHint = when === "today" ? "Once a schedule and callsheet is uploaded it will appear here." : when === "upcoming" ? "Once a schedule is uploaded it will appear here." : "Upload the script to build the breakdown automatically, or add scenes one by one.";
   const draftCount = `${revisions.length} draft${revisions.length === 1 ? "" : "s"}`;
   // The header reads like the reference: the selected draft, or the only draft when there is just one.
   const draftTitle = rev || (revisions.length === 1 ? revisions[0] : revisions.length ? "All drafts" : "Scenes");
@@ -213,7 +201,6 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
                 <button className="btn" onClick={() => setDocOpen("SCHEDULE")}><CalendarDays size={16} /> Upload schedule</button>
                 <span className="tiny" style={{ color: "var(--danger)" }}>Upload schedule to add characters and shoot date</span>
               </div>
-              <button className="btn" onClick={() => setImportOpen(true)}><Upload size={16} /> Import breakdown</button>
               <button className="btn" onClick={() => openLine(null)}><Plus size={16} /> Add to breakdown</button>
             </>}
           </>
@@ -349,11 +336,6 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
 
       <ScriptUploadModal open={scriptOpen} onClose={() => setScriptOpen(false)} onImported={() => { setWhen("all"); setRev(""); }} />
       <ScheduleUploadModal open={!!docOpen} kind={docOpen || "SCHEDULE"} onClose={() => setDocOpen(null)} onApplied={() => { setWhen(docOpen === "CALLSHEET" ? "today" : "upcoming"); setRev(""); }} />
-      <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Import script breakdown" footer={<><button className="btn" onClick={() => setImportOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={importM.isPending} onClick={() => importM.mutate()}>Import</button></>}>
-        <div className="notice info mb-2">One scene per line: <span className="mono">number | name | location | INT/EXT | DAY/NIGHT | script day | characters (comma separated)</span>. Unknown characters are created automatically. Existing scene numbers are updated.</div>
-        <Textarea rows={10} value={importText} onChange={(e) => setImportText(e.target.value)} className="mono" />
-        <ErrorBox error={importM.error} />
-      </Modal>
     </div>
   );
 }

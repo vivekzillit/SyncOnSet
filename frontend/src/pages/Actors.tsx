@@ -9,6 +9,20 @@ import { fmtDate, fmtDateTime, humanize } from "@/lib/format";
 import { Card, ConfirmButton, Empty, PageHead, SearchBox, Spinner, useToast } from "@/components/ui";
 import { ActorModal, charLabel, type ActorRow } from "@/components/ActorModal";
 
+/** The actor's talent representative: name, then how to reach them, then any extra rows added on the form. */
+function TalentRep({ a }: { a: ActorRow }) {
+  const extra = a.talentRepDetails || [];
+  if (!a.talentRep && !a.talentRepEmail && !a.talentRepPhone && !extra.length) return <span className="subtle">—</span>;
+  return (
+    <div className="small">
+      {a.talentRep && <div className="bold">{a.talentRep}</div>}
+      {a.talentRepEmail && <div><a href={`mailto:${a.talentRepEmail}`}>{a.talentRepEmail}</a></div>}
+      {a.talentRepPhone && <div><a href={`tel:${a.talentRepPhone.replace(/[^\d+]/g, "")}`} className="nowrap">{a.talentRepPhone}</a></div>}
+      {extra.map((d, i) => <div key={i} className="subtle">{d.label}: {d.value}</div>)}
+    </div>
+  );
+}
+
 /** SyncOnSet-style Actors page: table + Create Actor form. */
 export default function Actors() {
   const { projectId, can } = useProject();
@@ -26,7 +40,7 @@ export default function Actors() {
   const openEdit = (a: ActorRow) => { setEditing(a); setOpen(true); };
   const del = useMutation({ mutationFn: (id: string) => api(p(projectId, `/actors/${id}`), { method: "DELETE" }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["actors", projectId] }); qc.invalidateQueries({ queryKey: ["characters", projectId] }); toast.push("Actor deleted", "ok"); } });
 
-  const list = useMemo(() => (data || []).filter((a) => !q || `${a.name} ${a.characters.map((c) => c.name).join(" ")} ${a.notes || ""}`.toLowerCase().includes(q.toLowerCase())), [data, q]);
+  const list = useMemo(() => (data || []).filter((a) => !q || `${a.name} ${a.characters.map((c) => c.name).join(" ")} ${a.notes || ""} ${a.talentRep || ""} ${a.talentRepEmail || ""} ${a.talentRepPhone || ""} ${(a.talentRepDetails || []).map((d) => `${d.label} ${d.value}`).join(" ")}`.toLowerCase().includes(q.toLowerCase())), [data, q]);
 
   return (
     <div onClick={() => menu && setMenu(null)}>
@@ -40,7 +54,7 @@ export default function Actors() {
         {isLoading ? <Spinner /> : list.length === 0 ? <Empty icon="★" title="There is nothing to display" hint={canEdit ? "Press Add to create the first actor." : undefined} /> : (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Name</th><th>Character(s)</th><th>Gender</th><th>Age</th><th>Next Fitting</th><th>Start Work</th><th>Notes</th><th></th></tr></thead>
+              <thead><tr><th>Name</th><th>Character(s)</th><th>Gender</th><th>Age</th><th>Next Fitting</th><th>Start Work</th><th>Talent Rep</th><th>Notes</th><th></th></tr></thead>
               <tbody>
                 {list.map((a) => (
                   <tr key={a.id}>
@@ -50,6 +64,7 @@ export default function Actors() {
                     <td className="num">{a.age ?? ""}</td>
                     <td className="nowrap">{a.nextFitting ? (a.nextFittingId ? <Link to={`${base}/fittings/${a.nextFittingId}`}>{fmtDateTime(a.nextFitting)}</Link> : fmtDateTime(a.nextFitting)) : ""}</td>
                     <td className="nowrap">{a.startWorkDate ? fmtDate(a.startWorkDate, { day: "2-digit", month: "2-digit", year: "numeric" }) : ""}</td>
+                    <td style={{ minWidth: 180 }}><TalentRep a={a} /></td>
                     <td className="subtle truncate" style={{ maxWidth: 240 }}>{a.notes}</td>
                     <td className="right" style={{ position: "relative" }}>
                       {canEdit && <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); setMenu(menu === a.id ? null : a.id); }}><MoreVertical size={16} /></button>}
