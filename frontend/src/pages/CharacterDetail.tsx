@@ -29,6 +29,7 @@ export default function CharacterDetail() {
   const { data: ch, isLoading } = useQuery({ queryKey: ["character", id], queryFn: () => api<Detail>(p(projectId, `/characters/${id}`)) });
   const [newOpen, setNewOpen] = useState(false);
   const [pieceOpen, setPieceOpen] = useState(false);
+  const [tagOpen, setTagOpen] = useState(false);
   const [nf, setNf] = useState<{ name: string; description: string; costumes: Costume[] }>({ name: "", description: "", costumes: [] });
   const [pick, setPick] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -59,6 +60,16 @@ export default function CharacterDetail() {
   const saveDetails = useMutation({
     mutationFn: (details: CharacterDetailRow[]) => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { details } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); setDetailAt(null); },
+    onError: (e: Error) => toast.push(e.message, "danger"),
+  });
+  /** Tag an inventory piece to this character. A piece tagged to someone else moves here, and the toast says so. */
+  const tagPiece = useMutation({
+    mutationFn: (c: Costume) => api(p(projectId, `/costumes/${c.id}`), { method: "PATCH", body: { characterId: id } }),
+    onSuccess: (_r, c) => {
+      qc.invalidateQueries({ queryKey: ["character", id] });
+      qc.invalidateQueries({ queryKey: ["costumes", projectId] });
+      toast.push(c.character?.name ? `${c.assetNumber} moved here from ${c.character.name}` : `${c.assetNumber} added`, "ok");
+    },
     onError: (e: Error) => toast.push(e.message, "danger"),
   });
   const update = useMutation({
@@ -203,7 +214,7 @@ export default function CharacterDetail() {
               </div>
             )}
           </Card>
-          <Card title={`All pieces (${ch.costumes.length})`} actions={canEdit && <button className="btn btn-sm" onClick={() => setPieceOpen(true)}><Plus size={14} /> Add piece</button>} pad0>
+          <Card title={`All pieces (${ch.costumes.length})`} actions={canEdit && <div className="row gap-1"><button className="btn btn-sm" onClick={() => setTagOpen(true)}>Pick existing</button><button className="btn btn-sm" onClick={() => setPieceOpen(true)}><Plus size={14} /> Add piece</button></div>} pad0>
             {ch.costumes.length === 0 ? <Empty title="No costumes tagged to this character" /> : <div className="list">{ch.costumes.map((c) => <CostumeRow key={c.id} c={c} noStatus />)}</div>}
           </Card>
           {ch.notes && <Card title="Notes"><div className="small">{ch.notes}</div></Card>}
@@ -211,6 +222,7 @@ export default function CharacterDetail() {
       </div>
 
       {/* A piece added here belongs to this character from the start. */}
+      <CostumePicker open={tagOpen} onClose={() => setTagOpen(false)} title={`Pick a piece for ${ch.name}`} filter={(c) => c.characterId !== ch.id} onPick={(c) => { tagPiece.mutate(c); setTagOpen(false); }} />
       <CostumeFormModal open={pieceOpen} onClose={() => setPieceOpen(false)} defaultCharacterId={ch.id} onSaved={() => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["costumes", projectId] }); }} />
       <Modal open={newOpen} onClose={() => setNewOpen(false)} title={`New change for ${ch.name}`} footer={<><button className="btn" onClick={() => setNewOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!nf.name || createChange.isPending} onClick={() => createChange.mutate()}>Create</button></>}>
         <div className="col">
