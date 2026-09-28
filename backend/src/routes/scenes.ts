@@ -169,7 +169,7 @@ scenesRouter.post(
   requireRole(MANAGER_ROLES),
   upload.single("file"),
   wrap(async (req, res) => {
-    if (!req.file) throw badRequest("file is required (.fdx, .fountain, .txt or .pdf)");
+    if (!req.file) throw badRequest("file is required (.fdx, .txt or .pdf)");
     const head = req.file.buffer.subarray(0, 512).toString("utf8");
     const format = detectFormat(req.file.originalname || "", req.file.mimetype || "", head);
     let content: string;

@@ -165,8 +165,8 @@ export default function ProductionWizard() {
             <div className="card flat" style={{ borderStyle: "dashed", textAlign: "center", padding: 30, cursor: "pointer" }} onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files?.[0]; if (file) parseFile(file); }}>
               <Upload size={34} color="var(--info)" />
               <div className="bold mt-1">{busy ? "Reading the script…" : "Drag and Drop File"}</div>
-              <div className="subtle">or click to browse · Final Draft, Fountain, text, PDF</div>
-              <input ref={fileRef} type="file" accept=".fdx,.fountain,.txt,.pdf,application/pdf,text/plain" hidden onChange={(e) => e.target.files?.[0] && parseFile(e.target.files[0])} />
+              <div className="subtle">or click to browse · Final Draft, text, PDF</div>
+              <input ref={fileRef} type="file" accept=".fdx,.txt,.pdf,application/pdf,text/plain" hidden onChange={(e) => e.target.files?.[0] && parseFile(e.target.files[0])} />
             </div>
           </div>
           <ErrorBox error={error} />

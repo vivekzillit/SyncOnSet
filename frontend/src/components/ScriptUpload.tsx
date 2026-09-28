@@ -175,8 +175,8 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
             onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); pick(e.dataTransfer.files?.[0] || null); }}>
             <Upload size={28} color="var(--text-3)" />
             <div className="bold mt-1">{parse.isPending ? `Reading ${file?.name}…` : "Drop the script here or click to choose"}</div>
-            <div className="subtle mt-1">Final Draft (.fdx) · Fountain (.fountain) · plain text (.txt) · PDF exported from your writing software</div>
-            <input ref={fileRef} type="file" accept=".fdx,.fountain,.txt,.pdf,application/pdf,text/plain" hidden onChange={(e) => pick(e.target.files?.[0] || null)} />
+            <div className="subtle mt-1">Final Draft (.fdx) · plain text (.txt) · PDF exported from your writing software</div>
+            <input ref={fileRef} type="file" accept=".fdx,.txt,.pdf,application/pdf,text/plain" hidden onChange={(e) => pick(e.target.files?.[0] || null)} />
           </div>
           <div className="subtle">Re-uploading a revised draft updates scenes by number and adds new characters; it never deletes anything.</div>
           <ErrorBox error={parse.error} />
