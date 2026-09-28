@@ -44,9 +44,14 @@ scheduleRouter.post(
     const characters = await prisma.character.findMany({ where: { projectId: req.projectId, castNumber: { not: null } }, select: { id: true, name: true, castNumber: true } });
     const byCast = new Map(characters.map((c) => [c.castNumber!, c]));
 
+    // A call sheet files the day it is for. Its advance block — tomorrow's work — is read and reported, but
+    // never applied: dating those scenes from this sheet would put the wrong day on them.
+    const ownDays = kind === "CALLSHEET" && parsed.date ? parsed.days.filter((d) => d.date === parsed.date) : parsed.days;
+    const aheadScenes = kind === "CALLSHEET" && parsed.date ? parsed.days.filter((d) => d.date !== parsed.date).reduce((n, d) => n + d.scenes.length, 0) : 0;
+
     // One row per scene named in the document, in scene order, exactly like the script upload's preview.
     const seen = new Set<string>();
-    const scenes = parsed.days.flatMap((day) =>
+    const scenes = ownDays.flatMap((day) =>
       day.scenes.filter((ref) => !seen.has(normalizeNumber(ref.number)) && seen.add(normalizeNumber(ref.number)) !== undefined).map((ref) => {
         const sc = byNumber.get(normalizeNumber(ref.number));
         const read = { intExt: ref.intExt, location: ref.location, timeOfDay: ref.timeOfDay, name: ref.name, pages: ref.pages, scriptDay: ref.scriptDay, description: ref.description };
@@ -72,9 +77,11 @@ scheduleRouter.post(
     res.json({
       kind, file: req.file.originalname, format,
       date: parsed.date, dayNumber: parsed.dayNumber,
-      days: parsed.days.length,
+      days: ownDays.length,
       scenes,
-      warnings: parsed.warnings,
+      warnings: aheadScenes
+        ? [...parsed.warnings, `${aheadScenes} scene${aheadScenes === 1 ? "" : "s"} from the advance schedule ${aheadScenes === 1 ? "was" : "were"} left out: a call sheet only files its own day.`]
+        : parsed.warnings,
       breakdownEmpty: stored.length === 0,
       knownCastNumbers: characters.length,
     });
