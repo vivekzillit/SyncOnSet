@@ -39,7 +39,10 @@ const WEEKDAY_RE = /\b(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday
 const NUM = String.raw`\d{1,4}[A-Za-z]{0,2}`;
 const RANGE = String.raw`${NUM}(?:(?:-|–|—)${NUM}|\s+(?:to|thru|through)\s+${NUM})?`;
 const LIST_RE = new RegExp(String.raw`\b(?:scenes?|scs?|scn)(?:[.\s:#\-–]+)(?:(?:no\.?|number|#)[.\s:]*)?(${RANGE}(?:\s*(?:,|&|\/|\+|\band\b)\s*${RANGE})*)`, "gi");
-const STRIP_RE = new RegExp(String.raw`^\s*(\d{1,4}[A-Za-z]{0,2}?)\s*[-–:.)]?\s*(?:INT\/EXT|EXT\/INT|INT|EXT|I\/E|E\/I|EST)(?:\b|(?=[A-Z]))`, "i");
+// A strip starts with its scene number, or several ("47 & 51 INT."), optionally a part ("72pt3") and a kind of shot
+// ("11 plate", "12 insert"), then INT./EXT.
+const STRIP_NUM = String.raw`\d{1,4}[A-Za-z]{0,2}?(?:\s?(?:pt|part)\.?\s?\d{1,2})?`;
+const STRIP_RE = new RegExp(String.raw`^\s*(${STRIP_NUM}(?:\s*(?:&|,|\/|\+|\band\b)\s*${STRIP_NUM})*)(?:\s+(?:plates?|inserts?|pick[\s-]?ups?|p\/u|cutaways?))?\s*[-–:.)]?\s*(?:INT\/EXT|EXT\/INT|INT|EXT|I\/E|E\/I|EST)(?:\b|(?=[A-Z]))`, "i");
 const SPLIT_RE = /\s*(?:,|&|\/|\+|\band\b)\s*/i;
 const RANGE_RE = /^(\d{1,4})(?:(?:-|–|—)|\s+(?:to|thru|through)\s+)(\d{1,4})$/i;
 const DAY_RES = [
@@ -53,8 +56,10 @@ const END_RE = /\bend\s+(?:of\s+)?(?:shoot(?:ing)?\s+)?day\b/i;
 const ADVANCE_RE = /\b(?:advance(?:\s+(?:schedule|shooting|call))?|for\s+tomorrow|tomorrow'?s?(?:\s+(?:schedule|scenes|call))?|tomorrow|next\s+day|day\s+after)\b/i;
 // Continuity and costume notes name other scenes by number; those scenes are not shot on this day.
 const NOTE_RE = /\b(?:continuity|cont'?d\.?|continued|same(?:\s+\w+){0,2}\s+as|as\s+(?:in|per)|refer(?:ence)?\s+to|see|match(?:es|ing)|carr(?:y|ied|ies)\s*[- ]?over|picks?\s*up\s+from|flashback\s+to)\b[^.;]{0,24}?\b(?:scs?|scn|scenes?)\.?\s*#?\s*\d/i;
+// Sound-only work names a scene without shooting it: "Record Ruth wildtrack for Sc 32", "Include VOs for scenes 173-176".
+const SOUND_RE = /\b(?:wild\s*-?\s*tracks?|v\.?\s?o\.?'?s?|voice[\s-]?overs?|adr|sound\s+only|audio\s+only)\b/i;
 // Lines whose date is not a shoot date (revision stamps, print dates, birthdays).
-const META_RE = /\b(?:rev(?:ised|ision)?|version|printed|generated|updated|created|issued|dob|born|expires?)\b/i;
+const META_RE = /\b(?:rev(?:ised|ision)?|version|printed|generated|updated|created|issued|dob|born|expires?)\b|\b(?:script|schedule|draft|pages?|one[- ]?liner|breakdown)\b[^.;]{0,40}?\bdated\b/i;
 const TOTAL_RE = /\btotal\b/i;
 // A numeric day/month with no year is only trusted where the line says it is a date.
 const NOYEAR_CONTEXT_RE = /\b(?:tomorrow|day\s+after|advance|date)\b/i;
@@ -82,6 +87,12 @@ function year(raw: string | undefined, fallback: number, strict = false): { y: n
   return { y: n, assumed: false };
 }
 const unique = <T,>(xs: T[]) => Array.from(new Set(xs));
+/**
+ * A part of a scene ("68PT", "116pt2", "111pt 1", "12 part 2") is shot as that scene: it is the scene itself, never a new
+ * one. Letter suffixes that are real scene numbers (46A, 140A) are kept.
+ */
+const PART_RE = /^(\d{1,4}[A-Z]?)\s?(?:PT|PART)\.?\s?\d{0,2}$/i;
+export const sceneOfPart = (n: string) => { const t = n.trim(); const m = PART_RE.exec(t); return m ? m[1] : t; };
 export const normalizeNumber = (n: string) => n.trim().toUpperCase().replace(/^0+(?=\d)/, "");
 export const nextDay = (isoDate: string) => { const [y, m, d] = isoDate.split("-").map(Number); const dt = new Date(Date.UTC(y, m - 1, d + 1)); return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`; };
 /** Normalise one line: strip a chat-export prefix, non-breaking and zero-width spaces. */
@@ -145,16 +156,18 @@ const splitScenes = (text: string) => text.split(SPLIT_RE).flatMap(expandRange).
 export function scenesOf(line: string): string[] {
   const out: string[] = [];
   const strip = STRIP_RE.exec(line);
-  if (strip) out.push(strip[1]);
+  if (strip) out.push(...splitScenes(strip[1]));
   for (const m of line.matchAll(LIST_RE)) out.push(...splitScenes(m[1]));
-  return unique(out.map(normalizeNumber));
+  return unique(out.map((n) => normalizeNumber(sceneOfPart(n))));
 }
 
 export const emptyDetail = (): SceneDetail => ({ intExt: null, location: null, timeOfDay: null, name: null, pages: null, scriptDay: null, cast: [], description: null });
 
 const INTEXT_RE = /\b(INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|E\/I|INT|EXT|EST)(?:\b|(?=[A-Z]))\.?/i;
 const PAGES_RE = /\b(\d{1,2}\s+\d{1,2}\/\d|\d{1,2}\/\d)\s*(?:pgs?\.?|pages?)?(?=[\s(]|$|[A-Za-z])/i;
-const STORY_DAY_RE = /\b([DN])\s?(\d{1,3})\b(?!\/)/;
+// The story-day column: "D8", "N32", and the long forms UK call sheets use ("MORN 1", "EVE 2", "NIGHT 3").
+const STORY_DAY_RE = /\b(D|N|DAY|NIGHT|MORN(?:ING)?|EVE(?:NING)?|AFT(?:ERNOON)?|DAWN|DUSK)\s?(\d{1,3})\b(?!\s*\/)/i;
+const STORY_TIME: Record<string, string> = { D: "DAY", DAY: "DAY", N: "NIGHT", NIGHT: "NIGHT", MORN: "DAY", MORNING: "DAY", EVE: "NIGHT", EVENING: "NIGHT", AFT: "DAY", AFTERNOON: "DAY", DAWN: "DAWN", DUSK: "DUSK" };
 const CAST_RE = /\bcast\s*(?:#|nos?\.?|numbers?)?\s*:?\s*((?:\d{1,3})(?:\s*(?:,|&|\+|and)\s*\d{1,3})*)/i;
 const EST_TIME_RE = /\b\d{1,2}\s*h(?:\s*\d{1,2}\s*m)?\b|\b\d{1,3}\s*mins?\b|\b\d{1,2}:\d{2}\s*(?:[ap]\.?m\.?)?\b/gi;
 const TIME_TAIL_RE = new RegExp(String.raw`[\s\-–—.,]+(${Object.keys(TIME_WORDS).map((w) => w.replace(/ /g, "\\s+")).sort((a, b) => b.length - a.length).join("|")})\s*$`, "i");
@@ -179,12 +192,15 @@ export function readSceneDetail(rawLine: string): SceneDetail {
   const ie = INTEXT_RE.exec(searchIn);
   if (!ie) return d;
   let rest = searchIn.slice(ie.index + ie[0].length);
-  const cut = [PAGES_RE.exec(rest)?.index, STORY_DAY_RE.exec(rest)?.index, CAST_RE.exec(rest)?.index, /\bcast\b/i.exec(rest)?.index]
-    .filter((i): i is number => typeof i === "number");
-  const pages = PAGES_RE.exec(rest);
-  if (pages) d.pages = pages[1].replace(/\s+/g, " ").trim();
   const story = STORY_DAY_RE.exec(rest);
-  if (story) d.scriptDay = `${story[1].toUpperCase() === "N" ? "Night" : "Day"} ${Number(story[2])}`;
+  // The story day's number must not be read as the whole-page part of the page count ("MORN 1   2/8" is 2/8, not 1 2/8).
+  const withoutStory = story ? rest.slice(0, story.index) + " ".repeat(story[0].length) + rest.slice(story.index + story[0].length) : rest;
+  const pages = PAGES_RE.exec(withoutStory);
+  const cut = [pages?.index, story?.index, CAST_RE.exec(rest)?.index, /\bcast\b/i.exec(rest)?.index]
+    .filter((i): i is number => typeof i === "number");
+  if (pages) d.pages = pages[1].replace(/\s+/g, " ").trim();
+  const storyTime = story ? STORY_TIME[story[1].toUpperCase()] ?? null : null;
+  if (story) d.scriptDay = `${storyTime === "NIGHT" ? "Night" : "Day"} ${Number(story[2])}`;
   if (cut.length) rest = rest.slice(0, Math.min(...cut));
   rest = rest.replace(EST_TIME_RE, " ").replace(/[\s\-–—.,:;|]+$/, "").replace(/^[\s\-–—.,:;|/]+/, "").replace(/\s{2,}/g, " ").trim();
   if (!rest) return d;
@@ -200,7 +216,7 @@ export function readSceneDetail(rawLine: string): SceneDetail {
   const slug = parseSlug(`${ie[0].replace(/\s/g, "")} ${rest}`);
   d.intExt = slug.intExt;
   d.location = slug.location;
-  d.timeOfDay = timeOfDay ?? slug.timeOfDay;
+  d.timeOfDay = timeOfDay ?? slug.timeOfDay ?? storyTime;
   d.name = d.location ? parseSlug(`${slug.intExt || "INT"}. ${d.location}${d.timeOfDay ? ` - ${d.timeOfDay}` : ""}`).name : null;
   return d;
 }
@@ -225,6 +241,16 @@ export function dayNumberOf(line: string): number | null {
   return null;
 }
 
+/**
+ * Does this dated line head a day? It starts with the date or a weekday ("Thursday 13th August 2026", "SAT 15 AUG –
+ * SHOOT DAY 23"), or says Date / Shoot day / Day 23, or closes a day ("End of Day 1 -- Mon, Oct 12").
+ */
+const LEADING_WEEKDAY_RE = new RegExp(String.raw`^[\s\W]*${WEEKDAY_RE.source}[\s,.\-–—]*$`, "i");
+function dayHeading(line: string, hit: DateHit): boolean {
+  const lead = line.slice(0, hit.index).trim();
+  return lead === "" || LEADING_WEEKDAY_RE.test(lead) || /\b(?:date|shoot(?:ing)?\s*day|day\s*(?:no\.?|#)?\s*\d)/i.test(line) || END_RE.test(line);
+}
+
 /** Call sheets: the shoot date is the header date that looks most like one, never a revision stamp or the advance block. */
 function pickSheetDate(lines: string[], opts: ParseOptions): string | null {
   let best: { iso: string; score: number } | null = null;
@@ -232,7 +258,9 @@ function pickSheetDate(lines: string[], opts: ParseOptions): string | null {
   for (const raw of lines) {
     const line = cleanLine(raw); if (!line) continue;
     if (++seen > 60) break;
-    if (META_RE.test(line) || ADVANCE_RE.test(line)) continue;
+    // Everything from the advance schedule down is later days, never the day this sheet is for.
+    if (ADVANCE_RE.test(line)) break;
+    if (META_RE.test(line)) continue;
     const hit = findDates(line, opts.defaultYear, opts.monthFirst)[0]; if (!hit) continue;
     const score = (/\bdate\b/i.test(line) ? 3 : 0) + (WEEKDAY_RE.test(line) ? 2 : 0) + (/\b(?:shoot|day)\b/i.test(line) ? 2 : 0);
     if (!best || score > best.score) best = { iso: hit.iso, score };
@@ -318,7 +346,7 @@ function parseCsv(lines: string[], opts: ParseOptions, warnings: string[]): Pars
       else { currentDate = null; warnings.push(`Could not read the date "${dateCell}".`); }
     }
     if (dayCol >= 0 && cells[dayCol]) { const n = parseInt(cells[dayCol], 10); if (!Number.isNaN(n)) currentDay = n; }
-    const numbers = splitScenes(cells[sceneCol] || "").map(normalizeNumber).filter((n) => /^\d{1,4}[A-Z]{0,2}$/.test(n));
+    const numbers = unique(splitScenes(cells[sceneCol] || "").map((n) => normalizeNumber(sceneOfPart(n)))).filter((n) => /^\d{1,4}[A-Z]{0,2}$/.test(n));
     if (!numbers.length) continue;
     sceneLines++;
     const detail = detailOf(cells);
@@ -387,7 +415,9 @@ export function parseScheduleText(text: string, options: ParseOptions): ParsedSc
   const days: ParsedDay[] = [];
   let current: ParsedDay | null = null;
   let pending: ParsedSceneRef[] = [];
-  let dateLines = 0, sceneLines = 0, ambiguous = 0, assumedYear = 0, advanceAssumed = 0, notesSkipped = 0;
+  let dateLines = 0, sceneLines = 0, ambiguous = 0, assumedYear = 0, notesSkipped = 0, soundSkipped = 0;
+  // Advance blocks dated "the day after the call sheet" by guesswork; only worth a warning if scenes actually landed on one.
+  const assumedDays: ParsedDay[] = [];
   const sheetDate = opts.kind === "CALLSHEET" ? pickSheetDate(rawLines, opts) : null;
   const count = (hit: DateHit) => { if (hit.ambiguous) ambiguous++; if (hit.assumedYear) assumedYear++; };
   const newDay = (date: string | null, dayNumber: number | null, label: string) => { const d: ParsedDay = { date, dayNumber, label, scenes: [] }; days.push(d); return d; };
@@ -398,6 +428,7 @@ export function parseScheduleText(text: string, options: ParseOptions): ParsedSc
     const isNote = NOTE_RE.test(line);
     const scenes = TOTAL_RE.test(line) ? [] : sceneRefsOf(line);
     if (isNote && scenes.length) { notesSkipped++; continue; } // continuity / costume notes name scenes shot on other days
+    if (scenes.length && SOUND_RE.test(line) && !STRIP_RE.test(line)) { soundSkipped++; continue; } // wildtrack / VO: recorded, not shot
     const dates = findDates(line, opts.defaultYear, opts.monthFirst);
     const dayNo = dayNumberOf(line);
     const meta = META_RE.test(line);
@@ -408,13 +439,16 @@ export function parseScheduleText(text: string, options: ParseOptions): ParsedSc
       const hit = dates.find((d) => d.index > advance.index) ?? dates[0];
       if (hit) count(hit);
       let date = hit?.iso ?? null;
-      if (!date && sheetDate) { date = nextDay(sheetDate); advanceAssumed++; }
-      if (scenes.length) { const d = newDay(date, dayNo, line); d.scenes = mergeScenes(d.scenes, scenes); current = d; sceneLines++; }
-      else { flushPending(sheetDate, null, "call sheet date"); current = newDay(date, dayNo, line); if (hit) dateLines++; }
+      const guessed = !date && !!sheetDate;
+      if (guessed) date = nextDay(sheetDate!);
+      if (scenes.length) { const d = newDay(date, dayNo, line); d.scenes = mergeScenes(d.scenes, scenes); current = d; sceneLines++; if (guessed) assumedDays.push(d); }
+      else { flushPending(sheetDate, null, "call sheet date"); current = newDay(date, dayNo, line); if (hit) dateLines++; if (guessed) assumedDays.push(current); }
       continue;
     }
     if (dates.length && !scenes.length) {
       if (meta) continue;
+      // On a call sheet a date inside a sentence ("B cam hours for 15th August are now…") is a note, not a new day.
+      if (opts.kind === "CALLSHEET" && !dayHeading(line, dates[0])) continue;
       dateLines++;
       const hit = dates[0]; count(hit);
       if (END_RE.test(line)) {
@@ -454,7 +488,8 @@ export function parseScheduleText(text: string, options: ParseOptions): ParsedSc
 
   const merged = shareDetailByNumber(mergeDays(days));
   finishWarnings(merged, warnings, { ambiguous, assumedYear, defaultYear: opts.defaultYear });
-  if (advanceAssumed) warnings.push("Tomorrow's advance scenes were dated the day after the call sheet. Check that date before applying.");
+  if (assumedDays.some((d) => d.scenes.length)) warnings.push("Tomorrow's advance scenes were dated the day after the call sheet. Check that date before applying.");
+  if (soundSkipped) warnings.push(`${soundSkipped} sound-only mention${soundSkipped === 1 ? "" : "s"} (wildtrack, VO) ${soundSkipped === 1 ? "was" : "were"} not treated as a scene being shot.`);
   if (notesSkipped) warnings.push(`${notesSkipped} continuity or costume note${notesSkipped === 1 ? "" : "s"} mentioning other scenes ${notesSkipped === 1 ? "was" : "were"} not treated as scheduled work.`);
   const dayNumber = opts.kind === "CALLSHEET" ? merged.find((d) => d.date === sheetDate && d.dayNumber != null)?.dayNumber ?? merged.find((d) => d.dayNumber != null)?.dayNumber ?? null : merged[0]?.dayNumber ?? null;
   return { kind: opts.kind, date: sheetDate ?? merged.find((d) => d.date)?.date ?? null, dayNumber, days: merged, warnings, stats: { lines: rawLines.length, dateLines, sceneLines, format: "text" } };

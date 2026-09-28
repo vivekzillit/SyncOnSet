@@ -19,7 +19,7 @@
   {
     "name": "StudioBinder style: day headers first",
     "kind": "SCHEDULE",
-    "text": "Day 1 \u2014 Monday, October 12, 2026\nScene 12 \u2014 INT. RAJ'S OFFICE \u2014 DAY \u2014 1 3/8 pages\nScene 24 \u2014 INT. RESTAURANT \u2014 NIGHT\nDay 2 \u2014 Tuesday, October 13, 2026\nScene 32 \u2014 INT. HOSPITAL CORRIDOR \u2014 NIGHT\n",
+    "text": "Day 1 — Monday, October 12, 2026\nScene 12 — INT. RAJ'S OFFICE — DAY — 1 3/8 pages\nScene 24 — INT. RESTAURANT — NIGHT\nDay 2 — Tuesday, October 13, 2026\nScene 32 — INT. HOSPITAL CORRIDOR — NIGHT\n",
     "expect": {
       "days": {
         "2026-10-12": [
@@ -333,7 +333,7 @@
   {
     "name": "Excel CSV with title rows and a BOM above the header",
     "kind": "SCHEDULE",
-    "text": "\ufeffDHOOP CHHAON - SHOOTING SCHEDULE (Block 1),,,,\nPrepared by: Production Office,,,,\n,,,,\nShoot Day,Date,Scenes,Location,Cast\n1,12-10-2026,\"12, 14A, 17\",Film City,\"1, 2\"\n2,13-10-2026,\"30, 31\",Marine Drive,1\n",
+    "text": "﻿DHOOP CHHAON - SHOOTING SCHEDULE (Block 1),,,,\nPrepared by: Production Office,,,,\n,,,,\nShoot Day,Date,Scenes,Location,Cast\n1,12-10-2026,\"12, 14A, 17\",Film City,\"1, 2\"\n2,13-10-2026,\"30, 31\",Marine Drive,1\n",
     "expect": {
       "days": {
         "2026-10-12": [
@@ -725,11 +725,11 @@
     "expect": {
       "days": {
         "2026-10-12": [
-          "107PT"
+          "107"
         ]
       },
       "detail": {
-        "107pt": {
+        "107": {
           "intExt": "INT",
           "location": "OLD RUN DOWN AIRPORT",
           "timeOfDay": "NIGHT",
@@ -749,11 +749,11 @@
     "expect": {
       "days": {
         "2026-10-12": [
-          "107PT"
+          "107"
         ]
       },
       "detail": {
-        "107PT": {
+        "107": {
           "intExt": "INT",
           "location": "OLD RUN DOWN AIRPORT",
           "timeOfDay": "NIGHT",
@@ -775,6 +775,104 @@
       "warningsInclude": [
         "continuity or costume note"
       ]
+    }
+  },
+  {
+    "name": "A schedule's revision date (\"Pink Schedule dated 30th July\") is not the shoot date",
+    "kind": "CALLSHEET",
+    "text": "Director: Sharon Maguire\nTuesday 4th August 2026\nScript: Blue Revisions dated 20th July 2026\nSchedule: Pink Schedule dated 30th July 2026   The Story Works, Lower Richmond Road\nCALL SHEET: 17 OF 32\n113   EXT. JAGDAMBI TEMPLE, INDIA (1965)   D24   1 3/8   1, 2, 3, 24\n114   EXT. KHAJURAHO TEMPLES, INDIA (1965)   D24   3/8   1, 2, 3\n",
+    "expect": {
+      "days": {
+        "2026-08-04": [
+          "113",
+          "114"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Scene parts (116pt2, 111pt 1, 68PT) are the scene itself, not new scene numbers",
+    "kind": "CALLSHEET",
+    "text": "Tuesday 4th August 2026\n116pt2   EXT. KHAJURAHO TEMPLES, INDIA (1965)   SUNSET 24   7/8   1, 2, 3\n111pt 1 EXT. MARKET, KHAJURAHO (1965)   D24   5/8   1, 2, 3, 51\n111pt2   EXT. MARKET, KHAJURAHO (1965)   D24   4/8   1, 2, 3, 51\n46A   INT. HOUSE - DAY   2/8\nSc 68PT, 70\n",
+    "expect": {
+      "days": {
+        "2026-08-04": [
+          "116",
+          "111",
+          "46A",
+          "68",
+          "70"
+        ]
+      }
+    }
+  },
+  {
+    "name": "A date inside a crew note (\"B cam hours for 15th August\") does not start a new day",
+    "kind": "CALLSHEET",
+    "text": "Thursday 13th August 2026\nCALL SHEET: 22 OF 32\n1. ***PLEASE NOTE THE B CAM SHOOT HOURS FOR 15TH AUGUST ARE NOW 08:30 - 20:30 (STANDARD WORKING DAY)***\n4   INT. THE TONIGHT SHOW (1972)   N38   1/8   27\n183   INT. US TV STUDIOS - BACKSTAGE - STAGE (1972)   N38   4/8   1, 2, 14, 19\nADVANCE SCHEDULE:\nSATURDAY 15TH AUGUST 2026 - SHOOT DAY 23 - SEMI-CONTINUOUS HOURS: 13.00 - 23.30tbc\n42   EXT. TRAFALGAR SQUARE   D3   4/8   1, 2, 9\n",
+    "expect": {
+      "days": {
+        "2026-08-13": [
+          "4",
+          "183"
+        ],
+        "2026-08-15": [
+          "42"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Call sheet: several numbers on one strip (47 & 51), shot kinds (11 plate), wildtrack/VO mentions are not scenes shot",
+    "kind": "CALLSHEET",
+    "text": "Tuesday 21st July 2026\nScript: Blue Revisions dated 20th July 2026\nSchedule: Blue Schedule dated 10th July 2026\nCALL SHEET: 7 OF 33\n1. ***PLEASE NOTE THAT TODAY WILL BE A CLOSED SET FOR SCENES 141 - 149***\n137A   INT. COMFORT HOUSE - BEDROOM (1970)   N32   2 4/8   1, 3\n141   INT. COMFORT HOUSE - BEDROOM (1970)   N32   1/8   1, 3\nTO RECORD RUTH WILDTRACK FOR SC 32 AS AVAILABLE\nB CAM TO SHOOT:\n72pt3   INT. COMFORT HOUSE - ALEX'S STUDY (1963)   D8   -   -   Alex Double\n47 & 51 INT. VARIOUS - TYPEWRITER CLOSE UPS   N3 & MORN 5   -   -   Alex Double\n12   INT. COMFORT HOUSE - KITCHEN (1960)   MORN 1   2/8   -   Ruth Double\n11 plate INT. COMFORT HOUSE - BEDROOM (1960)   MORN 1   -   -   1h30 warning for Data Wrangler\nSOUND:   Per Nina Rice. Wildtrack for Sc. 32 as available\nADVANCE SCHEDULE:\nTHURSDAY 23RD JULY 2026 - SHOOT DAY 9 - SEMI-CONTINUOUS HOURS: 08.00 - 18.30tbc   Dunsfold Aerodrome\n172   INT. AIRPLANE - NEW YORK TO LONDON (1970)   D37   1   1, 4\nINCLUDE VO'S FOR SCENES 173, 174, 175, 176 - MITCHELL'S SPEECH   35x Passengers (from above)\n108   INT. AIRPLANE TO INDIA (1965)   D23   2/8   1, 2, 3, 53\n",
+    "expect": {
+      "date": "2026-07-21",
+      "days": {
+        "2026-07-21": [
+          "141",
+          "137A",
+          "72",
+          "47",
+          "51",
+          "12",
+          "11"
+        ],
+        "2026-07-23": [
+          "172",
+          "108"
+        ]
+      },
+      "warningsInclude": [
+        "sound-only"
+      ]
+    }
+  },
+  {
+    "name": "Detail: a long story-day column (MORN 1) is the story day, not the set or the whole pages",
+    "kind": "CALLSHEET",
+    "text": "Tuesday 21st July 2026\n12   INT. COMFORT HOUSE - KITCHEN (1960)   MORN 1   2/8   -   Ruth Double\n84   INT. CHURCH HALL - BALLROOM CLASS 1 (1963)   EVE 11   6/8   1, 3, 15\n",
+    "expect": {
+      "days": {
+        "2026-07-21": [
+          "12",
+          "84"
+        ]
+      },
+      "detail": {
+        "12": {
+          "intExt": "INT",
+          "location": "COMFORT HOUSE - KITCHEN (1960)",
+          "timeOfDay": "DAY",
+          "pages": "2/8",
+          "scriptDay": "Day 1"
+        },
+        "84": {
+          "location": "CHURCH HALL - BALLROOM CLASS 1 (1963)",
+          "pages": "6/8",
+          "scriptDay": "Night 11"
+        }
+      }
     }
   }
 ]
