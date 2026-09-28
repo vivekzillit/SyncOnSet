@@ -9,6 +9,7 @@ import { EXPENSE_CATEGORIES, FINANCE_ROLES } from "../lib/constants";
 import { budgetReport } from "../services/reports";
 import { audit } from "../services/audit";
 import { readBudgetSheet } from "../services/budgetSheet";
+import { budgetTemplateXlsx } from "../services/budgetTemplate";
 import { normalizeNumber } from "../services/scheduleParser";
 
 export const expensesRouter = Router({ mergeParams: true });
@@ -49,6 +50,15 @@ expensesRouter.get("/budget", wrap(async (req, res) => res.json(await budgetRepo
  */
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const key = (s: string | null | undefined) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+/** A blank budget sheet (.xlsx) with the headers the upload reads, a few example rows and a live Amount formula. */
+expensesRouter.get(
+  "/import/template",
+  wrap(async (_req, res) => {
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", 'attachment; filename="Budget sheet template.xlsx"');
+    res.send(await budgetTemplateXlsx());
+  }),
+);
 expensesRouter.post(
   "/import/preview",
   upload.single("file"),

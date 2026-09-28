@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileSpreadsheet, Pencil, Plus, Trash2 } from "lucide-react";
+import { FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth } from "@/state/auth";
@@ -10,10 +10,10 @@ import { Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, Se
 import { RecordActions } from "@/components/Discussion";
 import { BudgetUpload } from "@/components/BudgetUpload";
 import { BudgetSheet, type SheetGroup } from "@/components/BudgetSheet";
-import { BUDGET_UNITS, CURRENCIES, WARDROBE_ACCOUNTS, sumByCurrency } from "@/lib/budgetAccounts";
+import { BUDGET_UNITS, CURRENCIES, WARDROBE_ACCOUNTS, departmentOf, sumByCurrency } from "@/lib/budgetAccounts";
 
 interface BudgetReport { total: number; byCategory: Record<string, number>; byCharacter: Record<string, number>; byScene: Record<string, number>; inventoryValue: number; rentalCommitted: number; expenses: Expense[]; rentals: Rental[] }
-type TabKey = "all" | "scenes" | "characters";
+type TabKey = "all" | "scenes" | "characters" | "accounts";
 /** Filter value for expenses not tagged to any scene / character. */
 const NONE = "__none__";
 const ACCOUNT_LIST_ID = "budget-accounts";
@@ -52,6 +52,7 @@ export default function Budget() {
   const [q, setQ] = useState("");
   const [sceneF, setSceneF] = useState("");
   const [charF, setCharF] = useState("");
+  const [accountF, setAccountF] = useState("");
   const [open, setOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [f, setF] = useState<Form>(() => blankForm(currency));
@@ -89,7 +90,14 @@ export default function Budget() {
   const shownExpenses = useMemo(() => expenses.filter((e) =>
     (!sceneF || (sceneF === NONE ? !e.sceneId : e.sceneId === sceneF)) &&
     (!charF || (charF === NONE ? !e.characterId : e.characterId === charF)) &&
-    matches(needle, e.description, humanize(e.category), e.character?.name, e.scene?.number, e.costume?.assetNumber, e.costume?.name, e.vendor?.name)), [expenses, sceneF, charF, needle]);
+    (!accountF || (accountF === NONE ? !e.accountCode : e.accountCode === accountF)) &&
+    matches(needle, e.description, humanize(e.category), e.accountCode, e.accountName, e.payee, e.character?.name, e.scene?.number, e.costume?.assetNumber, e.costume?.name, e.vendor?.name)), [expenses, sceneF, charF, accountF, needle]);
+  /** Every account code used on this production, in chart order, for the account filter. */
+  const accountOptions = useMemo(() => {
+    const by = new Map<string, string>();
+    for (const e of expenses) if (e.accountCode && !by.has(e.accountCode)) by.set(e.accountCode, e.accountName || "");
+    return [...by.entries()].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([code, name]) => ({ value: code, label: name ? `${code} ${name}` : code }));
+  }, [expenses]);
   // Every scene is listed, spend or not, so the breakdown reads scene by scene in script order.
   const shownScenes = useMemo(() => (scenes || []).filter((s) => matches(needle, s.number, s.name, s.location)), [scenes, needle]);
   const shownChars = useMemo(() => (characters || []).filter((c) => matches(needle, c.name, c.actor?.name, c.castNumber)), [characters, needle]);
@@ -97,9 +105,6 @@ export default function Budget() {
   if (isLoading || !data) return <Spinner />;
   const m = (n: number) => fmtMoney(n, currency);
   const cats = meta?.expenseCategories || Object.keys(data.byCategory);
-  const summary = (r?: { count: number; cats: Set<string> }) => r ? `${r.count} expense${r.count === 1 ? "" : "s"} · ${[...r.cats].map(humanize).join(", ")}` : "No spend yet";
-  /** From a scene / character row, open the All tab filtered to it. */
-  const drill = (scene: string, character: string) => { setSceneF(scene); setCharF(character); setQ(""); setTab("all"); };
   const untaggedScene = byScene.get(NONE);
   const untaggedChar = byChar.get(NONE);
   const openAdd = () => { setEditing(null); create.reset(); setF({ ...f, amount: "", description: "", quantity: "", rate: "", multiplier: "1", currency: f.currency || currency, sceneId: sceneF && sceneF !== NONE ? sceneF : f.sceneId, characterId: charF && charF !== NONE ? charF : f.characterId }); setOpen(true); };
@@ -123,6 +128,27 @@ export default function Budget() {
   ];
   const idleScenes = shownScenes.filter((s) => !byScene.get(s.id)).length;
   const idleChars = shownChars.filter((c) => !byChar.get(c.id)).length;
+  // By account code: department by department (30-000 - WARDROBE), each account's block inside it, as the printed budget reads.
+  const accountLines = expenses.filter((e) => matches(needle, e.accountCode, e.accountName, e.description, e.payee, humanize(e.category)));
+  const deptGroups: SheetGroup[] = (() => {
+    const by = new Map<string, SheetGroup>();
+    for (const e of accountLines) {
+      const d = departmentOf(e.accountCode);
+      const k = d?.key ?? NONE;
+      const g = by.get(k) || { key: k, title: d?.title ?? "No account code", lines: [] };
+      g.lines.push(e);
+      by.set(k, g);
+    }
+    return [...by.values()].sort((a, b) => (a.key === NONE ? 1 : b.key === NONE ? -1 : a.key.localeCompare(b.key, undefined, { numeric: true })));
+  })();
+  const allTitle = [sceneF && (sceneF === NONE ? "No scene" : null), charF && (charF === NONE ? "No character" : charById.get(charF)?.name), accountF && (accountF === NONE ? "No account code" : accountOptions.find((a) => a.value === accountF)?.label)].filter(Boolean);
+  const lineActions = (e: Expense) => (
+    <>
+      <RecordActions entityType="EXPENSE" entityId={e.id} title={e.description} path={`/p/${projectId}/budget`}
+        summary={`Expense: ${e.description} · ${fmtMoney(e.amount, e.currency || currency)}\n${[e.accountCode, fmtDate(e.date), humanize(e.category), e.scene ? `Sc ${e.scene.number}` : null, e.character?.name, e.vendor?.name].filter(Boolean).join(" · ")}`} />
+      <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" aria-label={`Delete ${e.description}`} onConfirm={() => del.mutate(e.id)}><Trash2 size={14} /></ConfirmButton>
+    </>
+  );
   const sceneLabel = (id: string) => { const s = sceneById.get(id); return s ? `Sc ${s.number}${s.name ? ` · ${s.name}` : ""}` : "Scene"; };
 
   return (
@@ -136,43 +162,27 @@ export default function Budget() {
         <Stat label="Rental committed" value={m(data.rentalCommitted)} hint="rate × booked days" />
       </div>
 
-      <Tabs tabs={[{ key: "all", label: `All (${expenses.length})` }, { key: "scenes", label: `Scene by scene (${scenes?.length ?? 0})` }, { key: "characters", label: `By character (${characters?.length ?? 0})` }]} value={tab} onChange={(t) => { setTab(t); setQ(""); }} />
+      <Tabs tabs={[{ key: "all", label: `All (${expenses.length})` }, { key: "scenes", label: `Scene by scene (${scenes?.length ?? 0})` }, { key: "characters", label: `By character (${characters?.length ?? 0})` }, { key: "accounts", label: `By account code (${accountOptions.length})` }]} value={tab} onChange={(t) => { setTab(t); setQ(""); }} />
       <div className="filters">
-        <SearchBox value={q} onChange={setQ} placeholder={tab === "all" ? "Search description, category, vendor, piece…" : tab === "scenes" ? "Search scene number, name, location…" : "Search character, actor, cast number…"} />
+        <SearchBox value={q} onChange={setQ} placeholder={tab === "all" ? "Search description, account, name, vendor, piece…" : tab === "scenes" ? "Search scene number, name, location…" : tab === "accounts" ? "Search account code, account name, description…" : "Search character, actor, cast number…"} />
         {tab === "all" && <>
           <Select value={sceneF} onChange={(e) => setSceneF(e.target.value)} options={[...(scenes || []).map((s) => ({ value: s.id, label: `Sc ${s.number}` })), { value: NONE, label: "No scene" }]} placeholder="All scenes" humanizeLabels={false} aria-label="Scene" style={{ width: "auto", minWidth: 140 }} />
           <Select value={charF} onChange={(e) => setCharF(e.target.value)} options={[...(characters || []).map((c) => ({ value: c.id, label: c.name })), { value: NONE, label: "No character" }]} placeholder="All characters" humanizeLabels={false} aria-label="Character" style={{ width: "auto", minWidth: 160 }} />
+          <Select value={accountF} onChange={(e) => setAccountF(e.target.value)} options={[...accountOptions, { value: NONE, label: "No account code" }]} placeholder="All account codes" humanizeLabels={false} aria-label="Account code" style={{ width: "auto", minWidth: 180 }} />
         </>}
       </div>
 
-      {tab === "all" && (sceneF || charF || needle) && (
+      {tab === "all" && (sceneF || charF || accountF || needle) && (
         <div className="subtle mb-2">
-          {[sceneF && (sceneF === NONE ? "No scene" : sceneLabel(sceneF)), charF && (charF === NONE ? "No character" : charById.get(charF)?.name)].filter(Boolean).join(" · ") || "Matching"} · <b>{sumByCurrency(shownExpenses, currency, fmtMoney)}</b> across {shownExpenses.length} expense{shownExpenses.length === 1 ? "" : "s"}
-          {(sceneF || charF) && <> · <button className="btn btn-ghost btn-sm" onClick={() => { setSceneF(""); setCharF(""); }}>Show all</button></>}
+          {[sceneF && (sceneF === NONE ? "No scene" : sceneLabel(sceneF)), ...allTitle].filter(Boolean).join(" · ") || "Matching"} · <b>{sumByCurrency(shownExpenses, currency, fmtMoney)}</b> across {shownExpenses.length} expense{shownExpenses.length === 1 ? "" : "s"}
+          {(sceneF || charF || accountF) && <> · <button className="btn btn-ghost btn-sm" onClick={() => { setSceneF(""); setCharF(""); setAccountF(""); }}>Show all</button></>}
         </div>
       )}
 
       <Card pad0>
         {tab === "all" ? (
-          !expenses.length ? <Empty icon="💸" title="No expenses yet" hint="Add an expense and tag it to a scene or character to see spend broken down." /> : !shownExpenses.length ? <Empty icon="🔍" title="No expenses match" /> : (
-            <div className="list">
-              {shownExpenses.map((e) => (
-                <div key={e.id} className="item">
-                  <div className="avatar" title={e.scene ? `Scene ${e.scene.number}` : "No scene"}>{e.scene ? e.scene.number : <span className="subtle">—</span>}</div>
-                  <div className="grow" style={{ minWidth: 0 }}>
-                    <span className="title">{e.description}</span>
-                    <div className="meta">{[e.accountCode ? `${e.accountCode}${e.accountName ? ` ${e.accountName}` : ""}` : null, fmtDate(e.date), humanize(e.category), e.payee, e.quantity != null && e.rate != null ? `${e.quantity} ${e.unit || ""} × ${e.multiplier ?? 1} × ${e.rate}` : null, e.character?.name, e.costume?.assetNumber, e.vendor?.name].filter(Boolean).join(" · ")}</div>
-                  </div>
-                  <div className="end">
-                    <span className="bold nowrap">{fmtMoney(e.amount, e.currency || currency)}</span>
-                    <button type="button" className="btn btn-ghost btn-sm" aria-label={`Edit ${e.description}`} onClick={() => openEdit(e)}><Pencil size={14} /></button>
-                    <RecordActions entityType="EXPENSE" entityId={e.id} title={e.description} path={`/p/${projectId}/budget`}
-                      summary={`Expense: ${e.description} · ${m(e.amount)}\n${[fmtDate(e.date), humanize(e.category), e.scene ? `Sc ${e.scene.number}` : null, e.character?.name, e.vendor?.name].filter(Boolean).join(" · ")}`} />
-                    <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" aria-label={`Delete ${e.description}`} onConfirm={() => del.mutate(e.id)}><Trash2 size={14} /></ConfirmButton>
-                  </div>
-                </div>
-              ))}
-            </div>
+          !expenses.length ? <Empty icon="💸" title="No budget lines yet" hint="Add a budget line or upload a budget, and tag lines to a scene or character to see spend broken down." /> : !shownExpenses.length ? <Empty icon="🔍" title="No budget lines match" /> : (
+            <BudgetSheet groups={[{ key: "all", title: allTitle.length || sceneF ? [sceneF && sceneF !== NONE ? sceneLabel(sceneF) : null, ...allTitle].filter(Boolean).join(" · ") : "All budget lines", lines: shownExpenses }]} currency={currency} fmt={money} onEdit={openEdit} lineActions={lineActions} />
           )
         ) : tab === "scenes" ? (
           !scenes?.length ? <Empty icon="🎬" title="No scenes yet" /> : (
@@ -181,6 +191,8 @@ export default function Budget() {
               {idleScenes > 0 && <div className="subtle small" style={{ padding: "10px 14px" }}>{idleScenes} scene{idleScenes === 1 ? "" : "s"} with no spend yet.</div>}
             </>
           )
+        ) : tab === "accounts" ? (
+          <BudgetSheet groups={deptGroups} currency={currency} fmt={money} onEdit={openEdit} empty={<Empty icon={needle ? "🔍" : "💸"} title={needle ? "No accounts match" : "No budget lines yet"} hint="Give a line an account code (e.g. 30-001) to see it under its department." />} />
         ) : (
           !characters?.length ? <Empty icon="🧍" title="No characters yet" /> : (
             <>
@@ -197,17 +209,17 @@ export default function Budget() {
         <datalist id={ACCOUNT_LIST_ID}>{[...new Map(knownAccounts.map((a) => [a.code, a])).values()].map((a) => <option key={a.code} value={a.code}>{a.name}</option>)}</datalist>
         <datalist id={UNIT_LIST_ID}>{BUDGET_UNITS.map((u) => <option key={u} value={u} />)}</datalist>
         <div className="form-grid">
-          <Field label="Account code" help="e.g. 30-001 · picking a known code fills the name"><Input list={ACCOUNT_LIST_ID} value={f.accountCode} onChange={(e) => setCode(e.target.value)} placeholder="30-090" className="mono" /></Field>
-          <Field label="Account name"><Input value={f.accountName} onChange={(e) => setF({ ...f, accountName: e.target.value })} placeholder="WARDROBE PURCHASES & RENTALS" /></Field>
-          <Field label="Description" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Prep, Shoot - UK, Car allowance, Principal…" /></Field>
-          <Field label="Name" help="Who the line pays: a crew member or supplier"><Input value={f.payee} onChange={(e) => setF({ ...f, payee: e.target.value })} placeholder="Lauren Reyhani" /></Field>
+          <Field label="Account code" help="Picking a known code fills the name"><Input list={ACCOUNT_LIST_ID} value={f.accountCode} onChange={(e) => setCode(e.target.value)} className="mono" /></Field>
+          <Field label="Account name"><Input value={f.accountName} onChange={(e) => setF({ ...f, accountName: e.target.value })} /></Field>
+          <Field label="Description" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
+          <Field label="Name" help="Who the line pays: a crew member or supplier"><Input value={f.payee} onChange={(e) => setF({ ...f, payee: e.target.value })} /></Field>
           <Field label="Category"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={cats} /></Field>
           <div className="span-2">
             <div className="row gap-1 wrap" style={{ alignItems: "flex-end" }}>
-              <div style={{ width: 90 }}><Field label="Amt"><Input value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} inputMode="decimal" placeholder="6.8" className="mono" /></Field></div>
-              <div style={{ width: 110 }}><Field label="Unit"><Input list={UNIT_LIST_ID} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder="Weeks" /></Field></div>
+              <div style={{ width: 90 }}><Field label="Amt"><Input value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} inputMode="decimal" className="mono" /></Field></div>
+              <div style={{ width: 110 }}><Field label="Unit"><Input list={UNIT_LIST_ID} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} /></Field></div>
               <div style={{ width: 70 }}><Field label="X"><Input value={f.multiplier} onChange={(e) => setF({ ...f, multiplier: e.target.value })} inputMode="decimal" className="mono" /></Field></div>
-              <div style={{ width: 120 }}><Field label="Rate"><Input value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} inputMode="decimal" placeholder="3,500" className="mono" /></Field></div>
+              <div style={{ width: 120 }}><Field label="Rate"><Input value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} inputMode="decimal" className="mono" /></Field></div>
               <div style={{ width: 110 }}><Field label="Currency"><Select value={f.currency} onChange={(e) => setF({ ...f, currency: e.target.value })} options={[...new Set([...(currency ? [currency] : []), ...CURRENCIES, ...(f.currency ? [f.currency] : [])])]} placeholder="None" humanizeLabels={false} /></Field></div>
               <div style={{ flex: 1, minWidth: 140 }}>
                 {subtotal != null

@@ -32,8 +32,11 @@ const num = (n?: number | null) => (n == null ? "" : new Intl.NumberFormat(undef
  * The budget read the way a production budget prints (Movie Magic): a header per scene or character, a block per account
  * code with its title, "Name:" rows for who is paid, then Amt · Unit · X · Rate · Subtotal lines and a Total per account.
  */
-export function BudgetSheet({ groups, currency, fmt, onEdit, empty }: { groups: SheetGroup[]; currency: string; fmt: (n: number, currency: string) => string; onEdit?: (e: Expense) => void; empty?: ReactNode }) {
+export function BudgetSheet({ groups, currency, fmt, onEdit, empty, lineActions }: { groups: SheetGroup[]; currency: string; fmt: (n: number, currency: string) => string; onEdit?: (e: Expense) => void; empty?: ReactNode; lineActions?: (e: Expense) => ReactNode }) {
   const total = (lines: Expense[]) => sumByCurrency(lines, currency, fmt);
+  // An actions column (share, discuss, delete) sits after Subtotal when the page asks for one.
+  const cols = lineActions ? 8 : 7;
+  const pad = lineActions ? <td /> : null;
   const all = groups.flatMap((g) => g.lines);
   if (!groups.length) return <>{empty}</>;
   const codeCell = (text: string, first: boolean) => (
@@ -42,17 +45,17 @@ export function BudgetSheet({ groups, currency, fmt, onEdit, empty }: { groups: 
   return (
     <div className="table-wrap table-scroll">
       <table className="table budget-sheet">
-        <thead><tr><th style={{ width: 96 }}>Account</th><th>Description</th><th className="right" style={{ width: 70 }}>Amt</th><th style={{ width: 80 }}>Unit</th><th className="right" style={{ width: 50 }}>X</th><th className="right" style={{ width: 100 }}>Rate</th><th className="right" style={{ width: 120 }}>Subtotal</th></tr></thead>
+        <thead><tr><th style={{ width: 96 }}>Account</th><th>Description</th><th className="right" style={{ width: 70 }}>Amt</th><th style={{ width: 80 }}>Unit</th><th className="right" style={{ width: 50 }}>X</th><th className="right" style={{ width: 100 }}>Rate</th><th className="right" style={{ width: 120 }}>Subtotal</th>{lineActions && <th style={{ width: 130 }}><span className="sr-only">Actions</span></th>}</tr></thead>
         <tbody>
           {groups.map((g) => (
             <Fragment key={g.key}>
-              <tr className="bs-group"><td colSpan={7}>{g.title}</td></tr>
+              <tr className="bs-group"><td colSpan={cols}>{g.title}</td></tr>
               {accountsOf(g.lines).map((a) => (
                 <Fragment key={a.code || a.name}>
-                  <tr className="bs-account">{codeCell(a.code, true)}<td colSpan={6}>{a.name || <span className="subtle">No account name</span>}</td></tr>
+                  <tr className="bs-account">{codeCell(a.code, true)}<td colSpan={cols - 1}>{a.name || <span className="subtle">No account name</span>}</td></tr>
                   {payeesOf(a.lines).map(([payee, lines]) => (
                     <Fragment key={payee}>
-                      {payee && <tr className="bs-name">{codeCell("", false)}<td colSpan={6}>Name: {payee}</td></tr>}
+                      {payee && <tr className="bs-name">{codeCell("", false)}<td colSpan={cols - 1}>Name: {payee}</td></tr>}
                       {lines.map((l) => (
                         <tr key={l.id} className={onEdit ? "bs-line row-link" : "bs-line"} onClick={onEdit ? () => onEdit(l) : undefined} title={onEdit ? "Edit this line" : undefined}>
                           {codeCell("", false)}
@@ -62,17 +65,18 @@ export function BudgetSheet({ groups, currency, fmt, onEdit, empty }: { groups: 
                           <td className="right mono">{l.quantity != null ? num(l.multiplier ?? 1) : ""}</td>
                           <td className="right mono">{num(l.rate)}</td>
                           <td className="right mono nowrap">{fmt(l.amount, l.currency || currency)}</td>
+                          {lineActions && <td className="right nowrap" onClick={(e) => e.stopPropagation()}>{lineActions(l)}</td>}
                         </tr>
                       ))}
                     </Fragment>
                   ))}
-                  <tr className="bs-total">{codeCell("", false)}<td colSpan={5}>Total</td><td className="right nowrap">{total(a.lines)}</td></tr>
+                  <tr className="bs-total">{codeCell("", false)}<td colSpan={5}>Total</td><td className="right nowrap">{total(a.lines)}</td>{pad}</tr>
                 </Fragment>
               ))}
-              <tr className="bs-group-total"><td /><td colSpan={5}>Total · {g.title}</td><td className="right nowrap">{total(g.lines)}</td></tr>
+              <tr className="bs-group-total"><td /><td colSpan={5}>Total · {g.title}</td><td className="right nowrap">{total(g.lines)}</td>{pad}</tr>
             </Fragment>
           ))}
-          {groups.length > 1 && <tr className="bs-grand"><td /><td colSpan={5}>Grand Total</td><td className="right nowrap">{total(all)}</td></tr>}
+          {groups.length > 1 && <tr className="bs-grand"><td /><td colSpan={5}>Grand Total</td><td className="right nowrap">{total(all)}</td>{pad}</tr>}
         </tbody>
       </table>
     </div>

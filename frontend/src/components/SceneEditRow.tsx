@@ -207,7 +207,7 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
     // which would read as "clear this cast number", and a stray scroll wheel would retype it.
     return <Input value={castNumberOf(c)} onChange={(e) => setCast(c, { castNumber: e.target.value })} disabled={busy} inputMode="numeric" pattern="[0-9]*" className="mono" placeholder="#" aria-label={`Cast number for ${c.name}`} aria-invalid={!!problem} title={problem || undefined} style={{ width: 72, borderColor: problem ? "var(--danger)" : undefined }} />;
   };
-  const actorInput = (c: Character) => <ActorSelect value={actorOf(c)} onChange={(actorId) => setCast(c, { actorId })} disabled={busy} label={`Actor for ${c.name}`} />;
+  const actorInput = (c: Character) => <ActorSelect value={actorOf(c)} onChange={(actorId) => setCast(c, { actorId })} disabled={busy} label={`Actor for ${c.name}`} quick />;
   const castProblemNote = castProblem && <div className="tiny" style={{ color: "var(--danger)", marginTop: 2 }}>{castProblem}</div>;
   const addRemove = <button type="button" className="btn btn-sm" disabled={busy} onClick={onPrincipals}>Add/Remove</button>;
 

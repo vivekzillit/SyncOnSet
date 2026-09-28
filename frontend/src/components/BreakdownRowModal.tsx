@@ -139,7 +139,7 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <Field label="Cast name" help="Both follow the character into every scene">
-                <ActorSelect value={af.actorId} onChange={(actorId) => setAf({ ...af, actorId })} placeholder="No actor assigned" label="Cast name" />
+                <ActorSelect value={af.actorId} onChange={(actorId) => setAf({ ...af, actorId })} placeholder="No actor assigned" label="Cast name" quick />
               </Field>
             </div>
           </div>

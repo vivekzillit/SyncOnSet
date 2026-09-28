@@ -8,7 +8,7 @@ import { CONTINUITY_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, fmtDateTime, relativeTime, todayISO } from "@/lib/format";
 import { characterReadiness, itemLevel } from "@/lib/readiness";
 import type { Character, ContinuityRecord, Costume, Scene } from "@/api/types";
-import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, PageHead, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
+import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, PageHead, Select, Spinner, Tabs, Textarea, discardIfDirty, useToast } from "@/components/ui";
 import { PhotoGrid, QRScanner } from "@/components/domain";
 import { ScheduleUploadModal } from "@/components/ScheduleUpload";
 import { ScanButton } from "@/components/DocumentScanner";
@@ -95,7 +95,7 @@ function useContinuity() {
  * The shooting day as wardrobe sees it: the scenes a call sheet put on this date, who is in them, and
  * whether their pieces are actually ready. Tapping a character arms the take form below for them.
  */
-function ShootDay({ c, day, onDay, detail }: { c: ReturnType<typeof useContinuity>; day: string; onDay: (d: string) => void; detail?: ReactNode }) {
+function ShootDay({ c, day, onDay, detail, onClose }: { c: ReturnType<typeof useContinuity>; day: string; onDay: (d: string) => void; detail?: ReactNode; onClose?: () => void }) {
   const { project } = useProject();
   const sheetDay = dateKey(project?.callsheetDate);
   const scenes = useMemo(() => (c.scenes || []).filter((s) => dateKey(s.shootDate) === day && s.status !== "OMITTED"), [c.scenes, day]);
@@ -130,11 +130,18 @@ function ShootDay({ c, day, onDay, detail }: { c: ReturnType<typeof useContinuit
           <div className="col gap-2">
             {scenes.map((s) => (
               <div key={s.id} className="card flat" style={{ padding: 12, borderColor: c.sceneId === s.id ? "var(--ink)" : undefined }}>
+                {/* The whole scene summary opens it, not just the title; its own buttons (title, character chips) keep their own clicks,
+                    and an already-open scene is left as it is so the chosen character doesn't jump back to the first. */}
+                <div className="scene-tap" style={{ cursor: c.sceneId === s.id ? undefined : "pointer" }} title={c.sceneId === s.id ? undefined : "Open the take form for this scene"}
+                  onClick={(e) => { if (c.sceneId === s.id || (e.target as HTMLElement).closest("button, a")) return; c.goTo(s.id, s.characters[0]?.characterId || ""); }}>
                 <div className="row between wrap gap-2">
                   <button type="button" className="btn btn-ghost btn-sm bold" style={{ padding: "2px 6px", marginLeft: -6 }} onClick={() => c.goTo(s.id, s.characters[0]?.characterId || "")} title="Open the take form for this scene">
                     Sc {s.number}{s.name ? ` · ${s.name}` : ""}
                   </button>
-                  <span className="subtle">{[s.intExt, s.location, s.timeOfDay].filter(Boolean).join(" · ")}</span>
+                  <div className="row gap-2">
+                    <span className="subtle">{[s.intExt, s.location, s.timeOfDay].filter(Boolean).join(" · ")}</span>
+                    {c.sceneId === s.id && onClose && <button type="button" className="btn btn-sm" onClick={onClose} title="Close this scene"><X size={14} /> Close</button>}
+                  </div>
                 </div>
                 {s.characters.length === 0 ? <div className="subtle mt-1">No characters tagged to this scene.</div> : (
                   <div className="chips mt-2">
@@ -150,6 +157,7 @@ function ShootDay({ c, day, onDay, detail }: { c: ReturnType<typeof useContinuit
                     })}
                   </div>
                 )}
+                </div>
                 {detail && c.sceneId === s.id && (
                   <div className="mt-2">
                     <SelectedScene c={c} />
@@ -250,6 +258,13 @@ export default function ContinuityOnSet() {
   useEffect(() => { if (!touched) setF(fill); }, [fill, touched]);
   useEffect(() => { setTouched(false); setMedia([]); }, [c.sceneId, c.characterId]);
   const edit = (patch: Partial<Draft>) => { setTouched(true); setF((prev) => ({ ...prev, ...patch })); };
+  /** Put the open scene away; a take typed into or photographed but not saved asks first. */
+  const closeScene = async () => {
+    const dirty = touched || media.length > 0;
+    if (dirty && !(await discardIfDirty(true, "The take you started for this scene hasn't been saved."))) return;
+    setCamera(false);
+    c.set("sceneId", "");
+  };
 
   /** A scanned label adds that piece to the take, so what the actor is wearing is recorded by scanning it. */
   const addScanned = async (raw: string) => {
@@ -369,10 +384,10 @@ export default function ContinuityOnSet() {
         actions={<>{mayRecord && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<Link to={`/p/${c.projectId}/continuity/book`} className="btn">Continuity book →</Link></>} />
       <ScheduleUploadModal open={callsheetOpen} kind="CALLSHEET" onClose={() => setCallsheetOpen(false)} onApplied={(d) => d && setDay(d)} />
       <div className="mb-2" style={{ color: "var(--danger)", fontWeight: 600 }}>Click on scene number to add details on set</div>
-      <ShootDay c={c} day={day} onDay={setDay} detail={detail} />
+      <ShootDay c={c} day={day} onDay={setDay} detail={detail} onClose={closeScene} />
       {!c.sceneId && <Card><Empty icon="🎬" title="Click a scene number above" hint="The take form fills in as soon as you pick the scene and who is in it." /></Card>}
       {/* A scene with no shoot date never appears on a day board, so its form opens on its own. */}
-      {c.sceneId && !onBoard && <div className="col gap-2"><SelectedScene c={c} />{detail}</div>}
+      {c.sceneId && !onBoard && <div className="col gap-2"><div className="row" style={{ justifyContent: "flex-end" }}><button type="button" className="btn btn-sm" onClick={closeScene}><X size={14} /> Close</button></div><SelectedScene c={c} />{detail}</div>}
     </div>
   );
 }

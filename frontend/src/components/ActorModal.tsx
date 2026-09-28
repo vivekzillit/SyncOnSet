@@ -21,8 +21,9 @@ export const charLabel = (c: { name: string; castNumber?: number | null }) => `$
  * Shared so adding an actor from a character's dropdown asks for exactly the same details.
  * Opened from a character's page (`forCharacter`), the actor is for that character: it is the only one
  * listed, ticked and locked.
+ * `quick` (from a Cast name dropdown) asks only for the name; the rest is filled in later on the Actors page.
  */
-export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = true, saveLabel, forCharacter }: { open: boolean; onClose: () => void; editing?: ActorRow | null; onSaved?: (actor: ActorRow) => void; allowAddAnother?: boolean; saveLabel?: string; forCharacter?: Pick<Character, "id" | "name" | "castNumber"> }) {
+export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = true, saveLabel, forCharacter, quick }: { open: boolean; onClose: () => void; editing?: ActorRow | null; onSaved?: (actor: ActorRow) => void; allowAddAnother?: boolean; saveLabel?: string; forCharacter?: Pick<Character, "id" | "name" | "castNumber">; quick?: boolean }) {
   const { projectId, can } = useProject();
   const { meta } = useAuth();
   const qc = useQueryClient();
@@ -68,6 +69,20 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
     const [first, ...rest] = editing.name.split(" ");
     setF({ first, last: rest.join(" "), gender: editing.gender || "", age: editing.age != null ? String(editing.age) : "", characterIds: editing.characters.map((c) => c.id), notes: editing.notes || "", nextFittingAt: toLocalInput(editing.nextFittingAt), fittingComment: editing.fittingComment || "", phone: editing.phone || "", phone2: editing.phone2 || "", email: editing.email || "", email2: editing.email2 || "", startWorkDate: editing.startWorkDate ? toLocalInput(editing.startWorkDate).slice(0, 10) : "", agency: editing.agency || "", talentRep: editing.talentRep || "", talentRepEmail: editing.talentRepEmail || "", talentRepPhone: editing.talentRepPhone || "", talentRepDetails: editing.talentRepDetails || [], measurements: Object.fromEntries(Object.entries(editing.measurements || {}).map(([k, v]) => [k, String(v)])) });
   }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (quick && !editing) {
+    const create = () => f.first.trim() && !save.isPending && save.mutate();
+    return (
+      <Modal open={open} onClose={onClose} title="Create Actor"
+        footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!f.first.trim() || save.isPending} onClick={create}>{save.isPending ? "Creating…" : saveLabel || "Create"}</button></>}>
+        <div className="form-grid" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); create(); } }}>
+          <Field label="First name"><Input value={f.first} onChange={(e) => setF({ ...f, first: e.target.value })} placeholder="First Name" autoFocus /></Field>
+          <Field label="Last name"><Input value={f.last} onChange={(e) => setF({ ...f, last: e.target.value })} placeholder="Last Name" /></Field>
+        </div>
+        <ErrorBox error={save.error} />
+      </Modal>
+    );
+  }
 
   return (
     <Modal open={open} onClose={onClose} title={editing ? "Edit Actor" : "Create Actor"} wide

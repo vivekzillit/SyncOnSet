@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Html5Qrcode } from "html5-qrcode";
-import { Camera, Download, ExternalLink, FileText, Images, Link as LinkIcon, Paperclip, Play, Plus, Video, X } from "lucide-react";
-import { api, p } from "@/api/client";
+import { Camera, Download, ExternalLink, FileText, Images, Link as LinkIcon, Paperclip, Play, Plus, ScanLine, Video, X } from "lucide-react";
+import { ApiError, api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { CONTINUITY_ROLES, MANAGER_ROLES } from "@/state/auth";
 import { fmtDateTime, humanize, tone } from "@/lib/format";
@@ -373,25 +373,67 @@ export function CostumeRow({ c, extra, onClick, end, noStatus }: { c: Costume; e
 }
 
 /* ---------- Costume picker (search + choose) ---------- */
+/**
+ * Pick a costume by searching, or by scanning its QR label with the camera — on set, the label is quicker than the
+ * name. A scan adds the piece straight away, exactly as tapping it in the list would.
+ */
 export function CostumePicker({ open, onClose, onPick, title = "Pick a costume", filter, characterId }: { open: boolean; onClose: () => void; onPick: (c: Costume) => void; title?: string; filter?: (c: Costume) => boolean; characterId?: string | null }) {
   const { projectId } = useProject();
   const [q, setQ] = useState("");
   const [onlyChar, setOnlyChar] = useState(!!characterId);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [typed, setTyped] = useState("");
   const { data, isLoading } = useQuery({
     queryKey: ["costumes", projectId, "picker", q, onlyChar ? characterId : ""],
     queryFn: () => api<{ items: Costume[] }>(p(projectId, `/costumes?pageSize=100&q=${encodeURIComponent(q)}${onlyChar && characterId ? `&characterId=${characterId}` : ""}`)),
-    enabled: open,
+    enabled: open && !scanning,
   });
+  // Each opening starts on the list, with the camera off.
+  useEffect(() => { if (open) { setScanning(false); setScanError(null); setTyped(""); } }, [open]);
+  const close = () => { setScanning(false); onClose(); };
+  // Stable, so the scanner is not restarted on every render.
+  const pickRef = useRef({ onPick, onClose, filter });
+  pickRef.current = { onPick, onClose, filter };
+  const onScan = useCallback(async (raw: string) => {
+    const asset = raw.trim().toUpperCase();
+    if (!asset) return;
+    try {
+      const c = await api<Costume>(p(projectId, `/costumes/lookup/${encodeURIComponent(asset)}`));
+      const { onPick: pick, onClose: done, filter: keep } = pickRef.current;
+      if (keep && !keep(c)) { setScanError(`${c.assetNumber} ${c.name} can't be added here.`); return; }
+      if (navigator.vibrate) navigator.vibrate(60);
+      setScanning(false);
+      pick(c);
+      done();
+    } catch (e) {
+      setScanError(e instanceof ApiError && e.status === 404 ? `No costume with the label ${asset} in this production.` : (e as Error).message || "That label could not be read.");
+    }
+  }, [projectId]);
   const items = (data?.items || []).filter(filter || (() => true));
   return (
-    <Modal open={open} onClose={onClose} title={title}>
+    <Modal open={open} onClose={close} title={title}>
       <div className="row gap-2 mb-2 wrap">
-        <SearchBox value={q} onChange={setQ} placeholder="Asset no, name, colour, size…" autoFocus />
-        {characterId && (
+        {!scanning && <SearchBox value={q} onChange={setQ} placeholder="Asset no, name, colour, size…" autoFocus />}
+        <button type="button" className={`btn btn-sm${scanning ? " btn-primary" : ""}`} onClick={() => { setScanError(null); setScanning((v) => !v); }} title="Scan the costume's QR label with the camera">
+          <ScanLine size={15} /> {scanning ? "Back to the list" : "Scan QR"}
+        </button>
+        {characterId && !scanning && (
           <label className="check"><input type="checkbox" checked={onlyChar} onChange={(e) => setOnlyChar(e.target.checked)} /> This character only</label>
         )}
       </div>
-      {isLoading ? <Spinner /> : items.length === 0 ? <Empty title="No costumes match" /> : (
+      {scanning ? (
+        <div className="col gap-1">
+          <QRScanner active={open && scanning} onScan={onScan} />
+          <div className="subtle small">Point the camera at the costume's QR label; the piece is added as soon as it reads.</div>
+          {/* For a torn or smudged label, or no camera: the asset number printed under the code does the same. */}
+          <form className="row gap-1" onSubmit={(e) => { e.preventDefault(); onScan(typed); }}>
+            <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Or type the asset number, e.g. CST-000245" aria-label="Asset number" />
+            <button type="submit" className="btn" disabled={!typed.trim()}>Add</button>
+          </form>
+          {scanError && <div className="notice">{scanError}</div>}
+        </div>
+      ) : isLoading ? <Spinner /> : items.length === 0 ? <Empty title="No costumes match" /> : (
         <div className="list card flat pad-0" style={{ maxHeight: "55vh", overflowY: "auto" }}>
           {items.map((c) => <CostumeRow key={c.id} c={c} onClick={() => { onPick(c); onClose(); }} end={<Plus size={16} />} />)}
         </div>
@@ -418,7 +460,7 @@ export function ReadinessLine({ level, name, sub }: { level: string; name: React
 const NEW_ACTOR = "__new_actor__";
 
 /** Actor dropdown that also offers "+ New actor", opening the same Create Actor form the Actors page uses. */
-export function ActorSelect({ value, onChange, disabled, label, placeholder = "— unassigned —" }: { value: string; onChange: (actorId: string) => void; disabled?: boolean; label?: string; placeholder?: string }) {
+export function ActorSelect({ value, onChange, disabled, label, placeholder = "— unassigned —", quick }: { value: string; onChange: (actorId: string) => void; disabled?: boolean; label?: string; placeholder?: string; quick?: boolean }) {
   const { projectId, can } = useProject();
   const [open, setOpen] = useState(false);
   const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<Actor[]>(p(projectId, "/actors")) });
@@ -429,7 +471,7 @@ export function ActorSelect({ value, onChange, disabled, label, placeholder = "�
     <>
       <Select value={value} onChange={(e) => (e.target.value === NEW_ACTOR ? setOpen(true) : onChange(e.target.value))} options={options} placeholder={placeholder} disabled={disabled} aria-label={label} />
       {/* Created from a character, so the new actor is assigned straight back to it — no "Create +". */}
-      <ActorModal open={open} onClose={() => setOpen(false)} onSaved={(a) => onChange(a.id)} allowAddAnother={false} saveLabel="Create & assign" />
+      <ActorModal open={open} onClose={() => setOpen(false)} onSaved={(a) => onChange(a.id)} allowAddAnother={false} saveLabel="Create & assign" quick={quick} />
     </>
   );
 }

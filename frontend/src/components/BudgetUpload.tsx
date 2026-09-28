@@ -18,23 +18,12 @@ interface Preview { fileName: string; sheets: string[]; skippedSheets: string[];
 type Row = Line & { pick: boolean; note: string | null };
 
 /** Why a line starts unticked; the user can still tick it once it is fixed. */
-/**
- * A blank budget sheet whose headers are exactly the ones the reader looks for. CSV so it opens straight in Excel,
- * Numbers or Google Sheets; Amount is a formula (Qty × X × Rate), and the reader also works it out when left blank.
- * The rows say "Example:" so a forgotten one is plain to see, and untick, in the preview.
- */
-const TEMPLATE_HEAD = ["Account", "Description", "Category", "Date", "Scene", "Character", "Vendor", "Qty", "Unit", "X", "Rate", "Amount"];
-const TEMPLATE_ROWS = [
-  ["30-090", "Example: Police uniforms (khaki)", "Purchase", "21/09/2026", "24", "Inspector Pandey", "Raj Textiles", "4", "Each", "1", "3000"],
-  ["30-090", "Example: Wig hire", "Rental", "22/09/2026", "32", "Raj", "", "3", "Days", "1", "1500"],
-  ["30-040", "Example: Saree dry cleaning", "Laundry", "23/09/2026", "", "Priya", "", "2", "Each", "1", "900"],
-  ["30-004", "Example: Costume standby", "Other", "", "", "", "", "5", "Days", "1", "2500"],
-];
-function downloadTemplate() {
-  const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  const lines = [TEMPLATE_HEAD, ...TEMPLATE_ROWS.map((r, i) => [...r, `=H${i + 2}*J${i + 2}*K${i + 2}`])].map((r) => r.map(cell).join(","));
-  const url = URL.createObjectURL(new Blob(["\uFEFF" + lines.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" }));
-  const a = Object.assign(document.createElement("a"), { href: url, download: "Budget sheet template.csv" });
+/** The blank budget sheet (.xlsx) the server builds: headers the reader looks for, example rows, a live Amount formula. */
+async function downloadTemplate(projectId: string) {
+  const res = await api<Response>(p(projectId, "/expenses/import/template"), { raw: true });
+  if (!res.ok) throw new Error("The template could not be downloaded. Try again.");
+  const url = URL.createObjectURL(await res.blob());
+  const a = Object.assign(document.createElement("a"), { href: url, download: "Budget sheet template.xlsx" });
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -109,7 +98,7 @@ export function BudgetUpload({ open, onClose, projectId, currency }: { open: boo
             One line per row, under a header row. Amount is the only column it must have (or Qty and Rate). It also reads Description or Particulars, Category or Head, Date, Scene, Character and Vendor. Every sheet in the workbook is read. A budget PDF printed from Movie Magic or similar is read page by page: account code, Name, Amt, Unit, X, Rate and Subtotal. Nothing is saved until you press Import.
           </div>
           <div className="row gap-1 mt-1" style={{ flexWrap: "wrap", justifyContent: "center" }}>
-            <button className="btn" onClick={downloadTemplate} title="A blank sheet with the right column headers and a few example rows"><Download size={16} /> Download template</button>
+            <button className="btn" onClick={() => downloadTemplate(projectId).catch((e: Error) => toast.push(e.message, "danger"))} title="A blank sheet with the right column headers and a few example rows"><Download size={16} /> Download template</button>
             <button className="btn btn-primary" disabled={read.isPending} onClick={() => fileRef.current?.click()}>{read.isPending ? "Reading…" : "Choose file"}</button>
           </div>
           <ErrorBox error={read.error} />
