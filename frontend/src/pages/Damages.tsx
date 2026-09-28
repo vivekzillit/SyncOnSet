@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, FINANCE_ROLES, OPS_ROLES } from "@/state/auth";
-import { fmtDateTime, fmtMoney, humanize, matches } from "@/lib/format";
+import { fmtDateTime, fmtMoney, humanize, matches, inCurrency } from "@/lib/format";
 import type { Costume, DamageReport, Scene } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
@@ -77,7 +77,7 @@ export default function Damages() {
           <Field label="Damage" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Torn sleeve" /></Field>
           <Field label="Scene"><Select value={f.sceneId} onChange={(e) => setF({ ...f, sceneId: e.target.value })} options={(scenes || []).map((s) => ({ value: s.id, label: `Sc ${s.number}` }))} placeholder="—" /></Field>
           <Field label="Take"><Input type="number" value={f.takeNumber} onChange={(e) => setF({ ...f, takeNumber: e.target.value })} /></Field>
-          {can(FINANCE_ROLES) && <Field label={`Estimated repair (${currency})`}><Input type="number" value={f.estimatedRepairCost} onChange={(e) => setF({ ...f, estimatedRepairCost: e.target.value })} /></Field>}
+          {can(FINANCE_ROLES) && <Field label={`Estimated repair${inCurrency(currency)}`}><Input type="number" value={f.estimatedRepairCost} onChange={(e) => setF({ ...f, estimatedRepairCost: e.target.value })} /></Field>}
           <Field label="Responsible"><Select value={f.responsible} onChange={(e) => setF({ ...f, responsible: e.target.value })} options={meta?.damageResponsible || []} /></Field>
           <Field label="Photos & video" span2 help="Shoot it now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>
         </div>

@@ -40,7 +40,7 @@ model Project {
   city            String?
   shootingDay     Int       @default(0)
   currentLocation String?
-  currency        String    @default("INR")
+  currency        String    @default("") // ISO code (INR, USD…); empty = amounts shown without a currency
   prepStartDate   DateTime? // prep (pre-production) window
   prepEndDate     DateTime?
   prepWrapDate    DateTime? // last day of prep, when it differs from the planned end

@@ -4,7 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth } from "@/state/auth";
-import { fmtDate, fmtMoney, humanize, matches, todayISO } from "@/lib/format";
+import { fmtDate, fmtMoney, humanize, matches, todayISO, inCurrency } from "@/lib/format";
 import type { Character, Expense, Rental, Scene } from "@/api/types";
 import { Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Stat, Tabs, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
@@ -178,7 +178,7 @@ export default function Budget() {
       <Modal open={open} onClose={() => setOpen(false)} title="Add expense" footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!f.amount || !f.description || create.isPending} onClick={() => create.mutate()}>Add</button></>}>
         <div className="form-grid">
           <Field label="Category"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={cats} /></Field>
-          <Field label={`Amount (${currency})`}><Input type="number" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>
+          <Field label={`Amount${inCurrency(currency)}`}><Input type="number" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>
           <Field label="Description" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
           <Field label="Date"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
           <Field label="Character"><Select value={f.characterId} onChange={(e) => setF({ ...f, characterId: e.target.value })} options={(characters || []).map((c) => ({ value: c.id, label: c.name }))} placeholder="—" humanizeLabels={false} /></Field>

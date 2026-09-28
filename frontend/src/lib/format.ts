@@ -21,8 +21,13 @@ export function fmtTime(d?: string | Date | null) {
 }
 export const fmtDateTime = (d?: string | Date | null) => (d ? `${fmtDate(d)} ${fmtTime(d)}` : "—");
 
-export function fmtMoney(n?: number | null, currency = "INR") {
+/** " (INR)" after a money field's label when the production has a currency, nothing when it has none. */
+export const inCurrency = (currency: string) => (currency ? ` (${currency})` : "");
+
+/** Money with the production's currency, or a plain grouped number when it has none set (the default). */
+export function fmtMoney(n?: number | null, currency = "") {
   if (n === null || n === undefined) return "—";
+  if (!currency) return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(n);
   try {
     return new Intl.NumberFormat(currency === "INR" ? "en-IN" : undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
   } catch {

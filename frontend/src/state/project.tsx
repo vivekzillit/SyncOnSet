@@ -20,7 +20,7 @@ export function ProjectProvider({ projectId, children }: { projectId: string; ch
   const { data, isLoading } = useQuery({ queryKey: ["project", projectId], queryFn: () => api<Project>(`/projects/${projectId}`), enabled: !!projectId });
   const value = useMemo<ProjectState>(() => {
     const role = (user?.role === "ADMIN" ? "ADMIN" : data?.myRole || user?.role || "ACTOR") as Role;
-    return { projectId, project: data || null, role, can: (roles) => roles.includes(role), currency: data?.currency || "INR", isLoading };
+    return { projectId, project: data || null, role, can: (roles) => roles.includes(role), currency: data?.currency || "", isLoading };
   }, [projectId, data, user, isLoading]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

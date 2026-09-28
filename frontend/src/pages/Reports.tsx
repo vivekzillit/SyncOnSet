@@ -4,7 +4,7 @@ import { Download, Printer } from "lucide-react";
 import { api, authedUrl, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { FINANCE_ROLES } from "@/state/auth";
-import { fmtDateLong, fmtMoney, fmtTime, humanize, todayISO } from "@/lib/format";
+import { fmtDateLong, fmtMoney, humanize, todayISO } from "@/lib/format";
 import type { CleaningRequest, Costume } from "@/api/types";
 import { Badge, Card, Input, PageHead, Spinner, Stat, Tabs } from "@/components/ui";
 
@@ -45,9 +45,6 @@ export default function Reports() {
               </Card>
               <Card title="Scenes shot / scheduled" pad0>
                 {daily.scenes.length === 0 ? <div className="subtle" style={{ padding: 14 }}>No scenes on this date.</div> : <div className="table-wrap"><table className="table"><thead><tr><th>Sc</th><th>Name</th><th>Location</th><th>Status</th><th>Characters / changes</th></tr></thead><tbody>{daily.scenes.map((s) => <tr key={s.id}><td className="bold">{s.number}</td><td>{s.name}</td><td>{s.location}</td><td><Badge status={s.status} /></td><td>{s.characters.map((c) => `${c.name}: ${c.change}`).join(" · ")}</td></tr>)}</tbody></table></div>}
-              </Card>
-              <Card title={`Costume movements (${daily.movements.length})`} pad0>
-                {daily.movements.length === 0 ? <div className="subtle" style={{ padding: 14 }}>No movements recorded.</div> : <div className="table-wrap"><table className="table"><thead><tr><th>Time</th><th>Asset</th><th>Action</th><th>From → To</th><th>By</th><th>Note</th></tr></thead><tbody>{daily.movements.map((mv) => <tr key={mv.id}><td className="nowrap mono">{fmtTime(mv.createdAt)}</td><td><span className="mono bold">{mv.costume.assetNumber}</span> {mv.costume.name}</td><td>{humanize(mv.action)}</td><td>{[mv.fromLocation, mv.toLocation].filter(Boolean).join(" → ")}</td><td>{mv.byUserName}</td><td className="subtle">{mv.note}</td></tr>)}</tbody></table></div>}
               </Card>
               <div className="grid grid-2">
                 <Card title="Cleaning requests" pad0>{daily.cleaning.length === 0 ? <div className="subtle" style={{ padding: 14 }}>None.</div> : <div className="list">{daily.cleaning.map((c) => <div key={c.id} className="item"><div className="grow"><div className="title small"><span className="mono">{c.costume.assetNumber}</span> {c.costume.name}{c.isEmergency ? " 🚨" : ""}</div><div className="meta">{c.problem} · {humanize(c.cleaningType)}</div></div><Badge status={c.status} /></div>)}</div>}</Card>

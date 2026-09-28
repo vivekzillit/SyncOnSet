@@ -5,7 +5,7 @@ import { Siren, Droplets, ArrowRightLeft, PackageCheck, PackageOpen, Clapperboar
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, CLEANING_ROLES, FINANCE_ROLES, MANAGER_ROLES, OPS_ROLES, TAILOR_ROLES } from "@/state/auth";
-import { humanize } from "@/lib/format";
+import { humanize, inCurrency } from "@/lib/format";
 import type { Character, CleaningRequest, Costume, Scene, Vendor } from "@/api/types";
 import { Badge, ErrorBox, Field, Input, Modal, Select, Textarea, useToast } from "./ui";
 import { CostumeRow, MediaPicker, attachMedia } from "./domain";
@@ -249,8 +249,8 @@ export function CostumeFormModal({ open, onClose, initial, onSaved, defaultChara
         <Field label="Location"><Select value={(meta?.standardLocations as string[] | undefined)?.includes(f.location) ? f.location : "__custom"} onChange={(e) => e.target.value !== "__custom" && setF({ ...f, location: e.target.value })} options={[...(meta?.standardLocations || []), ...((meta?.standardLocations as string[] | undefined)?.includes(f.location) ? [] : [{ value: "__custom", label: f.location || "Custom" }])]} humanizeLabels={false} /><Input className="mt-1" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></Field>
         <Field label="Source"><Select value={f.source} onChange={(e) => setF({ ...f, source: e.target.value })} options={meta?.costumeSources || []} /></Field>
         <Field label="Vendor"><Select value={f.vendorId} onChange={(e) => setF({ ...f, vendorId: e.target.value })} options={(vendors || []).map((v) => ({ value: v.id, label: v.name }))} placeholder="—" /></Field>
-        {can(FINANCE_ROLES) && <Field label={`Purchase cost (${currency})`}><Input type="number" value={f.purchaseCost} onChange={(e) => setF({ ...f, purchaseCost: e.target.value })} /></Field>}
-        {can(FINANCE_ROLES) && <Field label={`Rental / day (${currency})`}><Input type="number" value={f.rentalCostPerDay} onChange={(e) => setF({ ...f, rentalCostPerDay: e.target.value })} /></Field>}
+        {can(FINANCE_ROLES) && <Field label={`Purchase cost${inCurrency(currency)}`}><Input type="number" value={f.purchaseCost} onChange={(e) => setF({ ...f, purchaseCost: e.target.value })} /></Field>}
+        {can(FINANCE_ROLES) && <Field label={`Rental / day${inCurrency(currency)}`}><Input type="number" value={f.rentalCostPerDay} onChange={(e) => setF({ ...f, rentalCostPerDay: e.target.value })} /></Field>}
         <Field label="Quantity"><Input type="number" min={1} value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} /></Field>
         <Field label="Care instructions"><Input value={f.careInstructions} onChange={(e) => setF({ ...f, careInstructions: e.target.value })} placeholder="Cold wash, no bleach" /></Field>
         <Field label="Notes" span2><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>

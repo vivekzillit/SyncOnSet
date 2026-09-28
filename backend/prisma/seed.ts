@@ -38,7 +38,6 @@ async function main() {
       status: "SHOOTING",
       shootingDay: 18,
       currentLocation: "Mumbai Studio",
-      currency: "INR",
       startDate: dayOnly(-30),
       endDate: dayOnly(45),
       notes: "Feature film. Unit A shooting at Mumbai Studio, Unit B on location from next week.",

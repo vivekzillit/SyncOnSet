@@ -16,7 +16,7 @@ export default function Projects() {
   const { data, isLoading } = useQuery({ queryKey: ["projects"], queryFn: () => api<ProjectSummary[]>("/projects") });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", code: "", status: "PREP", currentLocation: "", currency: "INR" });
+  const [form, setForm] = useState({ name: "", code: "", status: "PREP", currentLocation: "", currency: "" });
   const create = useMutation({
     mutationFn: () => api<ProjectSummary>("/projects", { body: form }),
     onSuccess: (pr) => { qc.invalidateQueries({ queryKey: ["projects"] }); toast.push("Project created", "ok"); nav(`/p/${pr.id}`); },
@@ -74,7 +74,7 @@ export default function Projects() {
           <Field label="Code" help="Short code used in reports"><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="ABC" /></Field>
           <Field label="Status"><Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={meta?.projectStatuses || ["PREP"]} /></Field>
           <Field label="Current location"><Input value={form.currentLocation} onChange={(e) => setForm({ ...form, currentLocation: e.target.value })} /></Field>
-          <Field label="Currency"><Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} options={["INR", "USD", "GBP", "EUR", "AED"]} humanizeLabels={false} /></Field>
+          <Field label="Currency"><Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} options={["INR", "USD", "GBP", "EUR", "AED"]} placeholder="None" humanizeLabels={false} /></Field>
         </div>
         <ErrorBox error={create.error} />
       </Modal>
