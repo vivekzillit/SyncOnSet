@@ -135,7 +135,7 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
           <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
             <div style={{ width: 140 }}>
               {/* Not type="number": that hands back "" for anything it cannot parse, which would read as "clear the number". */}
-              <Field label="Cast number" help={castProblem || undefined}><Input value={af.castNumber} onChange={(e) => setAf({ ...af, castNumber: e.target.value })} inputMode="numeric" className="mono" placeholder="—" /></Field>
+              <Field label="Cast number" help={castProblem || undefined}><Input value={af.castNumber} onChange={(e) => setAf({ ...af, castNumber: e.target.value })} inputMode="numeric" className="mono" /></Field>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <Field label="Cast name" help="Both follow the character into every scene">
