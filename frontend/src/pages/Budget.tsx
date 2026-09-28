@@ -1,19 +1,31 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileSpreadsheet, Plus, Trash2 } from "lucide-react";
+import { FileSpreadsheet, Pencil, Plus, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth } from "@/state/auth";
 import { fmtDate, fmtMoney, humanize, matches, todayISO, inCurrency } from "@/lib/format";
-import type { Character, Expense, Rental, Scene } from "@/api/types";
+import type { Character, Expense, Rental, Scene, Vendor } from "@/api/types";
 import { Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Stat, Tabs, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
 import { BudgetUpload } from "@/components/BudgetUpload";
+import { BudgetSheet, type SheetGroup } from "@/components/BudgetSheet";
+import { BUDGET_UNITS, CURRENCIES, WARDROBE_ACCOUNTS, sumByCurrency } from "@/lib/budgetAccounts";
 
 interface BudgetReport { total: number; byCategory: Record<string, number>; byCharacter: Record<string, number>; byScene: Record<string, number>; inventoryValue: number; rentalCommitted: number; expenses: Expense[]; rentals: Rental[] }
 type TabKey = "all" | "scenes" | "characters";
 /** Filter value for expenses not tagged to any scene / character. */
 const NONE = "__none__";
+const ACCOUNT_LIST_ID = "budget-accounts";
+const UNIT_LIST_ID = "budget-units";
+
+/** The add / edit form: numbers stay strings while typed, so a half-typed "6." is not lost. */
+type Form = { category: string; amount: string; description: string; date: string; characterId: string; sceneId: string; vendorId: string; accountCode: string; accountName: string; payee: string; quantity: string; unit: string; multiplier: string; rate: string; currency: string };
+const blankForm = (currency: string): Form => ({ category: "PURCHASE", amount: "", description: "", date: todayISO(), characterId: "", sceneId: "", vendorId: "", accountCode: "", accountName: "", payee: "", quantity: "", unit: "", multiplier: "1", rate: "", currency });
+const toForm = (e: Expense, currency: string): Form => ({ category: e.category, amount: String(e.amount), description: e.description, date: (e.date || "").slice(0, 10), characterId: e.characterId || "", sceneId: e.sceneId || "", vendorId: e.vendorId || "", accountCode: e.accountCode || "", accountName: e.accountName || "", payee: e.payee || "", quantity: e.quantity != null ? String(e.quantity) : "", unit: e.unit || "", multiplier: e.multiplier != null ? String(e.multiplier) : "1", rate: e.rate != null ? String(e.rate) : "", currency: e.currency || currency });
+const numOrNull = (v: string) => (v.trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+/** Amt × X × Rate, once Amt and Rate are both filled in (X defaults to 1); otherwise the amount is typed directly. */
+const subtotalOf = (f: Form) => { const q = numOrNull(f.quantity); const r = numOrNull(f.rate); return q == null || r == null ? null : Math.round(q * (numOrNull(f.multiplier) ?? 1) * r * 100) / 100; };
 
 /** Totals per key (scene or character id; untagged under NONE). */
 function rollup(expenses: Expense[], key: (e: Expense) => string | null | undefined) {
@@ -35,16 +47,35 @@ export default function Budget() {
   const { data, isLoading } = useQuery({ queryKey: ["budget", projectId], queryFn: () => api<BudgetReport>(p(projectId, "/reports/budget")) });
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
   const { data: scenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
+  const { data: vendors } = useQuery({ queryKey: ["vendors", projectId], queryFn: () => api<Vendor[]>(p(projectId, "/vendors")) });
   const [tab, setTab] = useState<TabKey>("all");
   const [q, setQ] = useState("");
   const [sceneF, setSceneF] = useState("");
   const [charF, setCharF] = useState("");
   const [open, setOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [f, setF] = useState({ category: "PURCHASE", amount: "", description: "", date: todayISO(), characterId: "", sceneId: "" });
+  const [f, setF] = useState<Form>(() => blankForm(currency));
+  const [editing, setEditing] = useState<string | null>(null);
+  const subtotal = subtotalOf(f);
+  const amount = subtotal ?? numOrNull(f.amount);
   const create = useMutation({
-    mutationFn: () => api(p(projectId, "/expenses"), { body: { ...f, amount: Number(f.amount), characterId: f.characterId || null, sceneId: f.sceneId || null } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["budget", projectId] }); setOpen(false); setF({ ...f, amount: "", description: "" }); toast.push("Expense added", "ok"); },
+    mutationFn: () => {
+      const body = {
+        category: f.category, amount: amount ?? 0, description: f.description.trim(), date: f.date || null,
+        characterId: f.characterId || null, sceneId: f.sceneId || null, vendorId: f.vendorId || null,
+        accountCode: f.accountCode, accountName: f.accountName, payee: f.payee, unit: f.unit,
+        quantity: numOrNull(f.quantity), multiplier: numOrNull(f.quantity) != null ? numOrNull(f.multiplier) ?? 1 : null, rate: numOrNull(f.rate),
+        currency: f.currency === currency ? "" : f.currency,
+      };
+      return editing ? api(p(projectId, `/expenses/${editing}`), { method: "PATCH", body }) : api(p(projectId, "/expenses"), { body });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["budget", projectId] });
+      setOpen(false);
+      toast.push(editing ? "Budget line saved" : "Budget line added", "ok");
+      // The next line usually sits in the same account, for the same person: keep those, clear the rest.
+      if (!editing) setF({ ...blankForm(currency), accountCode: f.accountCode, accountName: f.accountName, payee: f.payee, sceneId: f.sceneId, characterId: f.characterId, category: f.category, currency: f.currency });
+    },
   });
   const del = useMutation({ mutationFn: (id: string) => api(p(projectId, `/expenses/${id}`), { method: "DELETE" }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["budget", projectId] }); toast.push("Expense deleted", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -59,7 +90,6 @@ export default function Budget() {
     (!sceneF || (sceneF === NONE ? !e.sceneId : e.sceneId === sceneF)) &&
     (!charF || (charF === NONE ? !e.characterId : e.characterId === charF)) &&
     matches(needle, e.description, humanize(e.category), e.character?.name, e.scene?.number, e.costume?.assetNumber, e.costume?.name, e.vendor?.name)), [expenses, sceneF, charF, needle]);
-  const shownTotal = shownExpenses.reduce((n, e) => n + e.amount, 0);
   // Every scene is listed, spend or not, so the breakdown reads scene by scene in script order.
   const shownScenes = useMemo(() => (scenes || []).filter((s) => matches(needle, s.number, s.name, s.location)), [scenes, needle]);
   const shownChars = useMemo(() => (characters || []).filter((c) => matches(needle, c.name, c.actor?.name, c.castNumber)), [characters, needle]);
@@ -70,17 +100,38 @@ export default function Budget() {
   const summary = (r?: { count: number; cats: Set<string> }) => r ? `${r.count} expense${r.count === 1 ? "" : "s"} · ${[...r.cats].map(humanize).join(", ")}` : "No spend yet";
   /** From a scene / character row, open the All tab filtered to it. */
   const drill = (scene: string, character: string) => { setSceneF(scene); setCharF(character); setQ(""); setTab("all"); };
-  const openAdd = () => { setF({ ...f, sceneId: sceneF && sceneF !== NONE ? sceneF : "", characterId: charF && charF !== NONE ? charF : "" }); setOpen(true); };
   const untaggedScene = byScene.get(NONE);
   const untaggedChar = byChar.get(NONE);
+  const openAdd = () => { setEditing(null); create.reset(); setF({ ...f, amount: "", description: "", quantity: "", rate: "", multiplier: "1", currency: f.currency || currency, sceneId: sceneF && sceneF !== NONE ? sceneF : f.sceneId, characterId: charF && charF !== NONE ? charF : f.characterId }); setOpen(true); };
+  const openEdit = (e: Expense) => { setEditing(e.id); create.reset(); setF(toForm(e, currency)); setOpen(true); };
+  /** Picking a known code fills its account name (only when the name is blank or still the old code's name). */
+  const knownAccounts = [...WARDROBE_ACCOUNTS, ...expenses.filter((e) => e.accountCode && e.accountName).map((e) => ({ code: e.accountCode!, name: e.accountName! }))];
+  const setCode = (code: string) => {
+    const hit = knownAccounts.find((a) => a.code === code.trim());
+    const oldName = knownAccounts.find((a) => a.code === f.accountCode.trim())?.name;
+    setF({ ...f, accountCode: code, accountName: hit && (!f.accountName || f.accountName === oldName) ? hit.name : f.accountName });
+  };
+  const money = (n: number, c: string) => fmtMoney(n, c);
+  const sceneTitle = (s: Scene) => [`Sc ${s.number}`, s.name || s.location].filter(Boolean).join(" - ");
+  const sceneGroups: SheetGroup[] = [
+    ...shownScenes.map((s) => ({ key: s.id, title: sceneTitle(s), lines: expenses.filter((e) => e.sceneId === s.id) })).filter((g) => g.lines.length),
+    ...(!needle && untaggedScene ? [{ key: NONE, title: "Not tagged to a scene", lines: expenses.filter((e) => !e.sceneId) }] : []),
+  ];
+  const charGroups: SheetGroup[] = [
+    ...shownChars.map((c) => ({ key: c.id, title: c.castNumber != null ? `${c.castNumber}. ${c.name}` : c.name, lines: expenses.filter((e) => e.characterId === c.id) })).filter((g) => g.lines.length),
+    ...(!needle && untaggedChar ? [{ key: NONE, title: "Not tagged to a character", lines: expenses.filter((e) => !e.characterId) }] : []),
+  ];
+  const idleScenes = shownScenes.filter((s) => !byScene.get(s.id)).length;
+  const idleChars = shownChars.filter((c) => !byChar.get(c.id)).length;
   const sceneLabel = (id: string) => { const s = sceneById.get(id); return s ? `Sc ${s.number}${s.name ? ` · ${s.name}` : ""}` : "Scene"; };
 
   return (
     <div>
       <PageHead title="Budget" sub="Spend for the whole production, scene by scene or by character." actions={<><button className="btn" onClick={() => setUploadOpen(true)}><FileSpreadsheet size={16} /> Upload budget sheet</button><button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Budget</button></>} />
       <div className="grid grid-stats mb-2">
-        <Stat label="Total spend" value={m(data.total)} />
-        {cats.map((c) => <Stat key={c} label={humanize(c)} value={m(data.byCategory[c] || 0)} />)}
+        {/* Summed per currency, so a line in pounds is never added into a rupee total. */}
+        <Stat label="Total spend" value={sumByCurrency(expenses, currency, fmtMoney)} />
+        {cats.map((c) => <Stat key={c} label={humanize(c)} value={sumByCurrency(expenses.filter((e) => e.category === c), currency, fmtMoney)} />)}
         <Stat label="Inventory value" value={m(data.inventoryValue)} hint="sum of purchase costs" />
         <Stat label="Rental committed" value={m(data.rentalCommitted)} hint="rate × booked days" />
       </div>
@@ -96,7 +147,7 @@ export default function Budget() {
 
       {tab === "all" && (sceneF || charF || needle) && (
         <div className="subtle mb-2">
-          {[sceneF && (sceneF === NONE ? "No scene" : sceneLabel(sceneF)), charF && (charF === NONE ? "No character" : charById.get(charF)?.name)].filter(Boolean).join(" · ") || "Matching"} · <b>{m(shownTotal)}</b> across {shownExpenses.length} expense{shownExpenses.length === 1 ? "" : "s"}
+          {[sceneF && (sceneF === NONE ? "No scene" : sceneLabel(sceneF)), charF && (charF === NONE ? "No character" : charById.get(charF)?.name)].filter(Boolean).join(" · ") || "Matching"} · <b>{sumByCurrency(shownExpenses, currency, fmtMoney)}</b> across {shownExpenses.length} expense{shownExpenses.length === 1 ? "" : "s"}
           {(sceneF || charF) && <> · <button className="btn btn-ghost btn-sm" onClick={() => { setSceneF(""); setCharF(""); }}>Show all</button></>}
         </div>
       )}
@@ -110,10 +161,11 @@ export default function Budget() {
                   <div className="avatar" title={e.scene ? `Scene ${e.scene.number}` : "No scene"}>{e.scene ? e.scene.number : <span className="subtle">—</span>}</div>
                   <div className="grow" style={{ minWidth: 0 }}>
                     <span className="title">{e.description}</span>
-                    <div className="meta">{[fmtDate(e.date), humanize(e.category), e.character?.name, e.costume?.assetNumber, e.vendor?.name].filter(Boolean).join(" · ")}</div>
+                    <div className="meta">{[e.accountCode ? `${e.accountCode}${e.accountName ? ` ${e.accountName}` : ""}` : null, fmtDate(e.date), humanize(e.category), e.payee, e.quantity != null && e.rate != null ? `${e.quantity} ${e.unit || ""} × ${e.multiplier ?? 1} × ${e.rate}` : null, e.character?.name, e.costume?.assetNumber, e.vendor?.name].filter(Boolean).join(" · ")}</div>
                   </div>
                   <div className="end">
-                    <span className="bold nowrap">{m(e.amount)}</span>
+                    <span className="bold nowrap">{fmtMoney(e.amount, e.currency || currency)}</span>
+                    <button type="button" className="btn btn-ghost btn-sm" aria-label={`Edit ${e.description}`} onClick={() => openEdit(e)}><Pencil size={14} /></button>
                     <RecordActions entityType="EXPENSE" entityId={e.id} title={e.description} path={`/p/${projectId}/budget`}
                       summary={`Expense: ${e.description} · ${m(e.amount)}\n${[fmtDate(e.date), humanize(e.category), e.scene ? `Sc ${e.scene.number}` : null, e.character?.name, e.vendor?.name].filter(Boolean).join(" · ")}`} />
                     <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" aria-label={`Delete ${e.description}`} onConfirm={() => del.mutate(e.id)}><Trash2 size={14} /></ConfirmButton>
@@ -124,68 +176,50 @@ export default function Budget() {
           )
         ) : tab === "scenes" ? (
           !scenes?.length ? <Empty icon="🎬" title="No scenes yet" /> : (
-            <div className="list">
-              {shownScenes.map((s) => {
-                const r = byScene.get(s.id);
-                return (
-                  <button key={s.id} type="button" className="item link" onClick={() => drill(s.id, "")}>
-                    <div className="avatar">{s.number}</div>
-                    <div className="grow" style={{ minWidth: 0 }}>
-                      <span className="title">{s.name || `Scene ${s.number}`}</span>
-                      <div className="meta">{summary(r)}</div>
-                    </div>
-                    <div className={`end nowrap ${r ? "bold" : "subtle"}`}>{m(r?.total || 0)}</div>
-                  </button>
-                );
-              })}
-              {untaggedScene && !needle && (
-                <button type="button" className="item link" onClick={() => drill(NONE, "")}>
-                  <div className="avatar"><span className="subtle">—</span></div>
-                  <div className="grow" style={{ minWidth: 0 }}><span className="title">Not tagged to a scene</span><div className="meta">{summary(untaggedScene)}</div></div>
-                  <div className="end nowrap bold">{m(untaggedScene.total)}</div>
-                </button>
-              )}
-              {!shownScenes.length && needle && <Empty icon="🔍" title="No scenes match" />}
-            </div>
+            <>
+              <BudgetSheet groups={sceneGroups} currency={currency} fmt={money} onEdit={openEdit} empty={<Empty icon={needle ? "🔍" : "💸"} title={needle ? "No scenes match" : "No spend tagged to a scene yet"} hint="Tag a budget line to a scene to see it here." />} />
+              {idleScenes > 0 && <div className="subtle small" style={{ padding: "10px 14px" }}>{idleScenes} scene{idleScenes === 1 ? "" : "s"} with no spend yet.</div>}
+            </>
           )
         ) : (
           !characters?.length ? <Empty icon="🧍" title="No characters yet" /> : (
-            <div className="list">
-              {shownChars.map((c) => {
-                const r = byChar.get(c.id);
-                return (
-                  <button key={c.id} type="button" className="item link" onClick={() => drill("", c.id)}>
-                    <div className="avatar">{c.castNumber != null ? c.castNumber : <span className="subtle">—</span>}</div>
-                    <div className="grow" style={{ minWidth: 0 }}>
-                      <span className="title">{c.name}</span>
-                      <div className="meta">{summary(r)}</div>
-                    </div>
-                    <div className={`end nowrap ${r ? "bold" : "subtle"}`}>{m(r?.total || 0)}</div>
-                  </button>
-                );
-              })}
-              {untaggedChar && !needle && (
-                <button type="button" className="item link" onClick={() => drill("", NONE)}>
-                  <div className="avatar"><span className="subtle">—</span></div>
-                  <div className="grow" style={{ minWidth: 0 }}><span className="title">Not tagged to a character</span><div className="meta">{summary(untaggedChar)}</div></div>
-                  <div className="end nowrap bold">{m(untaggedChar.total)}</div>
-                </button>
-              )}
-              {!shownChars.length && needle && <Empty icon="🔍" title="No characters match" />}
-            </div>
+            <>
+              <BudgetSheet groups={charGroups} currency={currency} fmt={money} onEdit={openEdit} empty={<Empty icon={needle ? "🔍" : "💸"} title={needle ? "No characters match" : "No spend tagged to a character yet"} hint="Tag a budget line to a character to see it here." />} />
+              {idleChars > 0 && <div className="subtle small" style={{ padding: "10px 14px" }}>{idleChars} character{idleChars === 1 ? "" : "s"} with no spend yet.</div>}
+            </>
           )
         )}
       </Card>
 
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} projectId={projectId} currency={currency} />
-      <Modal open={open} onClose={() => setOpen(false)} title="Add expense" footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!f.amount || !f.description || create.isPending} onClick={() => create.mutate()}>Add</button></>}>
+      <Modal open={open} onClose={() => setOpen(false)} title={editing ? "Edit budget line" : "Add budget line"} wide
+        footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={amount == null || amount < 0 || !f.description.trim() || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Saving…" : editing ? "Save" : "Add"}</button></>}>
+        <datalist id={ACCOUNT_LIST_ID}>{[...new Map(knownAccounts.map((a) => [a.code, a])).values()].map((a) => <option key={a.code} value={a.code}>{a.name}</option>)}</datalist>
+        <datalist id={UNIT_LIST_ID}>{BUDGET_UNITS.map((u) => <option key={u} value={u} />)}</datalist>
         <div className="form-grid">
+          <Field label="Account code" help="e.g. 30-001 · picking a known code fills the name"><Input list={ACCOUNT_LIST_ID} value={f.accountCode} onChange={(e) => setCode(e.target.value)} placeholder="30-090" className="mono" /></Field>
+          <Field label="Account name"><Input value={f.accountName} onChange={(e) => setF({ ...f, accountName: e.target.value })} placeholder="WARDROBE PURCHASES & RENTALS" /></Field>
+          <Field label="Description" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Prep, Shoot - UK, Car allowance, Principal…" /></Field>
+          <Field label="Name" help="Who the line pays: a crew member or supplier"><Input value={f.payee} onChange={(e) => setF({ ...f, payee: e.target.value })} placeholder="Lauren Reyhani" /></Field>
           <Field label="Category"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={cats} /></Field>
-          <Field label={`Amount${inCurrency(currency)}`}><Input type="number" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>
-          <Field label="Description" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
-          <Field label="Date"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
-          <Field label="Character"><Select value={f.characterId} onChange={(e) => setF({ ...f, characterId: e.target.value })} options={(characters || []).map((c) => ({ value: c.id, label: c.name }))} placeholder="—" humanizeLabels={false} /></Field>
+          <div className="span-2">
+            <div className="row gap-1 wrap" style={{ alignItems: "flex-end" }}>
+              <div style={{ width: 90 }}><Field label="Amt"><Input value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} inputMode="decimal" placeholder="6.8" className="mono" /></Field></div>
+              <div style={{ width: 110 }}><Field label="Unit"><Input list={UNIT_LIST_ID} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder="Weeks" /></Field></div>
+              <div style={{ width: 70 }}><Field label="X"><Input value={f.multiplier} onChange={(e) => setF({ ...f, multiplier: e.target.value })} inputMode="decimal" className="mono" /></Field></div>
+              <div style={{ width: 120 }}><Field label="Rate"><Input value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} inputMode="decimal" placeholder="3,500" className="mono" /></Field></div>
+              <div style={{ width: 110 }}><Field label="Currency"><Select value={f.currency} onChange={(e) => setF({ ...f, currency: e.target.value })} options={[...new Set([...(currency ? [currency] : []), ...CURRENCIES, ...(f.currency ? [f.currency] : [])])]} placeholder="None" humanizeLabels={false} /></Field></div>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                {subtotal != null
+                  ? <Field label="Subtotal" help="Amt × X × Rate"><div className="bold mono" style={{ padding: "9px 0" }}>{fmtMoney(subtotal, f.currency)}</div></Field>
+                  : <Field label={`Amount${inCurrency(f.currency)}`} help="Or fill in Amt and Rate"><Input type="number" min={0} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>}
+              </div>
+            </div>
+          </div>
           <Field label="Scene"><Select value={f.sceneId} onChange={(e) => setF({ ...f, sceneId: e.target.value })} options={(scenes || []).map((s) => ({ value: s.id, label: `Sc ${s.number}${s.name ? ` · ${s.name}` : ""}` }))} placeholder="—" humanizeLabels={false} /></Field>
+          <Field label="Character"><Select value={f.characterId} onChange={(e) => setF({ ...f, characterId: e.target.value })} options={(characters || []).map((c) => ({ value: c.id, label: c.name }))} placeholder="—" humanizeLabels={false} /></Field>
+          <Field label="Vendor"><Select value={f.vendorId} onChange={(e) => setF({ ...f, vendorId: e.target.value })} options={(vendors || []).map((v) => ({ value: v.id, label: v.name }))} placeholder="—" humanizeLabels={false} /></Field>
+          <Field label="Date"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
         </div>
         <ErrorBox error={create.error} />
       </Modal>

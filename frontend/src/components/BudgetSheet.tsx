@@ -19,9 +19,11 @@ function accountsOf(lines: Expense[]) {
   }
   return [...acc.values()].sort((a, b) => byCode(a.code, b.code) || a.name.localeCompare(b.name));
 }
+/** Lines read in the order they were entered (Prep, Shoot, Wrap…), as the sheet lists them. */
+const entered = (a: Expense, b: Expense) => (a.createdAt || a.date).localeCompare(b.createdAt || b.date);
 function payeesOf(lines: Expense[]) {
   const out = new Map<string, Expense[]>();
-  for (const l of lines) { const k = (l.payee || "").trim(); out.set(k, [...(out.get(k) || []), l]); }
+  for (const l of [...lines].sort(entered)) { const k = (l.payee || "").trim(); out.set(k, [...(out.get(k) || []), l]); }
   return [...out.entries()].sort(([a], [b]) => (!a ? -1 : !b ? 1 : 0));
 }
 const num = (n?: number | null) => (n == null ? "" : new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(n));
