@@ -29,8 +29,15 @@ const localDateISO = (ymd: string) => { const [y, m, d] = ymd.split("-").map(Num
 
 export const emptyDraft = (): Draft => ({ number: "", episode: "", dayPrefix: "Day", dayN: "", intExt: "INT", location: "", synopsis: "", shootDate: "", principals: [], cast: {} });
 export const toDraft = (s: Scene): Draft => ({ number: s.number, episode: s.episode || "", ...parseScriptDay(s.scriptDay), intExt: s.intExt || "", location: s.location || "", synopsis: s.synopsis || "", shootDate: dateKey(s.shootDate), principals: s.characters.map((c) => c.characterId), cast: {} });
-type Body = { number: string; episode: string | null; scriptDay: string | null; intExt: string | null; location: string | null; synopsis: string | null; shootDate: string | null };
-const toBody = (d: Draft): Body => ({ number: d.number.trim(), episode: d.episode.trim() || null, scriptDay: joinScriptDay(d) || null, intExt: d.intExt || null, location: d.location.trim() || null, synopsis: d.synopsis.trim() || null, shootDate: d.shootDate ? localDateISO(d.shootDate) : null });
+type Body = { number: string; episode: string | null; scriptDay: string | null; intExt: string | null; location: string | null; name: string | null; synopsis: string | null; shootDate: string | null };
+/** The parser names a scene "Location - Time", so an edited slugline renames it the same way rather than keeping the writer's. */
+const sceneName = (d: Draft, original?: Scene) => {
+  const loc = d.location.trim();
+  if (!loc) return original?.name?.trim() || null;
+  const time = original?.timeOfDay ? original.timeOfDay.charAt(0) + original.timeOfDay.slice(1).toLowerCase() : null;
+  return [loc, time].filter(Boolean).join(" - ");
+};
+const toBody = (d: Draft, original?: Scene): Body => ({ number: d.number.trim(), episode: d.episode.trim() || null, scriptDay: joinScriptDay(d) || null, intExt: d.intExt || null, location: d.location.trim() || null, name: sceneName(d, original), synopsis: d.synopsis.trim() || null, shootDate: d.shootDate ? localDateISO(d.shootDate) : null });
 /** Keys of `next` whose value differs from `prev` — so a PATCH only touches what the user changed. */
 function diffBody(next: Body, prev: Body): Partial<Body> {
   const out: Partial<Body> = {};
@@ -63,7 +70,7 @@ export async function persistDraft(projectId: string, id: string | null, d: Draf
     sceneId = (await api<Scene>(p(projectId, "/scenes"), { body: { ...toBody(d), status: "PLANNED", timeOfDay: null, revision: revision || null } })).id;
     created = true;
   } else {
-    const body = original ? diffBody(toBody(d), toBody(toDraft(original))) : toBody(d);
+    const body = original ? diffBody(toBody(d, original), toBody(toDraft(original), original)) : toBody(d);
     if (Object.keys(body).length) await api(p(projectId, `/scenes/${sceneId}`), { method: "PATCH", body });
   }
   const originalIds = original?.characters.map((c) => c.characterId) || [];
