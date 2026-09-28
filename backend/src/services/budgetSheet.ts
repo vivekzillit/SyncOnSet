@@ -1,6 +1,7 @@
 import readXlsxFile, { readSheetNames } from "read-excel-file/node";
 import { badRequest } from "../lib/errors";
 import { EXPENSE_CATEGORIES } from "../lib/constants";
+import { pdfRows, type PdfItem } from "./pdfLayout";
 
 type Category = (typeof EXPENSE_CATEGORIES)[number];
 type Cell = string | number | boolean | Date | null | undefined;
@@ -23,6 +24,11 @@ export interface SheetLine {
   unit: string | null;
   multiplier: number | null;
   rate: number | null;
+  /** Read from a printed budget (PDF): the account's title, the "Name:" the line pays, its department and currency. */
+  accountName?: string | null;
+  payee?: string | null;
+  department?: string | null;
+  currency?: string | null;
   /** "Total", "Sub-total" … rows: shown, but not ticked, so a sheet's own sums are not counted twice. */
   isTotal: boolean;
 }
@@ -187,12 +193,17 @@ function parseCsv(src: string): string[][] {
 /** Every budget line in the file, from every sheet that has a recognisable header row. Nothing is stored. */
 export async function readBudgetSheet(file: { originalname: string; buffer: Buffer }): Promise<{ lines: SheetLine[]; sheets: string[]; skippedSheets: string[] }> {
   const ext = (file.originalname.split(".").pop() || "").toLowerCase();
+  if (ext === "pdf") {
+    const lines = await readBudgetPdf(file.buffer);
+    const departments = [...new Set(lines.map((l) => l.department || "Budget"))];
+    return { lines, sheets: departments, skippedSheets: [] };
+  }
   if (ext === "xls" || ext === "numbers" || ext === "ods") throw badRequest(`.${ext} files can't be read. Save the sheet as .xlsx (Excel Workbook) or .csv and upload that.`);
   if (ext === "csv" || ext === "txt") {
     const lines = linesOf("CSV", parseCsv(file.buffer.toString("utf8").replace(/^﻿/, "")));
     return { lines, sheets: ["CSV"], skippedSheets: lines.length ? [] : ["CSV"] };
   }
-  if (ext !== "xlsx" && ext !== "xlsm") throw badRequest("Upload an Excel workbook (.xlsx) or a .csv file.");
+  if (ext !== "xlsx" && ext !== "xlsm") throw badRequest("Upload an Excel workbook (.xlsx), a .csv file or a budget PDF.");
   let names: string[];
   try { names = await readSheetNames(file.buffer); } catch { throw badRequest("That file could not be opened as an Excel workbook. Save it again as .xlsx and retry."); }
   const lines: SheetLine[] = [];
@@ -203,4 +214,87 @@ export async function readBudgetSheet(file: { originalname: string; buffer: Buff
     if (got.length) lines.push(...got); else skippedSheets.push(name);
   }
   return { lines, sheets: names, skippedSheets };
+}
+
+/* ---------- Printed budget (Movie Magic style PDF) ---------- */
+
+const CURRENCY_SIGNS: [RegExp, string][] = [[/£/, "GBP"], [/€/, "EUR"], [/₹|rs\.?/i, "INR"], [/\$/, "USD"]];
+const DEPT_ROW = /^(\d{2,3}-0{2,3})\s*-\s*(.+)$/; // "30-000 - WARDROBE"
+const ACCOUNT_CODE = /^\d{2,3}-\d{2,4}$/; // "30-001"
+
+/**
+ * A budget printed from Movie Magic (or anything laid out like it): per detail page a header row
+ * Account · Description · Amt · Unit · X · Rate · Subtotal, then "30-000 - WARDROBE", "30-001 COSTUME DESIGNER",
+ * "Name: …" rows and the costed lines. Each run is placed in a column by where it sits under that header, so
+ * right-aligned numbers and truncated descriptions still land in the right cell. The topsheet (Account ·
+ * Description · Total, no Amt or Rate) is not a detail page and is skipped, as are Subtotal / Total rows,
+ * which the lines already add up to.
+ */
+export async function readBudgetPdf(buffer: Buffer): Promise<SheetLine[]> {
+  let rows;
+  try { rows = await pdfRows(buffer); } catch { throw badRequest("That PDF could not be read. If it is scanned, export the budget from the budgeting software as a PDF or Excel file instead."); }
+  const out: SheetLine[] = [];
+  type Cols = { desc: number; amt: number; unit: number; x: number; rate: number; sub: number };
+  let cols: Cols | null = null;
+  let page = 0;
+  let department: string | null = null;
+  let account: { code: string; name: string } | null = null;
+  let payee: string | null = null;
+  const colOf = (it: PdfItem, c: Cols) => {
+    if (it.x < c.desc - 5) return "account";
+    if (it.x < c.amt - 15) return "desc";
+    if (it.x < c.unit - 2) return "amt";
+    if (it.x < c.x - 15) return "unit";
+    if (it.x < c.rate - 28) return "x";
+    if (it.x < c.sub - 2) return "rate";
+    return "sub";
+  };
+  for (const r of rows) {
+    if (r.page !== page) { page = r.page; cols = null; }
+    const words = r.items.map((i) => i.s.trim().toLowerCase());
+    if (words.includes("account") && words.includes("amt") && words.includes("rate")) {
+      const at = (w: string) => r.items[words.indexOf(w)].x;
+      cols = { desc: at("description"), amt: at("amt"), unit: at("unit"), x: words.includes("x") ? at("x") : (at("unit") + at("rate")) / 2, rate: at("rate"), sub: words.includes("subtotal") ? at("subtotal") : at("rate") + 40 };
+      continue;
+    }
+    if (!cols) continue; // page title, topsheet, or anything above the table header
+    const cell: Record<string, string> = {};
+    for (const it of r.items) { const k = colOf(it, cols); cell[k] = cell[k] ? `${cell[k]} ${it.s.trim()}` : it.s.trim(); }
+    const acc = (cell.account || "").replace(/\s*cont\.*…?$/i, "").trim();
+    const dept = (cell.account || r.text).match(DEPT_ROW);
+    if (dept && !cell.sub) { department = `${dept[1]} ${dept[2].trim()}`; account = null; payee = null; continue; }
+    if (ACCOUNT_CODE.test(acc) && !/cont/i.test(cell.account || "") && cell.desc && !cell.sub) { account = { code: acc, name: cell.desc }; payee = null; continue; }
+    if (cell.account && !ACCOUNT_CODE.test(acc)) continue; // running footer: production title, "Page: 3"
+    const desc = (cell.desc || "").trim();
+    if (!desc) continue;
+    const name = desc.match(/^name:\s*(.*)$/i);
+    // "Name: TOMMY ROYAL" usually heads the lines below it, but can carry money itself (1 Week × 2,500): then it is a line too.
+    if (name) { payee = name[1].trim() || null; if (!cell.sub) continue; }
+    if (/^(sub ?)?total\b|^grand total\b/i.test(desc) || /^start:/i.test(desc) || /^-{2,}$/.test(desc)) continue;
+    const amount = toAmount(cell.sub?.replace(/[£€$]/g, ""));
+    if (amount == null) continue; // a heading inside the account ("01. PRINCIPAL COSTUME STANDBY"), no money on it
+    const currency = CURRENCY_SIGNS.find(([re]) => re.test(cell.sub || ""))?.[1] || null;
+    const unit = cell.unit?.trim() || null;
+    out.push({
+      sheet: department || "Budget",
+      row: r.page,
+      description: (name ? name[1] : desc).replace(/…$/, "").trim() || desc,
+      category: toCategory(null, `${desc} ${account?.name || ""} ${department || ""}`),
+      categoryText: account ? `${account.code} ${account.name}` : null,
+      amount,
+      date: null,
+      scene: null, character: null, vendor: null, costume: null,
+      accountCode: account?.code || null,
+      accountName: account?.name || null,
+      payee,
+      department,
+      currency,
+      quantity: toAmount(cell.amt),
+      unit: unit && !/^\d/.test(unit) ? unit : null,
+      multiplier: toAmount(cell.x),
+      rate: toAmount(cell.rate),
+      isTotal: false,
+    });
+  }
+  return out;
 }
