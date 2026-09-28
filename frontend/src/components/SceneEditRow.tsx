@@ -213,7 +213,10 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
       <td rowSpan={span} style={top} />
       {episodes && <td rowSpan={span} style={top}><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} placeholder="Ep" disabled={busy} style={{ minWidth: 64, maxWidth: 84 }} /></td>}
       <td rowSpan={span} style={top}>
-        <Input value={d.number} onChange={(e) => set({ number: e.target.value })} placeholder="Scene #" autoFocus={isNew} disabled={busy} aria-invalid={!!error} title={error} style={{ minWidth: 84, maxWidth: 110, borderColor: error ? "var(--danger)" : undefined }} />
+        {/* A scene keeps its number: it is what the script, schedule and call sheets match on. Only a new scene takes one here. */}
+        {isNew
+          ? <Input value={d.number} onChange={(e) => set({ number: e.target.value })} placeholder="Scene #" autoFocus disabled={busy} aria-invalid={!!error} title={error} style={{ minWidth: 84, maxWidth: 110, borderColor: error ? "var(--danger)" : undefined }} />
+          : <span className="bold mono" style={{ display: "inline-block", minWidth: 48, padding: "8px 0" }} title="The scene number cannot be changed">{d.number}</span>}
         {error && <div className="tiny" style={{ color: "var(--danger)", marginTop: 2 }}>{error}</div>}
       </td>
       <td rowSpan={span} style={top}>
