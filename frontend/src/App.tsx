@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "@/state/auth";
 import { LeaveGuard, Spinner } from "@/components/ui";
 import { ProjectShell } from "@/components/Layout";
+import { ScrollArrows } from "@/components/ScrollArrows";
 import Login from "@/pages/Login";
 import Projects from "@/pages/Projects";
 import Dashboard from "@/pages/Dashboard";
@@ -46,6 +47,7 @@ export default function App() {
   return (
     <>
       <LeaveGuard />
+      <ScrollArrows />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/projects" element={<RequireAuth><Projects /></RequireAuth>} />

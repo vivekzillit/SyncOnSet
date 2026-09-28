@@ -7,7 +7,7 @@ import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { dateKey, fmtDate, hasEpisodes, humanize, todayISO } from "@/lib/format";
 import type { Character, Scene, SceneCharacter } from "@/api/types";
-import { Badge, Card, Chips, ConfirmButton, Dot, Empty, PageHead, SearchBox, Select, Spinner, discardIfDirty, useToast, useUnsavedGuard } from "@/components/ui";
+import { Badge, Card, Chips, ConfirmButton, Dot, Empty, PageHead, SearchBox, Select, Spinner, confirmAction, discardIfDirty, useToast, useUnsavedGuard } from "@/components/ui";
 import { ScriptUploadModal } from "@/components/ScriptUpload";
 import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
 import { PrincipalsModal, sortByCast } from "@/components/PrincipalsModal";
@@ -168,7 +168,13 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
     return !base || JSON.stringify(d) !== JSON.stringify(base);
   };
   const cancelOne = async (key: string) => { if (await discardIfDirty(changed(key))) dropDraft(key); };
-  const cancelAll = async () => { if (await discardIfDirty(Object.keys(drafts).some(changed))) { setDrafts({}); setEditAll(false); } };
+  const cancelAll = async () => {
+    const edited = Object.keys(drafts).filter(changed).length;
+    const ok = await confirmAction(edited
+      ? { title: "Discard changes?", message: `You have unsaved changes in ${edited} scene${edited === 1 ? "" : "s"}. Cancel and lose them?`, confirm: "Discard", cancel: "Keep editing", danger: true }
+      : { title: "Stop editing?", message: "Nothing has been changed. Leave Edit All?", confirm: "Stop editing", cancel: "Keep editing" });
+    if (ok) { setDrafts({}); setEditAll(false); }
+  };
   useUnsavedGuard(Object.keys(drafts).some(changed));
   const busy = saveOne.isPending || saveAll.isPending;
   const principalsDraft = principalsFor ? drafts[principalsFor] : undefined;

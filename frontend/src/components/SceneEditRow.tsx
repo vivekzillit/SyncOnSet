@@ -11,8 +11,8 @@ export interface CastEdit { castNumber?: string; actorId?: string }
 export interface Draft { number: string; episode: string; dayPrefix: string; dayN: string; intExt: string; location: string; synopsis: string; shootDate: string; principals: string[]; cast: Record<string, CastEdit> }
 export const NEW = "new";
 export const LOCATION_LIST_ID = "scene-locations";
-const DAY_PREFIXES = ["Day", "Night"];
-const INT_EXT_FALLBACK = ["INT", "EXT", "INT/EXT"];
+export const DAY_PREFIXES = ["Day", "Night"];
+export const INT_EXT_FALLBACK = ["INT", "EXT", "INT/EXT"];
 
 /** "Day 3" / "D3" / "N12" → { dayPrefix, dayN }; anything else is kept verbatim in dayN. */
 export function parseScriptDay(s?: string | null): { dayPrefix: string; dayN: string } {
