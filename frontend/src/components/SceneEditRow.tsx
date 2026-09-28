@@ -159,7 +159,11 @@ export function castMembers(chars: Pick<SceneCharacter, "characterId" | "charact
 }
 
 /* ---------- Inline edit row (add + edit share it) ---------- */
-export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, people = [], error, episodes, changes }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; people?: Character[]; error?: string; episodes?: boolean; changes?: { text: string; title: string } }) {
+/**
+ * `split` is the breakdown (expanded) view: one row per character, as the list reads when not editing. The scene's
+ * own fields span those rows once, and each row carries that character's cast number, actor and change.
+ */
+export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPrincipals, principals, people = [], error, episodes, changes, split, changeOf }: { d: Draft; onChange: (d: Draft) => void; meta: Meta | null; isNew?: boolean; onSave?: () => void; onCancel?: () => void; busy?: boolean; onPrincipals: () => void; principals: { text: string; title: string }; people?: Character[]; error?: string; episodes?: boolean; changes?: { text: string; title: string }; split?: boolean; changeOf?: (characterId: string) => string }) {
   const set = (patch: Partial<Draft>) => onChange({ ...d, ...patch });
   const castNumberOf = (c: Character) => d.cast[c.id]?.castNumber ?? (c.castNumber != null ? String(c.castNumber) : "");
   const actorOf = (c: Character) => d.cast[c.id]?.actorId ?? c.actorId ?? "";
@@ -189,31 +193,87 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
   // Always keep the row's current INT/EXT value selectable, even if it is not in the configured list (older / imported data).
   const intExtOptions = Array.from(new Set([...(meta?.intExt || INT_EXT_FALLBACK), ...(d.intExt ? [d.intExt] : [])]));
   // Inputs are disabled while the row is saving so keystrokes cannot land in a draft that is about to be replaced by the server row.
-  return (
-    <tr style={{ background: "var(--surface-2)" }} onKeyDown={onKey} aria-busy={busy || undefined}>
-      <td />
-      {episodes && <td><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} placeholder="Ep" disabled={busy} style={{ minWidth: 64, maxWidth: 84 }} /></td>}
-      <td>
+  const rowStyle = { background: "var(--surface-2)" };
+  const castInput = (c: Character) => {
+    const problem = castNumberProblem(castNumberOf(c));
+    // Deliberately not type="number": that hands back an empty string for anything it cannot parse,
+    // which would read as "clear this cast number", and a stray scroll wheel would retype it.
+    return <Input value={castNumberOf(c)} onChange={(e) => setCast(c, { castNumber: e.target.value })} disabled={busy} inputMode="numeric" pattern="[0-9]*" className="mono" placeholder="#" aria-label={`Cast number for ${c.name}`} aria-invalid={!!problem} title={problem || undefined} style={{ width: 72, borderColor: problem ? "var(--danger)" : undefined }} />;
+  };
+  const actorInput = (c: Character) => <ActorSelect value={actorOf(c)} onChange={(actorId) => setCast(c, { actorId })} disabled={busy} label={`Actor for ${c.name}`} />;
+  const castProblemNote = castProblem && <div className="tiny" style={{ color: "var(--danger)", marginTop: 2 }}>{castProblem}</div>;
+  const addRemove = <button type="button" className="btn btn-sm" disabled={busy} onClick={onPrincipals}>Add/Remove</button>;
+
+  // The scene's own fields; in the split view they span every character row of the scene.
+  const span = split && people.length > 1 ? people.length : undefined;
+  // Spanned cells sit at the top of their group, level with the first character, rather than floating mid-way.
+  const top = span ? { verticalAlign: "top" as const } : undefined;
+  const sceneCells = (
+    <>
+      <td rowSpan={span} style={top} />
+      {episodes && <td rowSpan={span} style={top}><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} placeholder="Ep" disabled={busy} style={{ minWidth: 64, maxWidth: 84 }} /></td>}
+      <td rowSpan={span} style={top}>
         <Input value={d.number} onChange={(e) => set({ number: e.target.value })} placeholder="Scene #" autoFocus={isNew} disabled={busy} aria-invalid={!!error} title={error} style={{ minWidth: 84, maxWidth: 110, borderColor: error ? "var(--danger)" : undefined }} />
         {error && <div className="tiny" style={{ color: "var(--danger)", marginTop: 2 }}>{error}</div>}
       </td>
-      <td>
+      <td rowSpan={span} style={top}>
         <div className="row gap-1" style={{ minWidth: 168 }}>
           <Select value={d.dayPrefix} onChange={(e) => set({ dayPrefix: e.target.value })} options={DAY_PREFIXES} placeholder="—" humanizeLabels={false} disabled={busy} style={{ width: 96 }} />
           <Input value={d.dayN} onChange={(e) => set({ dayN: e.target.value })} placeholder="No." title="Script day number" aria-label="Script day number" inputMode="numeric" pattern="[0-9A-Za-z]*" disabled={busy} style={{ width: 66 }} />
         </div>
       </td>
-      <td>
+      <td rowSpan={span} style={top}>
         <div className="row gap-1" style={{ minWidth: 250 }}>
           <Select value={d.intExt} onChange={(e) => set({ intExt: e.target.value })} options={intExtOptions} placeholder="—" humanizeLabels={false} disabled={busy} style={{ width: 104 }} />
           <Input list={LOCATION_LIST_ID} value={d.location} onChange={(e) => set({ location: e.target.value })} placeholder="Location" disabled={busy} style={{ minWidth: 140 }} />
         </div>
       </td>
-      <td><Input value={d.synopsis} onChange={(e) => set({ synopsis: e.target.value })} placeholder="Scene description" disabled={busy} style={{ minWidth: 220 }} /></td>
+      <td rowSpan={span} style={top}><Input value={d.synopsis} onChange={(e) => set({ synopsis: e.target.value })} placeholder="Scene description" disabled={busy} style={{ minWidth: 220 }} /></td>
+    </>
+  );
+  const tailCells = (
+    <>
+      <td rowSpan={span} style={top}><Input type="date" value={d.shootDate} onChange={(e) => set({ shootDate: e.target.value })} disabled={busy} style={{ minWidth: 150 }} /></td>
+      <td rowSpan={span} className="right nowrap" style={top}>
+        {onSave && <button type="button" className="btn btn-sm" style={{ background: "var(--ok)", color: "#fff", borderColor: "var(--ok)" }} disabled={!canSave} onClick={onSave}>{busy ? "Saving…" : "Save"}</button>}
+        {onCancel && <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 4 }} disabled={busy} onClick={onCancel}>Cancel</button>}
+      </td>
+    </>
+  );
+
+  if (split && people.length > 1) {
+    return (
+      <>
+        {people.map((c, i) => (
+          <tr key={c.id} style={rowStyle} onKeyDown={onKey} aria-busy={busy || undefined}>
+            {i === 0 && sceneCells}
+            <td>
+              <div className="row gap-1 wrap" style={{ minWidth: 190 }}>
+                <span className="small">{c.name}</span>
+                {/* Adding or removing people is for the scene as a whole, so it sits on its first row only. */}
+                {i === 0 && addRemove}
+              </div>
+            </td>
+            <td title="A cast number belongs to the character — changing it here changes it in every scene they are in">
+              {castInput(c)}
+              {i === people.length - 1 && castProblemNote}
+            </td>
+            <td title="Who is cast in the part — the same actor shows on every scene the character is in"><div style={{ minWidth: 180 }}>{actorInput(c)}</div></td>
+            <td className="subtle nowrap">{changeOf?.(c.id) || "—"}</td>
+            {i === 0 && tailCells}
+          </tr>
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <tr style={rowStyle} onKeyDown={onKey} aria-busy={busy || undefined}>
+      {sceneCells}
       <td>
         <div className="row gap-1 wrap" style={{ minWidth: 190 }}>
           {principals.text ? <span className="small" title={principals.title}>{principals.text}</span> : <span className="subtle">None</span>}
-          <button type="button" className="btn btn-sm" disabled={busy} onClick={onPrincipals}>Add/Remove</button>
+          {addRemove}
         </div>
       </td>
       {/* A cast number and the actor belong to the character, so a change here follows them into every scene.
@@ -221,20 +281,15 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
       <td title="A cast number belongs to the character — changing it here changes it in every scene they are in">
         {people.length === 0 ? <span className="subtle">—</span> : (
           <div className="col gap-1" style={{ minWidth: 92 }}>
-            {people.map((c) => {
-              const problem = castNumberProblem(castNumberOf(c));
-              return (
-                <div key={c.id} className="col" style={{ gap: 1 }}>
-                  {people.length > 1 && <span className="subtle tiny truncate" style={{ maxWidth: 88 }} title={c.name}>{c.name}</span>}
-                  {/* Deliberately not type="number": that hands back an empty string for anything it cannot parse,
-                      which would read as "clear this cast number", and a stray scroll wheel would retype it. */}
-                  <Input value={castNumberOf(c)} onChange={(e) => setCast(c, { castNumber: e.target.value })} disabled={busy} inputMode="numeric" pattern="[0-9]*" className="mono" placeholder="#" aria-label={`Cast number for ${c.name}`} aria-invalid={!!problem} title={problem || undefined} style={{ width: 72, borderColor: problem ? "var(--danger)" : undefined }} />
-                </div>
-              );
-            })}
+            {people.map((c) => (
+              <div key={c.id} className="col" style={{ gap: 1 }}>
+                {people.length > 1 && <span className="subtle tiny truncate" style={{ maxWidth: 88 }} title={c.name}>{c.name}</span>}
+                {castInput(c)}
+              </div>
+            ))}
           </div>
         )}
-        {castProblem && <div className="tiny" style={{ color: "var(--danger)", marginTop: 2 }}>{castProblem}</div>}
+        {castProblemNote}
       </td>
       <td title="Who is cast in the part — the same actor shows on every scene the character is in">
         {people.length === 0 ? <span className="subtle">—</span> : (
@@ -242,19 +297,15 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
             {people.map((c) => (
               <div key={c.id} className="col" style={{ gap: 1 }}>
                 {people.length > 1 && <span className="subtle tiny truncate" style={{ maxWidth: 170 }} title={c.name}>{c.name}</span>}
-                <ActorSelect value={actorOf(c)} onChange={(actorId) => setCast(c, { actorId })} disabled={busy} label={`Actor for ${c.name}`} />
+                {actorInput(c)}
               </div>
             ))}
           </div>
         )}
       </td>
       {/* The look each character wears is set per row in the breakdown view, not in the scene editor. */}
-      <td className="subtle" title={changes?.title || undefined}>{changes?.text || "—"}</td>
-      <td><Input type="date" value={d.shootDate} onChange={(e) => set({ shootDate: e.target.value })} disabled={busy} style={{ minWidth: 150 }} /></td>
-      <td className="right nowrap">
-        {onSave && <button type="button" className="btn btn-sm" style={{ background: "var(--ok)", color: "#fff", borderColor: "var(--ok)" }} disabled={!canSave} onClick={onSave}>{busy ? "Saving…" : "Save"}</button>}
-        {onCancel && <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 4 }} disabled={busy} onClick={onCancel}>Cancel</button>}
-      </td>
+      <td className="subtle" title={changes?.title || undefined}>{split && people.length === 1 ? changeOf?.(people[0].id) || "—" : changes?.text || "—"}</td>
+      {tailCells}
     </tr>
   );
 }
