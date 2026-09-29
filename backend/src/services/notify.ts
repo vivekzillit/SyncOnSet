@@ -15,17 +15,25 @@ interface NotifyInput {
   userIds?: string[];
   /** Never deliver to these users (e.g. whoever caused the notification). */
   excludeUserIds?: string[];
+  /**
+   * Deliver to exactly `userIds` and nobody else. A notification the app decides to raise goes to whoever
+   * should know, admins included; a message one person addressed to another is only theirs, so a request
+   * sent to two people is not also copied to every admin in the database.
+   */
+  onlyUserIds?: boolean;
 }
 
 /** Fan-out a notification to each relevant project member (one row per user so read-state is per user). */
 export async function notify(input: NotifyInput) {
-  const members = await prisma.projectMember.findMany({ where: { projectId: input.projectId }, select: { userId: true, role: true } });
-  const admins = await prisma.user.findMany({ where: { role: "ADMIN", isActive: true }, select: { id: true } });
   const targets = new Set<string>();
-  for (const m of members) {
-    if (!input.roles || input.roles.includes(m.role as Role)) targets.add(m.userId);
+  if (!input.onlyUserIds) {
+    const members = await prisma.projectMember.findMany({ where: { projectId: input.projectId }, select: { userId: true, role: true } });
+    const admins = await prisma.user.findMany({ where: { role: "ADMIN", isActive: true }, select: { id: true } });
+    for (const m of members) {
+      if (!input.roles || input.roles.includes(m.role as Role)) targets.add(m.userId);
+    }
+    for (const a of admins) targets.add(a.id);
   }
-  for (const a of admins) targets.add(a.id);
   for (const u of input.userIds || []) targets.add(u);
   for (const u of input.excludeUserIds || []) targets.delete(u);
   if (targets.size === 0) return 0;

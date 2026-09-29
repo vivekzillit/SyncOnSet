@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, UserCheck, ChevronRight } from "lucide-react";
+import { CheckCircle2, XCircle, UserCheck, ChevronRight, Megaphone } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { useAuth, CLEANING_ROLES, OPS_ROLES } from "@/state/auth";
+import { useAuth, CLEANING_ROLES, OPS_ROLES, REQUEST_ROLES } from "@/state/auth";
 import { fmtDateTime, humanize } from "@/lib/format";
 import type { CleaningRequest } from "@/api/types";
 import { Badge, Card, ConfirmButton, Field, Input, PageHead, Spinner, useToast } from "@/components/ui";
 import { CostumeRow, PhotoGrid, Pipeline, Timeline } from "@/components/domain";
+import { SendRequestModal } from "@/components/SendRequest";
 
 export default function CleaningDetail() {
   const { id = "" } = useParams();
@@ -19,6 +20,9 @@ export default function CleaningDetail() {
   const base = `/p/${projectId}`;
   const { data: r, isLoading } = useQuery({ queryKey: ["cleaning", projectId, id], queryFn: () => api<CleaningRequest>(p(projectId, `/cleaning/${id}`)), refetchInterval: 15000 });
   const [note, setNote] = useState("");
+  /** The message a chase starts from, taken when the button is pressed: this ticket refetches every 15
+   *  seconds, and it moving on behind the dialog must not rewrite what is being typed. */
+  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
   const inv = () => { qc.invalidateQueries({ queryKey: ["cleaning"] }); qc.invalidateQueries({ queryKey: ["dashboard"] }); qc.invalidateQueries({ queryKey: ["costume"] }); };
   const advance = useMutation({
     mutationFn: (body: Record<string, unknown>) => api<CleaningRequest>(p(projectId, `/cleaning/${id}/advance`), { body }),
@@ -40,6 +44,17 @@ export default function CleaningDetail() {
         crumbs={<><Link to={`${base}/cleaning`}>Cleaning</Link> / Ticket</>}
         title={<span className="row gap-2 wrap">{r.isEmergency && <Badge status="URGENT" lg>🚨 Emergency</Badge>}<span>{r.problem}</span><Badge status={r.status} lg /></span>}
         sub={<><Link to={`${base}/costumes/${r.costume.id}`}><b className="mono">{r.costume.assetNumber}</b> {r.costume.name}</Link>{r.costume.character ? ` · ${r.costume.character.name}` : ""}{r.scene ? ` · Sc ${r.scene.number}${r.takeNumber ? ` Take ${r.takeNumber}` : ""}` : ""}</>}
+        actions={can(REQUEST_ROLES) && <button className="btn" onClick={() => setChase({
+          title: `Cleaning · ${r.costume.assetNumber} ${r.problem}`.slice(0, 160),
+          body: [
+            `${r.costume.assetNumber} ${r.costume.name}${r.costume.character ? ` (${r.costume.character.name})` : ""}`,
+            `Problem: ${r.problem} · ${humanize(r.cleaningType)}${r.isEmergency ? " · emergency" : ""}`,
+            `Now: ${humanize(r.status)}${r.assignedToName ? ` · with ${r.assignedToName}` : ""}${r.expectedReadyAt ? ` · needed by ${fmtDateTime(r.expectedReadyAt)}` : ""}`,
+            "",
+            "Please say where it is and when it will be back.",
+            `${window.location.origin}${base}/cleaning/${r.id}`,
+          ].join("\n"),
+        })}><Megaphone size={16} /> Send request</button>}
       />
       <Card className="mb-2"><Pipeline steps={pipeline} current={r.status === "CANCELLED" ? "" : r.status} />{r.status === "CANCELLED" && <div className="notice mt-2">This request was cancelled.</div>}</Card>
 
@@ -93,6 +108,8 @@ export default function CleaningDetail() {
           <Card title="History"><Timeline events={logs.slice().reverse()} /></Card>
         </div>
       </div>
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · this ticket"
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="CLEANING" entityId={r.id} />
     </div>
   );
 }

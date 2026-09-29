@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Mail, MessageCircle, Send, Share2, Trash2 } from "lucide-react";
+import { Copy, Mail, Megaphone, MessageCircle, Send, Share2, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { useAuth } from "@/state/auth";
+import { useAuth, REQUEST_ROLES } from "@/state/auth";
 import { relativeTime } from "@/lib/format";
 import { ConfirmButton, Modal, Spinner, initials, useToast } from "@/components/ui";
+import { SendRequestModal } from "@/components/SendRequest";
 import "./discussion.css";
 
 const ZILLIT_WEB = "https://web.zillit.com";
@@ -15,18 +16,20 @@ export type ChatEntity = "BUDGET" | "EXPENSE" | "ALTERATION" | "DAMAGE" | "MISSI
 interface Comment { id: string; userId: string; userName: string; body: string; createdAt: string }
 
 /**
- * Share and Chat for one record (expense, alteration, damage, missing item, fitting).
- * `title` names the record and `summary` is the text a share carries. `path` is the page the record lives on:
+ * Send a request, Share and Chat for one record (expense, alteration, damage, missing item, fitting).
+ * `title` names the record and `summary` is the text a share carries — and the message a request starts from,
+ * so every record is chased the same way, whoever it concerns. `path` is the page the record lives on:
  * a list page gets `#rec-<id>` so the link scrolls to that record, and `?chat=<id>` (used by chat notifications)
  * opens its chat.
  */
 export function RecordActions({ entityType, entityId, title, summary, path }: { entityType: ChatEntity; entityId: string; title: string; summary: string; path: string }) {
-  const { projectId } = useProject();
+  const { projectId, project, can } = useProject();
   const loc = useLocation();
   const nav = useNavigate();
   const anchor = useRef<HTMLSpanElement>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const { data: counts } = useQuery({ queryKey: ["comment-counts", projectId, entityType], queryFn: () => api<Record<string, number>>(p(projectId, `/comments/counts?entityType=${entityType}`)) });
   const count = counts?.[entityId] || 0;
 
@@ -52,10 +55,14 @@ export function RecordActions({ entityType, entityId, title, summary, path }: { 
 
   return (
     <span className="rec-actions" ref={anchor} onClick={(e) => e.stopPropagation()}>
+      {can(REQUEST_ROLES) && <button type="button" className="btn btn-ghost btn-sm" onClick={(e) => { stop(e); setSendOpen(true); }} aria-label={`Send a request about ${title}`} title="Send a request"><Megaphone size={15} /></button>}
       <button type="button" className="btn btn-ghost btn-sm" onClick={(e) => { stop(e); setShareOpen(true); }} aria-label={`Share ${title}`} title="Share"><Share2 size={15} /></button>
       <button type="button" className="btn btn-ghost btn-sm" onClick={(e) => { stop(e); setChatOpen(true); }} aria-label={`Chat about ${title}${count ? ` (${count} messages)` : ""}`} title="Chat">
         <MessageCircle size={15} />{count > 0 && <span className="rec-count">{count}</span>}
       </button>
+      <SendRequestModal open={sendOpen} onClose={() => setSendOpen(false)} title={`Send a request · ${title}`}
+        defaultTitle={`${title}${project?.name ? ` · ${project.name}` : ""}`.slice(0, 160)}
+        defaultBody={`${summary}\n${url}`} entityType={entityType} entityId={entityId} />
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} title={title} summary={summary} url={url} />
       <ChatModal open={chatOpen} onClose={() => setChatOpen(false)} entityType={entityType} entityId={entityId} title={title} />
     </span>

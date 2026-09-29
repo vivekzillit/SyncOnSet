@@ -75,3 +75,5 @@ export const OPS_ROLES: Role[] = [...MANAGER_ROLES, "COSTUME_ASSISTANT", "WARDRO
 export const CLEANING_ROLES: Role[] = [...OPS_ROLES, "LAUNDRY"];
 export const TAILOR_ROLES: Role[] = [...OPS_ROLES, "TAILOR"];
 export const CONTINUITY_ROLES: Role[] = [...OPS_ROLES, "CONTINUITY"];
+/** Whoever can raise one of these tickets can chase it too, so the trades are in as well as wardrobe. */
+export const REQUEST_ROLES: Role[] = [...new Set([...CLEANING_ROLES, ...TAILOR_ROLES, ...CONTINUITY_ROLES])];

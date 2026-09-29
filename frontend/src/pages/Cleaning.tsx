@@ -1,18 +1,19 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Siren, LayoutGrid, List } from "lucide-react";
+import { Plus, Siren, LayoutGrid, List, Megaphone } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { useAuth, CLEANING_ROLES } from "@/state/auth";
+import { useAuth, CLEANING_ROLES, REQUEST_ROLES } from "@/state/auth";
 import { fmtTime, humanize, matches, relativeTime } from "@/lib/format";
 import type { CleaningRequest, Costume } from "@/api/types";
 import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { SceneSelect } from "@/components/QuickSelects";
 import { CostumePicker, CostumeRow, MediaPicker, attachMedia } from "@/components/domain";
+import { SendRequestModal, chaseBody } from "@/components/SendRequest";
 
 export default function Cleaning() {
-  const { projectId, can } = useProject();
+  const { projectId, can, project } = useProject();
   const { meta } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -22,6 +23,9 @@ export default function Cleaning() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
+  /** The message a chase starts from, taken at the moment the button is pressed: the sink refetches every
+   *  20 seconds, and a ticket moving on behind the dialog must not rewrite what is being typed. */
+  const [chase, setChase] = useState<{ title: string; body: string; id?: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; problem: string; cleaningType: string; priority: string; sceneId: string; takeNumber: string; expectedReadyAt: string; notes: string }>({ costume: null, problem: "", cleaningType: "SPOT_CLEANING", priority: "NORMAL", sceneId: "", takeNumber: "", expectedReadyAt: "", notes: "" });
   const [media, setMedia] = useState<File[]>([]);
   const createdId = useRef<string | null>(null);
@@ -44,8 +48,23 @@ export default function Cleaning() {
   const isReadyToday = (i: CleaningRequest) => i.status === "READY" && new Date(i.completedAt || i.createdAt).toDateString() === today;
   const readyToday = shown.filter(isReadyToday);
   // The header counts the whole sink, not just what the search is showing.
-  const openCount = data.items.filter((i) => !["READY", "CANCELLED"].includes(i.status)).length;
+  const stillOpen = data.items.filter((i) => !["READY", "CANCELLED"].includes(i.status));
+  const openCount = stillOpen.length;
   const readyTodayCount = data.items.filter(isReadyToday).length;
+  // A chase covers the whole sink for the same reason, emergencies first.
+  const chaseSink = () => {
+    const tickets = [...stillOpen].sort((a, b) => Number(b.isEmergency) - Number(a.isEmergency));
+    setChase({
+      id: tickets[0]?.id,
+      title: `Cleaning still open · ${project?.name || "Production"}`.slice(0, 160),
+      body: chaseBody({
+        lead: `${tickets.length} ${tickets.length === 1 ? "piece is" : "pieces are"} still in the sink:`,
+        lines: tickets.map((i) => `${i.isEmergency ? "🚨 " : ""}${i.costume.assetNumber} ${i.costume.name} — ${i.problem} · ${humanize(i.status)}${i.expectedReadyAt ? ` · needed by ${fmtTime(i.expectedReadyAt)}` : ""}`),
+        empty: "Nothing is in the sink right now.",
+        ask: "Please say where each piece is and when it will be back.",
+      }),
+    });
+  };
 
   const card = (i: CleaningRequest) => (
     <Link key={i.id} to={`${base}/cleaning/${i.id}`} className={`kcard ${i.isEmergency ? "emergency" : ""}`} style={{ display: "block" }}>
@@ -65,6 +84,7 @@ export default function Cleaning() {
       <PageHead title="Sink / Cleaning" sub={`${openCount} open · ${readyTodayCount} completed today`} actions={<>
         <div className="row gap-0 hide-mobile" style={{ gap: 2 }}><button className={`btn btn-sm ${view === "board" ? "btn-primary" : ""}`} onClick={() => setView("board")}><LayoutGrid size={14} /></button><button className={`btn btn-sm ${view === "list" ? "btn-primary" : ""}`} onClick={() => setView("list")}><List size={14} /></button></div>
         <Link to={`${base}/scan?emergency=1`} className="btn btn-emergency"><Siren size={16} /> Emergency</Link>
+        {can(REQUEST_ROLES) && <button className="btn" onClick={chaseSink}><Megaphone size={16} /> Send request</button>}
         {can(CLEANING_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Request</button>}
       </>} />
 
@@ -118,6 +138,8 @@ export default function Cleaning() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} filter={(c) => c.status !== "CLEANING"} />
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · cleaning"
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="CLEANING" entityId={chase?.id} />
     </div>
   );
 }

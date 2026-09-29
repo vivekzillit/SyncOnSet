@@ -19,7 +19,8 @@ export default function Notifications() {
     // A chat message opens that record's conversation.
     if (n.type === "CHAT" && n.entityType && n.entityId && map[n.entityType]) return nav(n.entityType === "FITTING" ? `${base}/fittings/${n.entityId}?chat=${n.entityId}` : `${base}/${map[n.entityType]}?chat=${n.entityId}`);
     if (n.entityType && n.entityId && (n.entityType === "COSTUME" || n.entityType === "CLEANING" || n.entityType === "FITTING")) nav(`${base}/${map[n.entityType]}/${n.entityId}`);
-    else if (n.entityType && map[n.entityType]) nav(`${base}/${map[n.entityType]}`);
+    // The others live on a list page, which scrolls to the record and flashes it when the link names one.
+    else if (n.entityType && map[n.entityType]) nav(`${base}/${map[n.entityType]}${n.entityId ? `#rec-${n.entityId}` : ""}`);
   };
   return (
     <div>

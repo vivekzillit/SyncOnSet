@@ -1,19 +1,20 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Megaphone } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { useAuth, FINANCE_ROLES, OPS_ROLES } from "@/state/auth";
+import { useAuth, FINANCE_ROLES, OPS_ROLES, REQUEST_ROLES } from "@/state/auth";
 import { fmtDateTime, fmtMoney, humanize, matches, inCurrency } from "@/lib/format";
 import type { Costume, DamageReport } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { SceneSelect } from "@/components/QuickSelects";
 import { RecordActions } from "@/components/Discussion";
+import { SendRequestModal, chaseBody } from "@/components/SendRequest";
 import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, attachMedia } from "@/components/domain";
 
 export default function Damages() {
-  const { projectId, can, currency } = useProject();
+  const { projectId, can, currency, project } = useProject();
   const { meta } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -23,6 +24,8 @@ export default function Damages() {
   const { data, isLoading } = useQuery({ queryKey: ["damages", projectId], queryFn: () => api<DamageReport[]>(p(projectId, "/damages")) });
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
+  /** The message a chase starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
+  const [chase, setChase] = useState<{ title: string; body: string; id?: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; description: string; sceneId: string; takeNumber: string; estimatedRepairCost: string; responsible: string }>({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" });
   const [media, setMedia] = useState<File[]>([]);
   const createdId = useRef<string | null>(null);
@@ -40,11 +43,26 @@ export default function Damages() {
   const setStatus = useMutation({ mutationFn: (v: { id: string; status: string }) => api(p(projectId, `/damages/${v.id}`), { method: "PATCH", body: { status: v.status } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
   if (isLoading || !data) return <Spinner />;
+  // The chase covers every report still to be dealt with, not what the search happens to be showing.
+  const unrepaired = data.filter((d) => ["OPEN", "REPAIRING"].includes(d.status));
+  const chaseRepairs = () => setChase({
+    id: unrepaired[0]?.id,
+    title: `Repairs needed · ${project?.name || "Production"}`.slice(0, 160),
+    body: chaseBody({
+      lead: `${unrepaired.length} ${unrepaired.length === 1 ? "piece needs" : "pieces need"} repair:`,
+      lines: unrepaired.map((d) => `${d.costume.assetNumber} ${d.costume.name} — ${d.description} · ${humanize(d.status)}${d.scene ? ` · Sc ${d.scene.number}` : ""}`),
+      empty: "Nothing is waiting to be repaired right now.",
+      ask: "Please say what you can take and by when.",
+    }),
+  });
   const items = data.filter((d) => (filter !== "open" || ["OPEN", "REPAIRING"].includes(d.status))
     && matches(q, d.costume.assetNumber, d.costume.name, d.description, d.scene?.number, humanize(d.responsible), humanize(d.status)));
   return (
     <div>
-      <PageHead title="Damage reports" actions={can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Report damage</button>} />
+      <PageHead title="Damage reports" actions={<>
+        {can(REQUEST_ROLES) && <button className="btn" onClick={chaseRepairs}><Megaphone size={16} /> Send request</button>}
+        {can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Report damage</button>}
+      </>} />
       <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, damage, scene…" /><Chips options={[{ key: "open", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
       {items.length === 0 ? <Card><Empty icon="🧵" title={q ? "No damage reports match" : "No damage reports"} /></Card> : (
         <div className="col gap-2">
@@ -84,6 +102,8 @@ export default function Damages() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} />
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · damage"
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="DAMAGE" entityId={chase?.id} />
     </div>
   );
 }

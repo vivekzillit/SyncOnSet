@@ -1,19 +1,20 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Megaphone } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { useAuth, OPS_ROLES } from "@/state/auth";
+import { useAuth, OPS_ROLES, REQUEST_ROLES } from "@/state/auth";
 import { fmtDate, fmtTime, matches } from "@/lib/format";
 import type { Character, Costume, Fitting } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
+import { SendRequestModal, chaseBody } from "@/components/SendRequest";
 import { Avatar, CostumePicker, CostumeRow, MediaPicker, attachMedia } from "@/components/domain";
 import { CharacterQuickPanel, NEW_CHARACTER, NewCharacterModal, characterOptions } from "@/components/CharacterQuick";
 
 export default function Fittings() {
-  const { projectId, can } = useProject();
+  const { projectId, can, project } = useProject();
   const { meta } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -23,6 +24,8 @@ export default function Fittings() {
   const { data, isLoading } = useQuery({ queryKey: ["fittings", projectId], queryFn: () => api<Fitting[]>(p(projectId, "/fittings")) });
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
   const [open, setOpen] = useState(false);
+  /** The message a call starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
+  const [chase, setChase] = useState<{ title: string; body: string; id?: string } | null>(null);
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ characterId: string; scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] });
   const [media, setMedia] = useState<File[]>([]);
@@ -41,9 +44,24 @@ export default function Fittings() {
     onSuccess: () => { createdId.current = null; qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeForm(); setF({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
   const list = (data || []).filter((x) => (!status || x.status === status) && matches(q, x.character.name, x.actor?.name, x.location));
+  // The call covers every fitting still to happen, in the order they happen — not what the filters are showing.
+  const upcoming = (data || []).filter((x) => ["SCHEDULED", "IN_PROGRESS"].includes(x.status)).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+  const callFittings = () => setChase({
+    id: upcoming[0]?.id,
+    title: `Fittings coming up · ${project?.name || "Production"}`.slice(0, 160),
+    body: chaseBody({
+      lead: `${upcoming.length} ${upcoming.length === 1 ? "fitting is" : "fittings are"} booked:`,
+      lines: upcoming.map((x) => `${fmtDate(x.scheduledAt)} ${fmtTime(x.scheduledAt)} — ${x.character.name}${x.character.actor ? ` (${x.character.actor.name}${x.character.actor.phone ? `, ${x.character.actor.phone}` : ""})` : ""}${x.location ? ` · ${x.location}` : ""}`),
+      empty: "Nothing is booked in at the moment.",
+      ask: "Please confirm you can make your slot, or tell us what suits you better.",
+    }),
+  });
   return (
     <div>
-      <PageHead title="Fittings" sub="Schedule fittings, tick off each piece, raise alterations on the spot." actions={can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Fitting</button>} />
+      <PageHead title="Fittings" sub="Schedule fittings, tick off each piece, raise alterations on the spot." actions={<>
+        {can(REQUEST_ROLES) && <button className="btn" onClick={callFittings}><Megaphone size={16} /> Send request</button>}
+        {can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Fitting</button>}
+      </>} />
       <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search character, actor, location…" /><Chips all="All" options={(meta?.fittingStatuses || []).map((s) => ({ key: s, label: s.replace(/_/g, " ").toLowerCase() }))} value={status} onChange={setStatus} /></div>
       <Card pad0>
         {isLoading ? <Spinner /> : list.length === 0 ? <Empty icon="📏" title={q ? "No fittings match" : "No fittings"} /> : (
@@ -91,6 +109,8 @@ export default function Fittings() {
       </Modal>
       <NewCharacterModal open={newChar} onClose={() => setNewChar(false)} onCreated={(c) => setF({ ...f, characterId: c.id, costumes: [] })} />
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costumes: f.costumes.some((x) => x.id === c.id) ? f.costumes : [...f.costumes, c] })} characterId={f.characterId || null} />
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · fittings"
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="FITTING" entityId={chase?.id} />
     </div>
   );
 }

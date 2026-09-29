@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Mail, Plus, Send, Share2, Users } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
+import { OPS_ROLES } from "@/state/auth";
 import { humanize } from "@/lib/format";
 import type { Vendor } from "@/api/types";
 import { ErrorBox, Field, Input, Modal, SearchBox, Textarea, useToast } from "@/components/ui";
@@ -95,8 +96,10 @@ function NewVendorModal({ open, onClose, onCreated }: { open: boolean; onClose: 
 export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBody, entityType, entityId }: {
   open: boolean; onClose: () => void; title: string; defaultTitle: string; defaultBody: string; entityType?: string; entityId?: string;
 }) {
-  const { projectId } = useProject();
+  const { projectId, can } = useProject();
   const toast = useToast();
+  // Adding a vendor or an outside contact writes to the production's own lists, which is a wardrobe job.
+  const canAdd = can(OPS_ROLES);
   const [group, setGroup] = useState<Group>("crew");
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState<Record<Group, Set<string>>>({ crew: new Set(), vendors: new Set(), contacts: new Set() });
@@ -109,9 +112,6 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
   const { data: members } = useQuery({ queryKey: ["members", projectId], queryFn: () => api<Member[]>(p(projectId, "/members")), enabled: open });
   const { data: vendors } = useQuery({ queryKey: ["vendors", projectId], queryFn: () => api<Vendor[]>(p(projectId, "/vendors")), enabled: open });
   const { data: contacts } = useQuery({ queryKey: ["contacts", projectId], queryFn: () => api<ExternalContact[]>(p(projectId, "/contacts")), enabled: open });
-
-  // Re-opened for another record: the message it was opened with is the message it starts from.
-  useEffect(() => { if (open) { setSubject(defaultTitle); setMessage(defaultBody); setSent(null); } }, [open, defaultTitle, defaultBody]);
 
   const toggle = (g: Group, id: string) => setPicked((prev) => {
     const next = new Set(prev[g]);
@@ -137,7 +137,20 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
     },
     onError: (e: Error) => toast.push(e.message, "danger"),
   });
-  const reset = () => { setPicked({ crew: new Set(), vendors: new Set(), contacts: new Set() }); setQ(""); setGroup("crew"); setSent(null); };
+  const reset = () => { setPicked({ crew: new Set(), vendors: new Set(), contacts: new Set() }); setQ(""); setGroup("crew"); setSent(null); setNewVendor(false); setNewContact(false); };
+
+  // Opening it is what seeds it, so one dialog can serve every record on a page and each is a fresh request:
+  // its own message, nobody carried over from the last one, and no error left over from a send that failed.
+  // Only the opening — a list refetching behind the dialog changes the message it would have started from,
+  // and that must never rewrite what somebody is part-way through typing.
+  useEffect(() => {
+    if (!open) return;
+    setSubject(defaultTitle);
+    setMessage(defaultBody);
+    reset();
+    send.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const close = () => { reset(); onClose(); };
 
   const text = `${subject.trim()}\n\n${message.trim()}`;
@@ -187,8 +200,8 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
               </div>
               <div className="row gap-1 mb-2 wrap">
                 <div className="grow" style={{ minWidth: 200 }}><SearchBox value={q} onChange={setQ} placeholder={group === "crew" ? "Search crew…" : group === "vendors" ? "Search vendors…" : "Search contacts…"} /></div>
-                {group === "vendors" && <button type="button" className="btn btn-sm" onClick={() => setNewVendor(true)}><Plus size={14} /> New vendor</button>}
-                {group === "contacts" && <button type="button" className="btn btn-sm" onClick={() => setNewContact(true)}><Plus size={14} /> New contact</button>}
+                {canAdd && group === "vendors" && <button type="button" className="btn btn-sm" onClick={() => setNewVendor(true)}><Plus size={14} /> New vendor</button>}
+                {canAdd && group === "contacts" && <button type="button" className="btn btn-sm" onClick={() => setNewContact(true)}><Plus size={14} /> New contact</button>}
                 {group === "crew" && <span className="subtle small row gap-1"><Users size={14} /> everyone on this production</span>}
               </div>
               <Rows items={rows} picked={picked[group]} onPick={(id) => toggle(group, id)} />
@@ -201,6 +214,18 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
       <NewContactModal open={newContact} onClose={() => setNewContact(false)} onCreated={(c) => { setGroup("contacts"); toggle("contacts", c.id); }} />
     </>
   );
+}
+
+/**
+ * The message a chase starts from when it covers a whole list — one line per record, in the order the list
+ * cares about. It is capped, because the server takes 4000 characters and a busy production has more open
+ * tickets than that; whoever sends it can still edit every word before it goes.
+ */
+export function chaseBody({ lead, lines, empty, ask }: { lead: string; lines: string[]; empty: string; ask: string }) {
+  const MAX = 20;
+  const shown = lines.slice(0, MAX).map((l) => `· ${l.slice(0, 160)}`);
+  const rest = lines.length > MAX ? `\n· …and ${lines.length - MAX} more` : "";
+  return `${lines.length ? `${lead}\n${shown.join("\n")}${rest}` : empty}\n\n${ask}`;
 }
 
 /** The share sheet's own icon, for a button that opens this dialog. */

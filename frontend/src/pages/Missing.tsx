@@ -1,18 +1,19 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, MapPin } from "lucide-react";
+import { Plus, MapPin, Megaphone } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { OPS_ROLES } from "@/state/auth";
+import { OPS_ROLES, REQUEST_ROLES } from "@/state/auth";
 import { fmtDateTime, matches } from "@/lib/format";
 import type { Costume, MissingItem } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Spinner, Textarea, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
+import { SendRequestModal, chaseBody } from "@/components/SendRequest";
 import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, attachMedia } from "@/components/domain";
 
 export default function Missing() {
-  const { projectId, can } = useProject();
+  const { projectId, can, project } = useProject();
   const qc = useQueryClient();
   const toast = useToast();
   const base = `/p/${projectId}`;
@@ -21,6 +22,8 @@ export default function Missing() {
   const { data, isLoading } = useQuery({ queryKey: ["missing", projectId], queryFn: () => api<MissingItem[]>(p(projectId, "/missing")) });
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
+  /** The message a search starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
+  const [chase, setChase] = useState<{ title: string; body: string; id?: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; lastSeenLocation: string; lastAssignedTo: string; notes: string }>({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" });
   const [found, setFound] = useState<{ id: string; location: string } | null>(null);
   const [media, setMedia] = useState<File[]>([]);
@@ -39,11 +42,26 @@ export default function Missing() {
   const resolve = useMutation({ mutationFn: (v: { id: string; status: string; foundLocation?: string }) => api(p(projectId, `/missing/${v.id}`), { method: "PATCH", body: v }), onSuccess: () => { qc.invalidateQueries(); setFound(null); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
   if (isLoading || !data) return <Spinner />;
+  // The search party covers everything still missing, not what the search box happens to be showing.
+  const stillMissing = data.filter((m) => m.status === "OPEN");
+  const putOutSearch = () => setChase({
+    id: stillMissing[0]?.id,
+    title: `Missing from wardrobe · ${project?.name || "Production"}`.slice(0, 160),
+    body: chaseBody({
+      lead: `${stillMissing.length} ${stillMissing.length === 1 ? "piece is" : "pieces are"} missing:`,
+      lines: stillMissing.map((m) => `${m.costume.assetNumber} ${m.costume.name}${m.costume.character ? ` (${m.costume.character.name})` : ""} — last seen ${m.lastSeenLocation || "nobody knows where"}${m.lastAssignedTo ? ` · with ${m.lastAssignedTo}` : ""}`),
+      empty: "Nothing is missing right now.",
+      ask: "Please check your bags, trucks and rooms and say if you have seen any of these.",
+    }),
+  });
   const items = data.filter((m) => (filter !== "OPEN" || m.status === "OPEN")
     && matches(q, m.costume.assetNumber, m.costume.name, m.costume.character?.name, m.lastSeenLocation, m.lastAssignedTo, m.notes));
   return (
     <div>
-      <PageHead title="Missing items" sub="Every open search, with last known location and custodian." actions={can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Report missing</button>} />
+      <PageHead title="Missing items" sub="Every open search, with last known location and custodian." actions={<>
+        {can(REQUEST_ROLES) && <button className="btn" onClick={putOutSearch}><Megaphone size={16} /> Send request</button>}
+        {can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Report missing</button>}
+      </>} />
       <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, character, last seen, custodian…" /><Chips options={[{ key: "OPEN", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
       {items.length === 0 ? <Card>{q ? <Empty icon="🔎" title="No missing items match" /> : <Empty icon="🔎" title="Nothing missing" hint="Great — every piece is accounted for." />}</Card> : (
         <div className="col gap-2">
@@ -90,6 +108,8 @@ export default function Missing() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => { setF({ ...f, costume: c, lastSeenLocation: c.location }); }} filter={(c) => c.status !== "MISSING"} />
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · missing"
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="MISSING" entityId={chase?.id} />
     </div>
   );
 }

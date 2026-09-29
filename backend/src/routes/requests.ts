@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { wrap, notFound } from "../lib/errors";
 import { parse, zOptionalString } from "../lib/validate";
 import { requireRole } from "../middleware/auth";
-import { OPS_ROLES } from "../lib/constants";
+import { OPS_ROLES, REQUEST_ENTITY_TYPES, REQUEST_ROLES } from "../lib/constants";
 import { notify } from "../services/notify";
 import { audit } from "../services/audit";
 
@@ -74,7 +74,7 @@ export const requestsRouter = Router({ mergeParams: true });
 const sendSchema = z.object({
   title: z.string().trim().min(1).max(160),
   body: z.string().trim().min(1).max(4000),
-  entityType: zOptionalString,
+  entityType: z.enum(REQUEST_ENTITY_TYPES).optional().nullable(),
   entityId: zOptionalString,
   crewUserIds: z.array(z.string()).max(200).optional(),
   vendorIds: z.array(z.string()).max(200).optional(),
@@ -83,7 +83,7 @@ const sendSchema = z.object({
 
 requestsRouter.post(
   "/",
-  requireRole(OPS_ROLES),
+  requireRole(REQUEST_ROLES),
   wrap(async (req, res) => {
     const b = parse(sendSchema, req.body);
     const projectId = req.projectId!;
@@ -95,19 +95,21 @@ requestsRouter.post(
     const vendors = b.vendorIds?.length ? await prisma.vendor.findMany({ where: { projectId, id: { in: b.vendorIds } } }) : [];
     const contacts = b.contactIds?.length ? await prisma.externalContact.findMany({ where: { projectId, id: { in: b.contactIds } } }) : [];
 
-    if (crew.length) {
-      await notify({
+    // Exactly the people who were picked, minus the sender: a request is addressed, not broadcast.
+    const notified = crew.length
+      ? await notify({
         projectId, type: "GENERAL", severity: "INFO", title: b.title, body: b.body,
         entityType: b.entityType || undefined, entityId: b.entityId || undefined,
-        roles: [], userIds: crew.map((m) => m.userId), excludeUserIds: [req.user!.id],
-      });
-    }
+        onlyUserIds: true, userIds: crew.map((m) => m.userId), excludeUserIds: [req.user!.id],
+      })
+      : 0;
     await audit(req.user, projectId, "REQUEST_SEND", b.entityType || "REQUEST", b.entityId || "bulk", {
       title: b.title, crew: crew.length, vendors: vendors.length, contacts: contacts.length,
     });
 
     res.status(201).json({
-      notified: crew.filter((m) => m.userId !== req.user!.id).length,
+      // What was really written, not what was asked for.
+      notified,
       // Picking yourself is common and harmless; saying nobody was picked would be a lie.
       skippedSelf: crew.some((m) => m.userId === req.user!.id),
       // Everyone the app cannot reach itself, with what is needed to reach them.

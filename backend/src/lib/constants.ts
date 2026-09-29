@@ -32,6 +32,10 @@ export const CLEANING_ROLES: Role[] = [...OPS_ROLES, "LAUNDRY"];
 export const TAILOR_ROLES: Role[] = [...OPS_ROLES, "TAILOR"];
 /** Roles allowed to write continuity records. */
 export const CONTINUITY_ROLES: Role[] = [...OPS_ROLES, "CONTINUITY"];
+/** Whoever can raise one of these tickets can chase it too, so the trades are in as well as wardrobe. */
+export const REQUEST_ROLES: Role[] = [...new Set([...CLEANING_ROLES, ...TAILOR_ROLES, ...CONTINUITY_ROLES])];
+/** What a request can be about — a typo here would file a notification whose link goes nowhere. */
+export const REQUEST_ENTITY_TYPES = ["CLEANING", "ALTERATION", "DAMAGE", "MISSING", "FITTING", "RENTAL", "COSTUME", "CHARACTER", "EXPENSE", "BUDGET"] as const;
 
 export const PROJECT_STATUSES = ["PREP", "SHOOTING", "WRAP", "ARCHIVED"] as const;
 export const PROJECT_TYPES = ["FEATURE", "EPISODIC"] as const;

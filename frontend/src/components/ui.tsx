@@ -160,6 +160,8 @@ export function SearchBox({ value, onChange, placeholder = "Search…", autoFocu
 type DiscardAsk = { title: string; message: string; confirm: string; cancel?: string; danger?: boolean; resolve: (ok: boolean) => void };
 let showDiscard: ((ask: DiscardAsk) => void) | null = null;
 let discardOpen = false;
+/** Every open modal, innermost last. */
+const modalStack: object[] = [];
 export function confirmDiscard(message = "You have unsaved changes. Discard them?", title = "Discard changes?", confirm = "Discard"): Promise<boolean> {
   if (!showDiscard) return Promise.resolve(window.confirm(message));
   return new Promise((resolve) => showDiscard!({ title, message, confirm, resolve }));
@@ -237,6 +239,7 @@ function DiscardHost() {
 export function Modal({ open, onClose, title, children, footer, wide, dirty }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean; dirty?: boolean }) {
   const [touched, setTouched] = useState(false);
   const bypass = useRef(false);
+  const me = useRef({});
   const bodyRef = useRef<HTMLDivElement>(null);
   const hasFields = () => !!bodyRef.current?.querySelector("input:not([type=hidden]):not([hidden]), select, textarea");
   useEffect(() => { if (!open) setTouched(false); }, [open]);
@@ -245,15 +248,28 @@ export function Modal({ open, onClose, title, children, footer, wide, dirty }: {
   const requestClose = useCallback(async () => {
     if (!hasFields() || await discardIfDirty(dirty ?? touched)) onClose();
   }, [dirty, touched, onClose]);
+  // A dialog can open a second one (pick a costume, add a contact). Both are open at once, so the stack
+  // decides: Escape belongs to whichever is on top, and the page stays locked until the last one closes.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !discardOpen && requestClose();
-    window.addEventListener("keydown", onKey);
+    const id = me.current;
+    modalStack.push(id);
     document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      const at = modalStack.lastIndexOf(id);
+      if (at >= 0) modalStack.splice(at, 1);
+      if (!modalStack.length) document.body.style.overflow = "";
     };
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || discardOpen) return;
+      if (modalStack[modalStack.length - 1] !== me.current) return;
+      requestClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, requestClose]);
   if (!open) return null;
   const markTouched = () => { if (!touched) setTouched(true); };

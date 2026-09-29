@@ -1,18 +1,19 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, ChevronRight } from "lucide-react";
+import { Plus, ChevronRight, Megaphone } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { useAuth, TAILOR_ROLES } from "@/state/auth";
+import { useAuth, TAILOR_ROLES, REQUEST_ROLES } from "@/state/auth";
 import { fmtDateTime, humanize, matches } from "@/lib/format";
 import type { Alteration, Costume } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
+import { SendRequestModal, chaseBody } from "@/components/SendRequest";
 import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, Pipeline, attachMedia } from "@/components/domain";
 
 export default function Alterations() {
-  const { projectId, can } = useProject();
+  const { projectId, can, project } = useProject();
   const { meta } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -22,6 +23,8 @@ export default function Alterations() {
   const { data, isLoading } = useQuery({ queryKey: ["alterations", projectId], queryFn: () => api<{ pipeline: string[]; items: Alteration[] }>(p(projectId, "/alterations")) });
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
+  /** The message a chase starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
+  const [chase, setChase] = useState<{ title: string; body: string; id?: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; issue: string; required: string; tailorName: string; priority: string; deadline: string }>({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" });
   const [media, setMedia] = useState<File[]>([]);
   const createdId = useRef<string | null>(null);
@@ -39,11 +42,26 @@ export default function Alterations() {
   const advance = useMutation({ mutationFn: (v: { id: string; toStatus?: string }) => api(p(projectId, `/alterations/${v.id}/advance`), { body: { toStatus: v.toStatus } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
   if (isLoading || !data) return <Spinner />;
+  // The chase covers every alteration still outstanding, not what the search happens to be showing.
+  const outstanding = data.items.filter((i) => !["COMPLETED", "CANCELLED"].includes(i.status));
+  const chaseTailors = () => setChase({
+    id: outstanding[0]?.id,
+    title: `Alterations outstanding · ${project?.name || "Production"}`.slice(0, 160),
+    body: chaseBody({
+      lead: `${outstanding.length} ${outstanding.length === 1 ? "alteration is" : "alterations are"} still open:`,
+      lines: outstanding.map((a) => `${a.costume.assetNumber} ${a.costume.name}${a.character ? ` (${a.character.name})` : ""} — ${a.issue} → ${a.required} · ${humanize(a.status)}${a.tailorName ? ` · with ${a.tailorName}` : ""}${a.deadline ? ` · due ${fmtDateTime(a.deadline)}` : ""}`),
+      empty: "Nothing is outstanding with the tailors right now.",
+      ask: "Please confirm what you have and when each piece will be ready.",
+    }),
+  });
   const items = data.items.filter((i) => (filter !== "open" || !["COMPLETED", "CANCELLED"].includes(i.status))
     && matches(q, i.costume.assetNumber, i.costume.name, i.issue, i.required, i.tailorName, i.character?.name, i.character?.actor?.name, humanize(i.status), humanize(i.priority)));
   return (
     <div>
-      <PageHead title="Alterations & tailoring" sub="Track every alteration from request to quality check." actions={can(TAILOR_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Alteration</button>} />
+      <PageHead title="Alterations & tailoring" sub="Track every alteration from request to quality check." actions={<>
+        {can(REQUEST_ROLES) && <button className="btn" onClick={chaseTailors}><Megaphone size={16} /> Send request</button>}
+        {can(TAILOR_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Alteration</button>}
+      </>} />
       <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, issue, tailor, character…" /><Chips options={[{ key: "open", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
       {items.length === 0 ? <Card><Empty icon="✂️" title={q ? "No alterations match" : "No alterations"} /></Card> : (
         <div className="col gap-2">
@@ -89,6 +107,8 @@ export default function Alterations() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} filter={(c) => !["ALTERATION", "CLEANING", "MISSING"].includes(c.status)} />
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · alterations"
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="ALTERATION" entityId={chase?.id} />
     </div>
   );
 }
