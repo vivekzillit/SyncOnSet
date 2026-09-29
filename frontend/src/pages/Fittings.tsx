@@ -10,6 +10,7 @@ import type { Character, Costume, Fitting } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { RecordActions } from "@/components/Discussion";
 import { Avatar, CostumePicker, CostumeRow, MediaPicker, attachMedia } from "@/components/domain";
+import { CharacterQuickPanel, NEW_CHARACTER, NewCharacterModal, characterOptions } from "@/components/CharacterQuick";
 
 export default function Fittings() {
   const { projectId, can } = useProject();
@@ -23,11 +24,13 @@ export default function Fittings() {
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
-  const [f, setF] = useState<{ characterId: string; scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ characterId: "", scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] });
+  const [f, setF] = useState<{ characterId: string; scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] });
   const [media, setMedia] = useState<File[]>([]);
+  const [newChar, setNewChar] = useState(false);
+  const [showChar, setShowChar] = useState(false);
   const createdId = useRef<string | null>(null);
   /** Closing drops what was picked, so it can never ride along to the next fitting. */
-  const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
+  const closeForm = () => { setOpen(false); setMedia([]); setShowChar(false); createdId.current = null; };
   const create = useMutation({
     // The fitting is created once — a failed upload can be retried from the same open form without booking
     // a second one — and whatever did not attach stays in the picker rather than being thrown away.
@@ -35,7 +38,7 @@ export default function Fittings() {
       if (!createdId.current) createdId.current = (await api<Fitting>(p(projectId, "/fittings"), { body: { characterId: f.characterId, scheduledAt: f.scheduledAt || new Date().toISOString(), location: f.location || null, notes: f.notes || null, costumeIds: f.costumes.map((c) => c.id) } })).id;
       await attachMedia({ projectId, entityType: "FITTING", entityId: createdId.current, files: media, kind: "REFERENCE", keep: setMedia, savedNote: "The fitting is saved — press Schedule again to attach what is left." });
     },
-    onSuccess: () => { createdId.current = null; qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeForm(); setF({ characterId: "", scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
+    onSuccess: () => { createdId.current = null; qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeForm(); setF({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
   const list = (data || []).filter((x) => (!status || x.status === status) && matches(q, x.character.name, x.actor?.name, x.location));
   return (
@@ -64,7 +67,10 @@ export default function Fittings() {
       </Card>
       <Modal open={open} onClose={closeForm} title="Schedule fitting" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-primary" disabled={!f.characterId || create.isPending} onClick={() => create.mutate()}>Schedule</button></>}>
         <div className="form-grid">
-          <Field label="Character" span2><Select value={f.characterId} onChange={(e) => setF({ ...f, characterId: e.target.value, costumes: [] })} options={(characters || []).map((c) => ({ value: c.id, label: `${c.name}${c.actor ? ` (${c.actor.name})` : ""}` }))} placeholder="Select…" /></Field>
+          {/* Somebody the script reader missed can be added from here rather than on another page. */}
+          <Field label="Character" span2>
+            <Select value={f.characterId} onChange={(e) => (e.target.value === NEW_CHARACTER ? setNewChar(true) : setF({ ...f, characterId: e.target.value, costumes: [] }))} options={characterOptions(characters)} placeholder="Select…" humanizeLabels={false} />
+          </Field>
           <Field label="When"><Input type="datetime-local" value={f.scheduledAt} onChange={(e) => setF({ ...f, scheduledAt: e.target.value })} /></Field>
           <Field label="Where"><Input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></Field>
           <Field label="Pieces to try" span2>
@@ -73,9 +79,17 @@ export default function Fittings() {
           </Field>
           <Field label="Notes" span2><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
           <Field label="Photos & video" span2 help="Shoot it now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>
+          {/* The character's own things — who is cast, their references, the pieces tagged to them — without leaving this form. */}
+          <div className="span-2">
+            <button type="button" className="btn btn-sm" disabled={!f.characterId} onClick={() => setShowChar((v) => !v)}>
+              {showChar ? "Hide character details" : "Character details"}
+            </button>
+            {showChar && f.characterId && <div className="card flat mt-2" style={{ padding: 12 }}><CharacterQuickPanel characterId={f.characterId} /></div>}
+          </div>
         </div>
         <ErrorBox error={create.error} />
       </Modal>
+      <NewCharacterModal open={newChar} onClose={() => setNewChar(false)} onCreated={(c) => setF({ ...f, characterId: c.id, costumes: [] })} />
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costumes: f.costumes.some((x) => x.id === c.id) ? f.costumes : [...f.costumes, c] })} characterId={f.characterId || null} />
     </div>
   );
