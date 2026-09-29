@@ -203,8 +203,8 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
             {/* Editing (all or a single scene) keeps the bar to the job in hand: no uploads or date filters until it is put down. */}
             {canEdit && !editAll && !picking && <>
               {view === "breakdown"
-                ? <button className="btn" onClick={() => setView("scenes")} title="One row per scene"><ChevronsDownUp size={16} /> Collapse Scene</button>
-                : <button className="btn" onClick={() => setView("breakdown")} title="One row per character in each scene"><ChevronsUpDown size={16} /> Expand Scene</button>}
+                ? <button className="btn" onClick={() => setView("scenes")} title="One row per scene"><ChevronsDownUp size={16} /> Collapse Scene Number</button>
+                : <button className="btn" onClick={() => setView("breakdown")} title="One row per character in each scene"><ChevronsUpDown size={16} /> Expand Scene Number</button>}
               <button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button>
               <div className="col" style={{ gap: 2 }}>
                 <button className="btn" onClick={() => setDocOpen("SCHEDULE")}><CalendarDays size={16} /> Upload schedule</button>
@@ -256,7 +256,7 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
         ) : (
           <div className="table-wrap table-scroll">
             <table className="table">
-              <thead><tr><th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast number</th><th>Cast Name</th><th>Change</th><th>Shoot Date</th><th style={{ width: view === "breakdown" ? 78 : 48 }}><span className="sr-only">Actions</span></th></tr></thead>
+              <thead><tr>{view === "breakdown" && <th style={{ width: 84 }}><span className="sr-only">Actions</span></th>}<th style={{ width: 28 }}><span className="sr-only">Readiness</span></th>{episodes && <th>Ep</th>}<th>Scene #</th><th>Script Day</th><th>Script Loc.</th><th>Scene Description</th><th>Character Name</th><th>Cast number</th><th>Cast Name</th><th>Change</th><th>Shoot Date</th><th style={{ width: 48 }}><span className="sr-only">{view === "breakdown" ? "Select" : "Actions"}</span></th></tr></thead>
               <tbody>
                 {drafts[NEW] && <EditRow episodes={episodes} d={drafts[NEW]} onChange={(d) => setDraft(NEW, d)} meta={meta} isNew principals={characterNamesOf(drafts[NEW].principals, charById)} people={peopleIn(drafts[NEW])} split={view === "breakdown"} onPrincipals={() => setPrincipalsFor(NEW)} onSave={editAll ? undefined : () => saveOne.mutate(NEW)} onCancel={editAll ? undefined : () => cancelOne(NEW)} busy={busy && (saveAll.isPending || saveOne.variables === NEW)} error={problems[NEW]} />}
                 {list.map((s) => {
@@ -283,6 +283,7 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
                       if (!l.sc) {
                         return (
                           <tr key={key} {...rowProps(key)}>
+                            <td />
                             <td><span title="Nobody in this scene yet" aria-label="Nobody in this scene yet" role="img"><Dot status="NOT_ASSIGNED" /></span></td>
                             {sceneCells}
                             <td className="subtle">Nobody yet</td><td className="subtle">—</td><td className="subtle">—</td><td className="subtle">—</td>
@@ -296,19 +297,21 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
                       const readiness = readinessOf(sc);
                       return (
                         <tr key={key} {...rowProps(key)}>
-                          <td><span title={humanize(readiness)} aria-label={humanize(readiness)} role="img"><Dot status={readiness} pulse={readiness === "MISSING"} /></span></td>
-                          {sceneCells}
-                          <td className="nowrap"><Link to={`/p/${projectId}/characters/${sc.characterId}/scenes/${s.id}`}>{sc.character.name}</Link></td>
-                          <td className="subtle mono nowrap">{sc.character.castNumber ?? full?.castNumber ?? "—"}</td>
-                          <td className="subtle nowrap">{full?.actor?.name || "—"}</td>
-                          <td className="nowrap">{sc.change ? <Link to={`/p/${projectId}/changes/${sc.change.id}`}>#{sc.change.changeNumber} {sc.change.name}</Link> : <span className="subtle">No change assigned</span>}</td>
-                          {shootCell}
-                          <td className="right nowrap">
+                          {/* A wide table scrolls; the row's own buttons stay at the edge you start from. */}
+                          <td className="nowrap">
                             {canEdit && <>
                               <button className="btn btn-ghost btn-sm" aria-label={`Edit ${sc.character.name} in scene ${s.number}`} onClick={() => openLine({ sceneId: s.id, characterId: sc.characterId, changeId: sc.change?.id || "" })}><Pencil size={14} /></button>
                               <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Remove?" aria-label={`Remove ${sc.character.name} from scene ${s.number}`} onConfirm={() => dropLine.mutate({ sceneId: s.id, characterId: sc.characterId })}>&times;</ConfirmButton>
                             </>}
                           </td>
+                          <td><span title={humanize(readiness)} aria-label={humanize(readiness)} role="img"><Dot status={readiness} pulse={readiness === "MISSING"} /></span></td>
+                          {sceneCells}
+                          <td className="nowrap">{sc.character.name}</td>
+                          <td className="subtle mono nowrap">{sc.character.castNumber ?? full?.castNumber ?? "—"}</td>
+                          <td className="subtle nowrap">{full?.actor?.name || "—"}</td>
+                          <td className="nowrap">{sc.change ? `#${sc.change.changeNumber} ${sc.change.name}` : <span className="subtle">No change assigned</span>}</td>
+                          {shootCell}
+                          {pickCell(key, `${sc.character.name} in scene ${s.number}`)}
                         </tr>
                       );
                     });

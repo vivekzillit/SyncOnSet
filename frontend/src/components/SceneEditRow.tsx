@@ -215,8 +215,16 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
   const span = split && people.length > 1 ? people.length : undefined;
   // Spanned cells sit at the top of their group, level with the first character, rather than floating mid-way.
   const top = span ? { verticalAlign: "top" as const } : undefined;
+  const saveCancel = (
+    <>
+      {onSave && <button type="button" className="btn btn-sm" style={{ background: "var(--ok)", color: "#fff", borderColor: "var(--ok)" }} disabled={!canSave} onClick={onSave}>{busy ? "Saving…" : "Save"}</button>}
+      {onCancel && <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 4 }} disabled={busy} onClick={onCancel}>Cancel</button>}
+    </>
+  );
   const sceneCells = (
     <>
+      {/* The split view keeps a row's own buttons at its left edge, where the pencil and ✕ are read. */}
+      {split && <td rowSpan={span} style={top} className="nowrap">{saveCancel}</td>}
       <td rowSpan={span} style={top} />
       {episodes && <td rowSpan={span} style={top}><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} placeholder="Ep" disabled={busy} style={{ minWidth: 64, maxWidth: 84 }} /></td>}
       <td rowSpan={span} style={top}>
@@ -244,10 +252,7 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
   const tailCells = (
     <>
       <td rowSpan={span} style={top}><Input type="date" value={d.shootDate} onChange={(e) => set({ shootDate: e.target.value })} disabled={busy} style={{ minWidth: 150 }} /></td>
-      <td rowSpan={span} className="right nowrap" style={top}>
-        {onSave && <button type="button" className="btn btn-sm" style={{ background: "var(--ok)", color: "#fff", borderColor: "var(--ok)" }} disabled={!canSave} onClick={onSave}>{busy ? "Saving…" : "Save"}</button>}
-        {onCancel && <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 4 }} disabled={busy} onClick={onCancel}>Cancel</button>}
-      </td>
+      <td rowSpan={span} className="right nowrap" style={top}>{split ? null : saveCancel}</td>
     </>
   );
 
