@@ -27,6 +27,7 @@ type Form = { category: string; amount: string; description: string; date: strin
 /** A line's name for lists and sharing: its description, or failing that its account, payee or category (every field is optional). */
 export const lineTitle = (e: Pick<Expense, "description" | "accountName" | "accountCode" | "payee" | "category">) =>
   e.description?.trim() || e.accountName || e.payee || e.accountCode || humanize(e.category) || "Budget line";
+const OTHER = "OTHER";
 const blankForm = (currency: string): Form => ({ category: "PURCHASE", amount: "", description: "", date: todayISO(), characterId: "", sceneId: "", vendorId: "", accountCode: "", accountName: "", payee: "", quantity: "", unit: "", multiplier: "1", rate: "", currency });
 const toForm = (e: Expense, currency: string): Form => ({ category: e.category, amount: String(e.amount), description: e.description, date: (e.date || "").slice(0, 10), characterId: e.characterId || "", sceneId: e.sceneId || "", vendorId: e.vendorId || "", accountCode: e.accountCode || "", accountName: e.accountName || "", payee: e.payee || "", quantity: e.quantity != null ? String(e.quantity) : "", unit: e.unit || "", multiplier: e.multiplier != null ? String(e.multiplier) : "1", rate: e.rate != null ? String(e.rate) : "", currency: e.currency || currency });
 const numOrNull = (v: string) => (v.trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -107,7 +108,8 @@ export default function Budget() {
 
   if (isLoading || !data) return <Spinner />;
   const m = (n: number) => fmtMoney(n, currency);
-  const cats = meta?.expenseCategories || Object.keys(data.byCategory);
+  // The chart, plus any category this production named itself — both get a tile and a place in the picker.
+  const cats = [...new Set([...(meta?.expenseCategories || []), ...Object.keys(data.byCategory)])];
   const untaggedScene = byScene.get(NONE);
   const untaggedChar = byChar.get(NONE);
   const openAdd = () => { setEditing(null); create.reset(); setF({ ...f, amount: "", description: "", quantity: "", rate: "", multiplier: "1", currency: f.currency || currency }); setOpen(true); };
@@ -120,6 +122,8 @@ export default function Budget() {
     setF({ ...f, accountCode: code, accountName: hit && (!f.accountName || f.accountName === oldName) ? hit.name : f.accountName });
   };
   const money = (n: number, c: string) => fmtMoney(n, c);
+  /** "Other" is where a production names its own: the box under the picker is what it is called. */
+  const ownCategory = f.category === OTHER || !cats.includes(f.category);
   const sceneTitle = (s: Scene) => [`Sc ${s.number}`, s.name || s.location].filter(Boolean).join(" - ");
   const sceneGroups: SheetGroup[] = [
     ...shownScenes.map((s) => ({ key: s.id, title: sceneTitle(s), lines: expenses.filter((e) => e.sceneId === s.id) })).filter((g) => g.lines.length),
@@ -248,7 +252,10 @@ export default function Budget() {
           <Field label="Description" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
           <Field label="Character"><CharacterSelect value={f.characterId} onChange={(characterId) => setF({ ...f, characterId })} /></Field>
           <Field label="Pay to" help="Who the line pays: a crew member or supplier"><Input value={f.payee} onChange={(e) => setF({ ...f, payee: e.target.value })} /></Field>
-          <Field label="Category"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={cats} /></Field>
+          <Field label="Category" help={ownCategory ? "Type the name this production uses" : undefined}>
+            <Select value={ownCategory ? OTHER : f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={cats} />
+            {ownCategory && <Input className="mt-1" value={f.category === OTHER ? "" : humanize(f.category)} onChange={(e) => setF({ ...f, category: e.target.value.trim() ? e.target.value : OTHER })} placeholder="Consumables, petty cash…" aria-label="New category name" />}
+          </Field>
           <div className="span-2">
             <div className="row gap-1 wrap" style={{ alignItems: "flex-end" }}>
               <div style={{ width: 90 }}><Field label="Amt"><Input value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} inputMode="decimal" className="mono" /></Field></div>

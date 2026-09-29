@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma";
 import { wrap, notFound, badRequest } from "../lib/errors";
 import { parse, zDate } from "../lib/validate";
 import { requireRole } from "../middleware/auth";
-import { EXPENSE_CATEGORIES, FINANCE_ROLES } from "../lib/constants";
+import { FINANCE_ROLES } from "../lib/constants";
 import { budgetReport } from "../services/reports";
 import { audit } from "../services/audit";
 import { readBudgetSheet } from "../services/budgetSheet";
@@ -18,7 +18,8 @@ expensesRouter.use(requireRole(FINANCE_ROLES));
 const text = (max: number) => z.string().trim().max(max).optional().nullable().transform((v) => v || null);
 // Every field of a line is optional: a line added by hand can be just an account code, a name, or an amount.
 const schema = z.object({
-  category: z.enum(EXPENSE_CATEGORIES).default("OTHER"),
+  /** The chart above, or a name this production uses — typed in when none of them fits. */
+  category: z.string().trim().min(1).max(40).transform((v) => v.toUpperCase().replace(/\s+/g, "_")).default("OTHER"),
   amount: z.number().min(0).default(0),
   description: z.string().trim().max(500).default(""),
   date: zDate,
