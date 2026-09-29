@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ChevronRight } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth } from "@/state/auth";
@@ -79,16 +81,6 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
   });
 
   const character = charById.get(af.characterId);
-  /** Everyone tagged to the scene being edited, in cast order — what the Character picker offers. */
-  const inScene = useMemo(() => {
-    const list = [...(scene?.characters || [])];
-    // The row's own character leads even if the scene list has not caught up with a just-added tag.
-    if (af.characterId && !list.some((sc) => sc.characterId === af.characterId)) {
-      const ch = charById.get(af.characterId);
-      if (ch) list.push({ id: `pending-${ch.id}`, sceneId: af.sceneId, characterId: ch.id, character: ch } as SceneCharacter);
-    }
-    return list.sort((a, b) => (a.character.castNumber ?? Number.MAX_SAFE_INTEGER) - (b.character.castNumber ?? Number.MAX_SAFE_INTEGER) || a.character.name.localeCompare(b.character.name));
-  }, [scene, af.characterId, af.sceneId, charById]);
   return (
     <Modal open={open} onClose={onClose} title={locked ? `Edit ${character?.name || "row"} · Sc ${scene?.number || ""}` : "Add to breakdown"} wide={locked}
       footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!af.sceneId || !af.characterId || !!castProblem || putRow.isPending} onClick={() => putRow.mutate()}>{putRow.isPending ? "Saving…" : locked ? "Save" : "Add"}</button></>}>
@@ -116,11 +108,12 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
             <Field label="Shoot date"><Input type="date" value={d.shootDate} onChange={(e) => set({ shootDate: e.target.value })} /></Field>
           </div>
           <Field label="Scene description"><Textarea value={d.synopsis} onChange={(e) => set({ synopsis: e.target.value })} placeholder="Scene description" rows={3} /></Field>
-          {/* The row can be pointed at any of the people in this scene, so a mis-clicked pencil is one pick to fix. */}
-          <Field label="Character" help={inScene.length > 1 ? "Everyone this scene has in it" : undefined}>
-            <Select value={af.characterId} onChange={(e) => setAf({ ...af, characterId: e.target.value, ...castOf(e.target.value) })}
-              options={inScene.map((sc) => ({ value: sc.characterId, label: sc.character.castNumber != null ? `${sc.character.castNumber}. ${sc.character.name}` : sc.character.name }))}
-              placeholder={inScene.length ? undefined : "Nobody is in this scene yet"} humanizeLabels={false} />
+          {/* The row is this character in this scene: tapping the name opens their page for the scene, not a picker. */}
+          <Field label="Character" help="Opens the character's page for this scene">
+            <Link to={`/p/${projectId}/characters/${af.characterId}/scenes/${af.sceneId}`} className="btn btn-block" style={{ justifyContent: "space-between" }}>
+              <span>{character ? (character.castNumber != null ? `${character.castNumber}. ${character.name}` : character.name) : "—"}</span>
+              <ChevronRight size={16} />
+            </Link>
           </Field>
         </>) : (<>
           <Field label="Scene" help="The scene the script reader left this character out of">
