@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, FileUp, CalendarDays, ChevronsDownUp, ChevronsUpDown, Pencil } from "lucide-react";
@@ -183,7 +183,20 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
   const endSingle = () => setSingle(null);
   const lineKey = (l: BreakdownLine) => l.sc ? l.sc.id : `scene:${l.scene.id}`;
   const setView = (v: View) => { setSingle(null); setParams((prev) => { const n = new URLSearchParams(prev); n.set("view", v); return n; }, { replace: true }); };
-  const openLine = (target: BreakdownTarget) => setRowModal({ open: true, target });
+  // The row being edited lives in the address too (?row=<scene>.<character>), so opening the character's page from it
+  // and coming Back lands on the same edit form rather than a closed one.
+  const rowParam = params.get("row");
+  const setRowParam = (v: string | null) => setParams((prev) => { const n = new URLSearchParams(prev); if (v) n.set("row", v); else n.delete("row"); return n; }, { replace: true });
+  const openLine = (target: BreakdownTarget) => { setRowModal({ open: true, target }); if (target) setRowParam(`${target.sceneId}.${target.characterId}`); };
+  const closeLine = () => { setRowModal((m) => ({ ...m, open: false })); if (rowParam) setRowParam(null); };
+  useEffect(() => {
+    if (!rowParam || rowModal.open || !data) return;
+    const [sceneId, characterId] = rowParam.split(".");
+    const sc = data.find((x) => x.id === sceneId)?.characters.find((c) => c.characterId === characterId);
+    if (!sc) { setRowParam(null); return; } // the row has gone (removed elsewhere): nothing to reopen
+    setRowModal({ open: true, target: { sceneId, characterId, changeId: sc.change?.id || "" } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowParam, data]);
   const addRow = () => setDraft(NEW, emptyDraft());
 
   const emptyTitle = when === "today" ? "No scenes scheduled today" : when === "upcoming" ? "No upcoming scenes" : q || rev ? "No scenes match" : "No scenes yet";
@@ -341,7 +354,7 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
         )}
       </Card>
 
-      <BreakdownRowModal open={rowModal.open} target={rowModal.target} onClose={() => setRowModal((m) => ({ ...m, open: false }))} scenes={data || []} characters={characters || []} episodes={episodes} />
+      <BreakdownRowModal open={rowModal.open} target={rowModal.target} onClose={closeLine} scenes={data || []} characters={characters || []} episodes={episodes} />
       <PrincipalsModal open={!!principalsDraft} onClose={() => setPrincipalsFor(null)} characters={characters || []} value={principalsDraft?.principals || []} onChange={(ids) => principalsFor && drafts[principalsFor] && setDraft(principalsFor, { ...drafts[principalsFor], principals: ids })} />
 
       <ScriptUploadModal open={scriptOpen} onClose={() => setScriptOpen(false)} onImported={() => { setWhen("all"); setRev(""); }} />
