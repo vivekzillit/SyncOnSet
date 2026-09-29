@@ -53,7 +53,9 @@ export default function App() {
         <Route path="/projects" element={<RequireAuth><Projects /></RequireAuth>} />
         <Route path="/projects/new" element={<RequireAuth><ProductionWizard /></RequireAuth>} />
         <Route path="/p/:projectId" element={<RequireAuth><ProjectShell /></RequireAuth>}>
-          <Route index element={<Dashboard />} />
+          {/* Opening a production lands on the Scene Breakdown; the dashboard has its own address. */}
+          <Route index element={<Navigate to="breakdown" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="scan" element={<Scan />} />
           <Route path="scenes" element={<Scenes initialView="scenes" />} />
           <Route path="scenes/:id" element={<SceneDetail />} />

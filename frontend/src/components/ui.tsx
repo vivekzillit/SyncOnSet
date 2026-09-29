@@ -20,11 +20,12 @@ export function BackButton() {
   const nav = useNavigate();
   const { pathname } = useLocation();
   const inProject = /^\/p\/[^/]+/.exec(pathname);
-  const isRoot = pathname === (inProject ? inProject[0] : "/projects");
+  // A production opens on its Scene Breakdown, so that page (like the bare production address) is the top level.
+  const isRoot = inProject ? pathname === inProject[0] || pathname === `${inProject[0]}/breakdown` : pathname === "/projects";
   const goBack = () => {
     const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
     if (idx > 0) nav(-1);
-    else nav(inProject ? inProject[0] : "/projects");
+    else nav(inProject && !isRoot ? inProject[0] : "/projects");
   };
   return (
     <button type="button" className="iconbtn back" onClick={goBack} aria-label={isRoot ? "Back to productions" : "Go back"} title={isRoot ? "Back to productions" : "Back"}>

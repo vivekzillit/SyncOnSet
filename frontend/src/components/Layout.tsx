@@ -72,7 +72,7 @@ function Shell() {
 
   const sceneActive = [`${base}/breakdown`, `${base}/scenes`].some((path) => loc.pathname === path || loc.pathname.startsWith(`${path}/`));
   const tabs: Tab[] = [
-    { key: "dash", label: "Dashboard", to: base, end: true },
+    { key: "dash", label: "Dashboard", to: `${base}/dashboard`, end: true },
     { key: "scenes", label: "Scene Breakdown", to: `${base}/breakdown`, also: [`${base}/scenes`] },
     { key: "characters", label: "Character Breakdown", items: [{ to: `${base}/characters`, label: "Characters", end: true }, { to: `${base}/actors`, label: "Actors" }] },
     { key: "costumes", label: "Costumes", items: [{ to: `${base}/costumes`, label: "Costumes", count: c?.costumes }, { to: `${base}/fittings`, label: "Fittings", count: c?.fittingsToday }, { to: `${base}/cleaning`, label: "Sink / Cleaning", count: c?.cleaning }, { to: `${base}/alterations`, label: "Alterations", count: c?.alteration }, { to: `${base}/damages`, label: "Damage", count: c?.damaged, danger: true }, { to: `${base}/missing`, label: "Missing", count: c?.missing, danger: true }, { to: `${base}/labels`, label: "QR Labels" }, { to: `${base}/vendors`, label: "Vendors & Rentals", count: c?.rentalsDue, danger: true }] },
@@ -128,7 +128,7 @@ function Shell() {
       <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} />
 
       <nav className="bottom-nav">
-        <NavLink to={base} end><LayoutDashboard size={20} /><span>Home</span></NavLink>
+        <NavLink to={`${base}/dashboard`} end><LayoutDashboard size={20} /><span>Home</span></NavLink>
         <NavLink to={`${base}/breakdown`} className={() => (sceneActive ? "active" : "")}><Clapperboard size={20} /><span>Scenes</span></NavLink>
         <NavLink to={`${base}/costumes`}><Shirt size={20} /><span>Costumes</span></NavLink>
         <NavLink to={`${base}/scan`} className="scan"><div className="scan-bubble"><ScanLine size={22} /></div><span>Scan</span></NavLink>
