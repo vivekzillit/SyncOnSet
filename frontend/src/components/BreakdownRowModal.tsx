@@ -5,6 +5,7 @@ import { useProject } from "@/state/project";
 import { useAuth } from "@/state/auth";
 import type { Character, Scene, SceneCharacter } from "@/api/types";
 import { ErrorBox, Field, Input, Modal, Select, Textarea, useToast } from "@/components/ui";
+import { CharacterSelect, SceneSelect } from "@/components/QuickSelects";
 import { ActorSelect } from "@/components/domain";
 import { DAY_PREFIXES, INT_EXT_FALLBACK, LOCATION_LIST_ID, castNumberProblem, emptyDraft, persistDraft, toDraft, type Draft } from "@/components/SceneEditRow";
 
@@ -123,12 +124,10 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
           </Field>
         </>) : (<>
           <Field label="Scene" help="The scene the script reader left this character out of">
-            <Select value={af.sceneId} onChange={(e) => setAf({ ...af, sceneId: e.target.value })}
-              options={scenes.map((sc) => ({ value: sc.id, label: [episodes && sc.episode ? `Ep ${sc.episode}` : null, `Sc ${sc.number}`, sc.name || sc.location].filter(Boolean).join(" · ") }))} placeholder="Select a scene" humanizeLabels={false} />
+            <SceneSelect value={af.sceneId} onChange={(sceneId) => setAf({ ...af, sceneId })} placeholder="Select a scene" />
           </Field>
           <Field label="Character">
-            <Select value={af.characterId} onChange={(e) => setAf({ ...af, characterId: e.target.value, ...castOf(e.target.value) })}
-              options={characters.map((c) => ({ value: c.id, label: c.castNumber != null ? `${c.castNumber}. ${c.name}` : c.name }))} placeholder="Select a character" humanizeLabels={false} />
+            <CharacterSelect value={af.characterId} onChange={(characterId) => setAf({ ...af, characterId, ...castOf(characterId) })} placeholder="Select a character" />
           </Field>
         </>)}
         {af.characterId && (

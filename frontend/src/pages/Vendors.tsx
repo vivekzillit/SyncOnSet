@@ -8,6 +8,7 @@ import { useAuth, FINANCE_ROLES, OPS_ROLES } from "@/state/auth";
 import { fmtDate, fmtMoney, matches, inCurrency } from "@/lib/format";
 import type { Costume, Rental, Vendor } from "@/api/types";
 import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
+import { VendorSelect } from "@/components/QuickSelects";
 import { CostumePicker, CostumeRow } from "@/components/domain";
 
 export default function Vendors() {
@@ -94,7 +95,7 @@ export default function Vendors() {
       <Modal open={rOpen} onClose={() => setROpen(false)} title="Record rental" footer={<><button className="btn" onClick={() => setROpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!rf.costume || !rf.vendorId || !rf.pickupDate || !rf.returnDate || createRental.isPending} onClick={() => createRental.mutate()}>Save</button></>}>
         <div className="form-grid">
           <Field label="Costume" span2>{rf.costume ? <div className="list card flat pad-0"><CostumeRow c={rf.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
-          <Field label="Vendor"><Select value={rf.vendorId} onChange={(e) => setRf({ ...rf, vendorId: e.target.value })} options={(vendors || []).map((v) => ({ value: v.id, label: v.name }))} placeholder="Select…" /></Field>
+          <Field label="Vendor"><VendorSelect value={rf.vendorId} onChange={(vendorId) => setRf({ ...rf, vendorId })} placeholder="Select…" /></Field>
           <Field label={`Rate per day${inCurrency(currency)}`}><Input type="number" value={rf.ratePerDay} onChange={(e) => setRf({ ...rf, ratePerDay: e.target.value })} /></Field>
           <Field label="Pickup"><Input type="date" value={rf.pickupDate} onChange={(e) => setRf({ ...rf, pickupDate: e.target.value })} /></Field>
           <Field label="Return by"><Input type="date" value={rf.returnDate} onChange={(e) => setRf({ ...rf, returnDate: e.target.value })} /></Field>

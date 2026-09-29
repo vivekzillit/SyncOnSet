@@ -8,6 +8,7 @@ import { useAuth } from "@/state/auth";
 import { fmtDate, fmtMoney, humanize, matches, todayISO, inCurrency } from "@/lib/format";
 import type { Character, Expense, Rental, Scene, Vendor } from "@/api/types";
 import { Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Stat, Tabs, useToast } from "@/components/ui";
+import { CharacterSelect, SceneSelect, VendorSelect } from "@/components/QuickSelects";
 import { RecordActions } from "@/components/Discussion";
 import { BudgetUpload } from "@/components/BudgetUpload";
 import { BudgetSheet, type SheetGroup } from "@/components/BudgetSheet";
@@ -261,9 +262,9 @@ export default function Budget() {
               </div>
             </div>
           </div>
-          <Field label="Scene"><Select value={f.sceneId} onChange={(e) => setF({ ...f, sceneId: e.target.value })} options={(scenes || []).map((s) => ({ value: s.id, label: `Sc ${s.number}${s.name ? ` · ${s.name}` : ""}` }))} placeholder="—" humanizeLabels={false} /></Field>
-          <Field label="Character"><Select value={f.characterId} onChange={(e) => setF({ ...f, characterId: e.target.value })} options={(characters || []).map((c) => ({ value: c.id, label: c.name }))} placeholder="—" humanizeLabels={false} /></Field>
-          <Field label="Vendor"><Select value={f.vendorId} onChange={(e) => setF({ ...f, vendorId: e.target.value })} options={(vendors || []).map((v) => ({ value: v.id, label: v.name }))} placeholder="—" humanizeLabels={false} /></Field>
+          <Field label="Scene"><SceneSelect value={f.sceneId} onChange={(sceneId) => setF({ ...f, sceneId })} /></Field>
+          <Field label="Character"><CharacterSelect value={f.characterId} onChange={(characterId) => setF({ ...f, characterId })} /></Field>
+          <Field label="Vendor"><VendorSelect value={f.vendorId} onChange={(vendorId) => setF({ ...f, vendorId })} /></Field>
           <Field label="Date"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
         </div>
         <ErrorBox error={create.error} />

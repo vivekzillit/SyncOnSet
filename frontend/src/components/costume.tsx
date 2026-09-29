@@ -6,8 +6,9 @@ import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, CLEANING_ROLES, FINANCE_ROLES, MANAGER_ROLES, OPS_ROLES, TAILOR_ROLES } from "@/state/auth";
 import { humanize, inCurrency } from "@/lib/format";
-import type { Character, CleaningRequest, Costume, Scene, Vendor } from "@/api/types";
+import type { Character, CleaningRequest, Costume, Vendor } from "@/api/types";
 import { Badge, ErrorBox, Field, Input, Modal, Select, Textarea, useToast } from "./ui";
+import { CharacterSelect, SceneSelect, VendorSelect } from "@/components/QuickSelects";
 import { CostumeRow, MediaPicker, attachMedia } from "./domain";
 
 type ModalKind = null | "action" | "cleaning" | "emergency" | "emergencyResult" | "damage" | "alteration" | "missing";
@@ -38,7 +39,6 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
   const [alf, setAlf] = useState({ issue: "", required: "", tailorName: "", priority: "HIGH", deadline: "" });
   const [mf, setMf] = useState({ lastSeenLocation: costume.location, notes: "" });
   const [result, setResult] = useState<{ request: CleaningRequest; alternatives: Costume[]; replacement: Costume | null } | null>(null);
-  const { data: scenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
 
   useEffect(() => { setCf((c) => ({ ...c, sceneId: sceneId || c.sceneId })); setAf((a) => ({ ...a, sceneId: sceneId || a.sceneId })); }, [sceneId]);
 
@@ -99,7 +99,6 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
   if (can(TAILOR_ROLES) && ["AVAILABLE", "ISSUED", "ON_SET"].includes(s)) buttons.push(btn("Alteration", <Scissors size={16} />, () => setModal("alteration")));
   if (can(MANAGER_ROLES) && ["AVAILABLE", "DAMAGED"].includes(s)) buttons.push(btn("Retire", <Archive size={16} />, () => openAction("RETIRE")));
 
-  const sceneOpts = (scenes || []).map((sc) => ({ value: sc.id, label: `Sc ${sc.number}${sc.name ? ` · ${sc.name}` : ""}` }));
   const locOpts = [...(meta?.standardLocations || []), ...(af.toLocation && !(meta?.standardLocations as string[] | undefined)?.includes(af.toLocation) ? [af.toLocation] : [])];
 
   return (
@@ -119,7 +118,7 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
             </Field>
           )}
           {["ISSUE", "TO_SET", "RETURN"].includes(action) && (<>
-            <Field label="Scene"><Select value={af.sceneId} onChange={(e) => setAf({ ...af, sceneId: e.target.value })} options={sceneOpts} placeholder="—" /></Field>
+            <Field label="Scene"><SceneSelect value={af.sceneId} onChange={(sceneId) => setAf({ ...af, sceneId })} /></Field>
             <Field label="Take"><Input type="number" value={af.takeNumber} onChange={(e) => setAf({ ...af, takeNumber: e.target.value })} /></Field>
           </>)}
           <Field label="Note" span2><Input value={af.note} onChange={(e) => setAf({ ...af, note: e.target.value })} /></Field>
@@ -134,7 +133,7 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
           <Field label="Problem" span2><Input value={cf.problem} onChange={(e) => setCf({ ...cf, problem: e.target.value })} placeholder="e.g. Coffee spill on chest" autoFocus /></Field>
           <Field label="Cleaning type"><Select value={cf.cleaningType} onChange={(e) => setCf({ ...cf, cleaningType: e.target.value })} options={meta?.cleaningTypes || []} /></Field>
           {modal === "cleaning" ? <Field label="Priority"><Select value={cf.priority} onChange={(e) => setCf({ ...cf, priority: e.target.value })} options={meta?.priorities || []} /></Field> : <Field label="Priority"><Badge status="URGENT" lg>Urgent</Badge></Field>}
-          <Field label="Scene"><Select value={cf.sceneId} onChange={(e) => setCf({ ...cf, sceneId: e.target.value })} options={sceneOpts} placeholder="—" /></Field>
+          <Field label="Scene"><SceneSelect value={cf.sceneId} onChange={(sceneId) => setCf({ ...cf, sceneId })} /></Field>
           <Field label="Take"><Input type="number" value={cf.takeNumber} onChange={(e) => setCf({ ...cf, takeNumber: e.target.value })} /></Field>
           {modal === "emergency" && <label className="check span-2"><input type="checkbox" checked={cf.autoAssignReplacement} onChange={(e) => setCf({ ...cf, autoAssignReplacement: e.target.checked })} /> Auto-assign the best available replacement</label>}
         </div>
@@ -167,7 +166,7 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
       <Modal open={modal === "damage"} onClose={() => setModal(null)} title={`Report damage · ${costume.assetNumber}`} footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-danger" disabled={!df.description || damage.isPending} onClick={() => damage.mutate()}>Report</button></>}>
         <div className="form-grid">
           <Field label="Damage" span2><Input value={df.description} onChange={(e) => setDf({ ...df, description: e.target.value })} placeholder="e.g. Torn sleeve" autoFocus /></Field>
-          <Field label="Scene"><Select value={df.sceneId} onChange={(e) => setDf({ ...df, sceneId: e.target.value })} options={sceneOpts} placeholder="—" /></Field>
+          <Field label="Scene"><SceneSelect value={df.sceneId} onChange={(sceneId) => setDf({ ...df, sceneId })} /></Field>
           <Field label="Take"><Input type="number" value={df.takeNumber} onChange={(e) => setDf({ ...df, takeNumber: e.target.value })} /></Field>
           {can(FINANCE_ROLES) && <Field label="Estimated repair cost"><Input type="number" value={df.estimatedRepairCost} onChange={(e) => setDf({ ...df, estimatedRepairCost: e.target.value })} /></Field>}
           <Field label="Responsible"><Select value={df.responsible} onChange={(e) => setDf({ ...df, responsible: e.target.value })} options={meta?.damageResponsible || []} /></Field>
@@ -245,10 +244,10 @@ export function CostumeFormModal({ open, onClose, initial, onSaved, defaultChara
         <Field label="Size"><Input value={f.size} onChange={(e) => setF({ ...f, size: e.target.value })} /></Field>
         <Field label="Brand"><Input value={f.brand} onChange={(e) => setF({ ...f, brand: e.target.value })} /></Field>
         <Field label="Fabric"><Input value={f.fabric} onChange={(e) => setF({ ...f, fabric: e.target.value })} /></Field>
-        <Field label="Character"><Select value={f.characterId} onChange={(e) => setF({ ...f, characterId: e.target.value })} options={(characters || []).map((c) => ({ value: c.id, label: c.name }))} placeholder="— unassigned —" /></Field>
+        <Field label="Character"><CharacterSelect value={f.characterId} onChange={(characterId) => setF({ ...f, characterId })} placeholder="— unassigned —" /></Field>
         <Field label="Location"><Select value={(meta?.standardLocations as string[] | undefined)?.includes(f.location) ? f.location : "__custom"} onChange={(e) => e.target.value !== "__custom" && setF({ ...f, location: e.target.value })} options={[...(meta?.standardLocations || []), ...((meta?.standardLocations as string[] | undefined)?.includes(f.location) ? [] : [{ value: "__custom", label: f.location || "Custom" }])]} humanizeLabels={false} /><Input className="mt-1" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></Field>
         <Field label="Source"><Select value={f.source} onChange={(e) => setF({ ...f, source: e.target.value })} options={meta?.costumeSources || []} /></Field>
-        <Field label="Vendor"><Select value={f.vendorId} onChange={(e) => setF({ ...f, vendorId: e.target.value })} options={(vendors || []).map((v) => ({ value: v.id, label: v.name }))} placeholder="—" /></Field>
+        <Field label="Vendor"><VendorSelect value={f.vendorId} onChange={(vendorId) => setF({ ...f, vendorId })} /></Field>
         {can(FINANCE_ROLES) && <Field label={`Purchase cost${inCurrency(currency)}`}><Input type="number" value={f.purchaseCost} onChange={(e) => setF({ ...f, purchaseCost: e.target.value })} /></Field>}
         {can(FINANCE_ROLES) && <Field label={`Rental / day${inCurrency(currency)}`}><Input type="number" value={f.rentalCostPerDay} onChange={(e) => setF({ ...f, rentalCostPerDay: e.target.value })} /></Field>}
         <Field label="Quantity"><Input type="number" min={1} value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} /></Field>

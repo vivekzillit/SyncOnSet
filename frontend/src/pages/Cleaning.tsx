@@ -6,8 +6,9 @@ import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, CLEANING_ROLES } from "@/state/auth";
 import { fmtTime, humanize, matches, relativeTime } from "@/lib/format";
-import type { CleaningRequest, Costume, Scene } from "@/api/types";
+import type { CleaningRequest, Costume } from "@/api/types";
 import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { SceneSelect } from "@/components/QuickSelects";
 import { CostumePicker, CostumeRow } from "@/components/domain";
 
 export default function Cleaning() {
@@ -18,7 +19,6 @@ export default function Cleaning() {
   const base = `/p/${projectId}`;
   const [view, setView] = useState<"board" | "list">(window.innerWidth < 900 ? "list" : "board");
   const { data, isLoading } = useQuery({ queryKey: ["cleaning", projectId], queryFn: () => api<{ pipeline: string[]; items: CleaningRequest[] }>(p(projectId, "/cleaning")), refetchInterval: 20000 });
-  const { data: scenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
@@ -100,7 +100,7 @@ export default function Cleaning() {
           <Field label="Problem" span2><Input value={f.problem} onChange={(e) => setF({ ...f, problem: e.target.value })} placeholder="Sweat marks, mud on hem…" /></Field>
           <Field label="Cleaning type"><Select value={f.cleaningType} onChange={(e) => setF({ ...f, cleaningType: e.target.value })} options={meta?.cleaningTypes || []} /></Field>
           <Field label="Priority"><Select value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })} options={meta?.priorities || []} /></Field>
-          <Field label="Scene"><Select value={f.sceneId} onChange={(e) => setF({ ...f, sceneId: e.target.value })} options={(scenes || []).map((s) => ({ value: s.id, label: `Sc ${s.number}${s.name ? ` · ${s.name}` : ""}` }))} placeholder="—" /></Field>
+          <Field label="Scene"><SceneSelect value={f.sceneId} onChange={(sceneId) => setF({ ...f, sceneId })} /></Field>
           <Field label="Take"><Input type="number" value={f.takeNumber} onChange={(e) => setF({ ...f, takeNumber: e.target.value })} /></Field>
           <Field label="Needed by" span2><Input type="datetime-local" value={f.expectedReadyAt} onChange={(e) => setF({ ...f, expectedReadyAt: e.target.value })} /></Field>
           <Field label="Notes" span2><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>

@@ -6,8 +6,9 @@ import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, FINANCE_ROLES, OPS_ROLES } from "@/state/auth";
 import { fmtDateTime, fmtMoney, humanize, matches, inCurrency } from "@/lib/format";
-import type { Costume, DamageReport, Scene } from "@/api/types";
+import type { Costume, DamageReport } from "@/api/types";
 import { Badge, Card, Chips, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, useToast } from "@/components/ui";
+import { SceneSelect } from "@/components/QuickSelects";
 import { RecordActions } from "@/components/Discussion";
 import { CostumePicker, CostumeRow, MediaPicker, PhotoGrid, attachMedia } from "@/components/domain";
 
@@ -20,7 +21,6 @@ export default function Damages() {
   const [filter, setFilter] = useState<"open" | "all" | "">("open");
   const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey: ["damages", projectId], queryFn: () => api<DamageReport[]>(p(projectId, "/damages")) });
-  const { data: scenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ costume: Costume | null; description: string; sceneId: string; takeNumber: string; estimatedRepairCost: string; responsible: string }>({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" });
@@ -75,7 +75,7 @@ export default function Damages() {
         <div className="form-grid">
           <Field label="Costume" span2>{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
           <Field label="Damage" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Torn sleeve" /></Field>
-          <Field label="Scene"><Select value={f.sceneId} onChange={(e) => setF({ ...f, sceneId: e.target.value })} options={(scenes || []).map((s) => ({ value: s.id, label: `Sc ${s.number}` }))} placeholder="—" /></Field>
+          <Field label="Scene"><SceneSelect value={f.sceneId} onChange={(sceneId) => setF({ ...f, sceneId })} /></Field>
           <Field label="Take"><Input type="number" value={f.takeNumber} onChange={(e) => setF({ ...f, takeNumber: e.target.value })} /></Field>
           {can(FINANCE_ROLES) && <Field label={`Estimated repair${inCurrency(currency)}`}><Input type="number" value={f.estimatedRepairCost} onChange={(e) => setF({ ...f, estimatedRepairCost: e.target.value })} /></Field>}
           <Field label="Responsible"><Select value={f.responsible} onChange={(e) => setF({ ...f, responsible: e.target.value })} options={meta?.damageResponsible || []} /></Field>

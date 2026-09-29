@@ -8,6 +8,7 @@ import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import { fmtDateLong, hasEpisodes, humanize, toLocalInput } from "@/lib/format";
 import type { Character, CostumeChange, Readiness, Scene } from "@/api/types";
 import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { ChangeSelect, CharacterSelect } from "@/components/QuickSelects";
 import { ReadinessLine } from "@/components/domain";
 import { CueProgress, useCueExtraction } from "@/components/AiCues";
 import { OPS_ROLES } from "@/state/auth";
@@ -92,7 +93,7 @@ export default function SceneDetail() {
                     <div className="mt-2 row gap-2 wrap">
                       <span className="subtle">Change:</span>
                       {can(MANAGER_ROLES) ? (
-                        <Select style={{ width: "auto", minHeight: 32, padding: "4px 30px 4px 10px" }} value={sc?.changeId || ""} onChange={(e) => setChar.mutate({ characterId: r.character.id, changeId: e.target.value || null })} options={(sc?.character.changes || []).map((c) => ({ value: c.id, label: `#${c.changeNumber} ${c.name}` }))} placeholder="— not assigned —" />
+                        <ChangeSelect style={{ width: "auto", minHeight: 32, padding: "4px 30px 4px 10px" }} value={sc?.changeId || ""} onChange={(changeId) => setChar.mutate({ characterId: r.character.id, changeId: changeId || null })} characterId={r.character.id} changes={sc?.character.changes || []} placeholder="— not assigned —" />
                       ) : (
                         <span>{r.change ? <Link to={`${base}/changes/${r.change.id}`}>#{r.change.changeNumber} {r.change.name}</Link> : "not assigned"}</span>
                       )}
@@ -181,8 +182,8 @@ export default function SceneDetail() {
 
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add character to scene" footer={<><button className="btn" onClick={() => setAddOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!addChar || setChar.isPending} onClick={() => setChar.mutate({ characterId: addChar, changeId: addChange || null })}>Add</button></>}>
         <div className="col">
-          <Field label="Character"><Select value={addChar} onChange={(e) => { setAddChar(e.target.value); setAddChange(""); }} options={(characters || []).filter((c) => !scene.characters.some((sc) => sc.characterId === c.id)).map((c) => ({ value: c.id, label: c.name }))} placeholder="Select…" /></Field>
-          <Field label="Change (look)"><Select value={addChange} onChange={(e) => setAddChange(e.target.value)} options={(charChanges || []).map((c) => ({ value: c.id, label: `#${c.changeNumber} ${c.name}` }))} placeholder="— assign later —" /></Field>
+          <Field label="Character"><CharacterSelect value={addChar} onChange={(cid) => { setAddChar(cid); setAddChange(""); }} filter={(c) => !scene.characters.some((sc) => sc.characterId === c.id)} placeholder="Select…" /></Field>
+          <Field label="Change (look)"><ChangeSelect value={addChange} onChange={setAddChange} characterId={addChar} changes={charChanges || []} placeholder="— assign later —" disabled={!addChar} /></Field>
         </div>
       </Modal>
 

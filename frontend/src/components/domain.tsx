@@ -5,7 +5,9 @@ import { Html5Qrcode } from "html5-qrcode";
 import { Camera, Download, ExternalLink, FileText, Images, Link as LinkIcon, Paperclip, Play, Plus, ScanLine, Video, X } from "lucide-react";
 import { ApiError, api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { CONTINUITY_ROLES, MANAGER_ROLES } from "@/state/auth";
+import { CONTINUITY_ROLES, MANAGER_ROLES, OPS_ROLES } from "@/state/auth";
+// Circular with costume.tsx, which imports from here; both sides only use the other inside components, at render time.
+import { CostumeFormModal } from "@/components/costume";
 import { fmtDateTime, humanize, tone } from "@/lib/format";
 import type { Actor, Costume, Photo, Role, TimelineEvent } from "@/api/types";
 import { Badge, Dot, Empty, ErrorBox, Field, Input, Modal, SearchBox, Select, Spinner, Textarea, initials, useToast } from "./ui";
@@ -378,7 +380,8 @@ export function CostumeRow({ c, extra, onClick, end, noStatus }: { c: Costume; e
  * name. A scan adds the piece straight away, exactly as tapping it in the list would.
  */
 export function CostumePicker({ open, onClose, onPick, title = "Pick a costume", filter, characterId }: { open: boolean; onClose: () => void; onPick: (c: Costume) => void; title?: string; filter?: (c: Costume) => boolean; characterId?: string | null }) {
-  const { projectId } = useProject();
+  const { projectId, can } = useProject();
+  const [newOpen, setNewOpen] = useState(false);
   const [q, setQ] = useState("");
   const [onlyChar, setOnlyChar] = useState(!!characterId);
   const [scanning, setScanning] = useState(false);
@@ -421,7 +424,10 @@ export function CostumePicker({ open, onClose, onPick, title = "Pick a costume",
         {characterId && !scanning && (
           <label className="check"><input type="checkbox" checked={onlyChar} onChange={(e) => setOnlyChar(e.target.checked)} /> This character only</label>
         )}
+        {/* A piece that is not in the inventory yet is added here and picked straight away. */}
+        {!scanning && can(OPS_ROLES) && <button type="button" className="btn btn-sm btn-primary" style={{ marginLeft: "auto" }} onClick={() => setNewOpen(true)}><Plus size={15} /> New costume</button>}
       </div>
+      <CostumeFormModal open={newOpen} onClose={() => setNewOpen(false)} defaultCharacterId={characterId || null} onSaved={(c) => { if (filter && !filter(c)) return; onPick(c); onClose(); }} />
       {scanning ? (
         <div className="col gap-1">
           <QRScanner active={open && scanning} onScan={onScan} />
@@ -465,7 +471,8 @@ export function ActorSelect({ value, onChange, disabled, label, placeholder = "â
   const [open, setOpen] = useState(false);
   const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<Actor[]>(p(projectId, "/actors")) });
   const canAdd = can(MANAGER_ROLES);
-  const options = [...(actors || []).map((a) => ({ value: a.id, label: a.name })), ...(canAdd ? [{ value: NEW_ACTOR, label: "+ New actor" }] : [])];
+  // "+ New actor" leads the list, the same as every other picker.
+  const options = [...(canAdd ? [{ value: NEW_ACTOR, label: "+ New actor" }] : []), ...(actors || []).map((a) => ({ value: a.id, label: a.name }))];
 
   return (
     <>
