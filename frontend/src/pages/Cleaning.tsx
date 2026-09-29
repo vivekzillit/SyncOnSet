@@ -86,7 +86,7 @@ export default function Cleaning() {
       <PageHead title="Sink / Cleaning" sub={`${openCount} open · ${readyTodayCount} completed today`} actions={<>
         <div className="row gap-0 hide-mobile" style={{ gap: 2 }}><button className={`btn btn-sm ${view === "board" ? "btn-primary" : ""}`} onClick={() => setView("board")}><LayoutGrid size={14} /></button><button className={`btn btn-sm ${view === "list" ? "btn-primary" : ""}`} onClick={() => setView("list")}><List size={14} /></button></div>
         <Link to={`${base}/scan?emergency=1`} className="btn btn-emergency"><Siren size={16} /> Emergency</Link>
-        {can(REQUEST_ROLES) && <button className="btn" onClick={chaseSink}><Megaphone size={16} /> Send request</button>}
+        {can(REQUEST_ROLES) && <button className="btn" onClick={chaseSink}><Megaphone size={16} /> Send reminder request</button>}
         {can(CLEANING_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Request</button>}
       </>} />
 
@@ -140,7 +140,7 @@ export default function Cleaning() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} filter={(c) => c.status !== "CLEANING"} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · cleaning"
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · cleaning"
         defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="CLEANING" entityId={chase?.entityId} />
     </div>
   );

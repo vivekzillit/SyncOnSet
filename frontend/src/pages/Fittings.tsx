@@ -66,7 +66,7 @@ export default function Fittings() {
   return (
     <div>
       <PageHead title="Fittings" sub="Schedule fittings, tick off each piece, raise alterations on the spot." actions={<>
-        {can(REQUEST_ROLES) && <button className="btn" disabled={isLoading || !data} onClick={callFittings}><Megaphone size={16} /> Send request</button>}
+        {can(REQUEST_ROLES) && <button className="btn" disabled={isLoading || !data} onClick={callFittings}><Megaphone size={16} /> Send reminder request</button>}
         {can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Fitting</button>}
       </>} />
       <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search character, actor, location…" /><Chips all="All" options={(meta?.fittingStatuses || []).map((s) => ({ key: s, label: s.replace(/_/g, " ").toLowerCase() }))} value={status} onChange={setStatus} /></div>
@@ -121,7 +121,7 @@ export default function Fittings() {
       </Modal>
       <NewCharacterModal open={newChar} onClose={() => setNewChar(false)} onCreated={(c) => setF({ ...f, characterId: c.id, costumes: [] })} />
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costumes: f.costumes.some((x) => x.id === c.id) ? f.costumes : [...f.costumes, c] })} characterId={f.characterId || null} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · fittings"
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · fittings"
         defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="FITTING" />
     </div>
   );

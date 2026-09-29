@@ -62,7 +62,7 @@ export default function Damages() {
   return (
     <div>
       <PageHead title="Damage reports" actions={<>
-        {can(REQUEST_ROLES) && <button className="btn" onClick={chaseRepairs}><Megaphone size={16} /> Send request</button>}
+        {can(REQUEST_ROLES) && <button className="btn" onClick={chaseRepairs}><Megaphone size={16} /> Send reminder request</button>}
         {can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Report damage</button>}
       </>} />
       <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, damage, scene…" /><Chips options={[{ key: "open", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
@@ -104,7 +104,7 @@ export default function Damages() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · damage"
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · damage"
         defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="DAMAGE" entityId={chase?.entityId} />
     </div>
   );

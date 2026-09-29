@@ -61,7 +61,7 @@ export default function Alterations() {
   return (
     <div>
       <PageHead title="Alterations & tailoring" sub="Track every alteration from request to quality check." actions={<>
-        {can(REQUEST_ROLES) && <button className="btn" onClick={chaseTailors}><Megaphone size={16} /> Send request</button>}
+        {can(REQUEST_ROLES) && <button className="btn" onClick={chaseTailors}><Megaphone size={16} /> Send reminder request</button>}
         {can(TAILOR_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Alteration</button>}
       </>} />
       <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, issue, tailor, character…" /><Chips options={[{ key: "open", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
@@ -109,7 +109,7 @@ export default function Alterations() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} filter={(c) => !["ALTERATION", "CLEANING", "MISSING"].includes(c.status)} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · alterations"
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · alterations"
         defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="ALTERATION" entityId={chase?.entityId} />
     </div>
   );

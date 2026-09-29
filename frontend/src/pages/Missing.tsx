@@ -61,7 +61,7 @@ export default function Missing() {
   return (
     <div>
       <PageHead title="Missing items" sub="Every open search, with last known location and custodian." actions={<>
-        {can(REQUEST_ROLES) && <button className="btn" onClick={putOutSearch}><Megaphone size={16} /> Send request</button>}
+        {can(REQUEST_ROLES) && <button className="btn" onClick={putOutSearch}><Megaphone size={16} /> Send reminder request</button>}
         {can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Report missing</button>}
       </>} />
       <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search costume, character, last seen, custodian…" /><Chips options={[{ key: "OPEN", label: "Open" }, { key: "all", label: "All" }]} value={filter} onChange={(v) => setFilter(v || "all")} /></div>
@@ -110,7 +110,7 @@ export default function Missing() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => { setF({ ...f, costume: c, lastSeenLocation: c.location }); }} filter={(c) => c.status !== "MISSING"} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · missing"
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · missing"
         defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="MISSING" entityId={chase?.entityId} />
     </div>
   );
