@@ -147,8 +147,10 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
   // and that must never rewrite what somebody is part-way through typing.
   useEffect(() => {
     if (!open) return;
-    setSubject(defaultTitle);
-    setMessage(defaultBody);
+    // Trimmed to what the server takes: a record with a very long note would otherwise seed a message that
+    // can only fail at Send, after the recipients have been picked.
+    setSubject(defaultTitle.slice(0, 160));
+    setMessage(defaultBody.slice(0, 4000));
     reset();
     send.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
