@@ -39,6 +39,12 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
   const [alf, setAlf] = useState({ issue: "", required: "", tailorName: "", priority: "HIGH", deadline: "" });
   const [mf, setMf] = useState({ lastSeenLocation: costume.location, notes: "" });
   const [result, setResult] = useState<{ request: CleaningRequest; alternatives: Costume[]; replacement: Costume | null } | null>(null);
+  /** Photos of the stain for a cleaning or emergency ticket; the ticket is filed once, so a failed upload retries only the files. */
+  const [cleanMedia, setCleanMedia] = useState<File[]>([]);
+  const cleanId = useRef<string | null>(null);
+  const cleanRes = useRef<{ request: CleaningRequest; alternatives: Costume[]; replacement: Costume | null } | null>(null);
+  useEffect(() => { if (modal !== "cleaning" && modal !== "emergency") { setCleanMedia([]); cleanId.current = null; cleanRes.current = null; } }, [modal]);
+  const attachStain = (id: string) => attachMedia({ projectId, entityType: "CLEANING", entityId: id, files: cleanMedia, kind: "STAIN", keep: setCleanMedia, savedNote: "The ticket is raised — press the button again to attach what is left." });
 
   useEffect(() => { setCf((c) => ({ ...c, sceneId: sceneId || c.sceneId })); setAf((a) => ({ ...a, sceneId: sceneId || a.sceneId })); }, [sceneId]);
 
@@ -51,11 +57,19 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
     onSuccess: () => done(`${humanize(action)} recorded`), onError: fail,
   });
   const clean = useMutation({
-    mutationFn: () => api<CleaningRequest>(p(projectId, "/cleaning"), { body: { costumeId: costume.id, problem: cf.problem, cleaningType: cf.cleaningType, priority: cf.priority, sceneId: cf.sceneId || null, takeNumber: num(cf.takeNumber) } }),
-    onSuccess: (r) => { done("Cleaning requested"); nav(`${base}/cleaning/${r.id}`); }, onError: fail,
+    mutationFn: async () => {
+      if (!cleanId.current) cleanId.current = (await api<CleaningRequest>(p(projectId, "/cleaning"), { body: { costumeId: costume.id, problem: cf.problem, cleaningType: cf.cleaningType, priority: cf.priority, sceneId: cf.sceneId || null, takeNumber: num(cf.takeNumber) } })).id;
+      await attachStain(cleanId.current);
+      return cleanId.current;
+    },
+    onSuccess: (id) => { done("Cleaning requested"); nav(`${base}/cleaning/${id}`); }, onError: fail,
   });
   const emergency = useMutation({
-    mutationFn: () => api<{ request: CleaningRequest; alternatives: Costume[]; replacement: Costume | null }>(p(projectId, "/cleaning/emergency"), { body: { costumeId: costume.id, problem: cf.problem, cleaningType: cf.cleaningType, sceneId: cf.sceneId || null, takeNumber: num(cf.takeNumber), autoAssignReplacement: cf.autoAssignReplacement } }),
+    mutationFn: async () => {
+      if (!cleanRes.current) cleanRes.current = await api<{ request: CleaningRequest; alternatives: Costume[]; replacement: Costume | null }>(p(projectId, "/cleaning/emergency"), { body: { costumeId: costume.id, problem: cf.problem, cleaningType: cf.cleaningType, sceneId: cf.sceneId || null, takeNumber: num(cf.takeNumber), autoAssignReplacement: cf.autoAssignReplacement } });
+      await attachStain(cleanRes.current.request.id);
+      return cleanRes.current;
+    },
     onSuccess: (r) => { qc.invalidateQueries(); onChanged?.(); setResult(r); setModal("emergencyResult"); toast.push("🚨 Emergency ticket raised", "ok"); }, onError: fail,
   });
   const assignRepl = useMutation({
@@ -127,7 +141,7 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
       </Modal>
 
       <Modal open={modal === "cleaning" || modal === "emergency"} onClose={() => setModal(null)} title={modal === "emergency" ? <span className="row gap-1"><Siren size={18} color="var(--danger)" /> Emergency cleaning · {costume.assetNumber}</span> : `Request cleaning · ${costume.assetNumber}`}
-        footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button>{modal === "emergency" ? <button className="btn btn-emergency" disabled={!cf.problem || emergency.isPending} onClick={() => emergency.mutate()}>{emergency.isPending ? "Raising…" : "Raise emergency"}</button> : <button className="btn btn-primary" disabled={!cf.problem || clean.isPending} onClick={() => clean.mutate()}>Request</button>}</>}>
+        footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button>{modal === "emergency" ? <button className="btn btn-emergency" disabled={!cf.problem || emergency.isPending} onClick={() => emergency.mutate()}>{emergency.isPending ? "Raising…" : "Raise emergency"}</button> : <button className="btn btn-primary" disabled={!cf.problem || clean.isPending} onClick={() => clean.mutate()}>{clean.isPending ? "Saving…" : "Request"}</button>}</>}>
         {modal === "emergency" && <div className="notice mb-2">This marks the costume unavailable, alerts laundry and the supervisor, and finds a replacement instantly.</div>}
         <div className="form-grid">
           <Field label="Problem" span2><Input value={cf.problem} onChange={(e) => setCf({ ...cf, problem: e.target.value })} placeholder="e.g. Coffee spill on chest" autoFocus /></Field>
@@ -135,6 +149,7 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
           {modal === "cleaning" ? <Field label="Priority"><Select value={cf.priority} onChange={(e) => setCf({ ...cf, priority: e.target.value })} options={meta?.priorities || []} /></Field> : <Field label="Priority"><Badge status="URGENT" lg>Urgent</Badge></Field>}
           <Field label="Scene"><SceneSelect value={cf.sceneId} onChange={(sceneId) => setCf({ ...cf, sceneId })} /></Field>
           <Field label="Take"><Input type="number" value={cf.takeNumber} onChange={(e) => setCf({ ...cf, takeNumber: e.target.value })} /></Field>
+          <Field label="Photos & video" span2 help="Shoot the stain now, pick from the gallery, or scan a note"><MediaPicker files={cleanMedia} onChange={setCleanMedia} disabled={clean.isPending || emergency.isPending} /></Field>
           {modal === "emergency" && <label className="check span-2"><input type="checkbox" checked={cf.autoAssignReplacement} onChange={(e) => setCf({ ...cf, autoAssignReplacement: e.target.checked })} /> Auto-assign the best available replacement</label>}
         </div>
         <ErrorBox error={clean.error || emergency.error} />

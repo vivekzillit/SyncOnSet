@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Siren, LayoutGrid, List } from "lucide-react";
@@ -9,7 +9,7 @@ import { fmtTime, humanize, matches, relativeTime } from "@/lib/format";
 import type { CleaningRequest, Costume } from "@/api/types";
 import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { SceneSelect } from "@/components/QuickSelects";
-import { CostumePicker, CostumeRow } from "@/components/domain";
+import { CostumePicker, CostumeRow, MediaPicker, attachMedia } from "@/components/domain";
 
 export default function Cleaning() {
   const { projectId, can } = useProject();
@@ -23,9 +23,18 @@ export default function Cleaning() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ costume: Costume | null; problem: string; cleaningType: string; priority: string; sceneId: string; takeNumber: string; expectedReadyAt: string; notes: string }>({ costume: null, problem: "", cleaningType: "SPOT_CLEANING", priority: "NORMAL", sceneId: "", takeNumber: "", expectedReadyAt: "", notes: "" });
+  const [media, setMedia] = useState<File[]>([]);
+  const createdId = useRef<string | null>(null);
+  /** Closing drops what was picked, so it can never ride along to the next request. */
+  const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
   const create = useMutation({
-    mutationFn: () => api<CleaningRequest>(p(projectId, "/cleaning"), { body: { costumeId: f.costume!.id, problem: f.problem, cleaningType: f.cleaningType, priority: f.priority, sceneId: f.sceneId || null, takeNumber: f.takeNumber ? Number(f.takeNumber) : null, expectedReadyAt: f.expectedReadyAt || null, notes: f.notes || null } }),
-    onSuccess: () => { qc.invalidateQueries(); setOpen(false); setF({ ...f, costume: null, problem: "" }); toast.push("Cleaning requested", "ok"); },
+    // The request is filed once — a failed upload can be retried from the same open form without a second ticket —
+    // and whatever did not attach stays in the picker rather than being thrown away.
+    mutationFn: async () => {
+      if (!createdId.current) createdId.current = (await api<CleaningRequest>(p(projectId, "/cleaning"), { body: { costumeId: f.costume!.id, problem: f.problem, cleaningType: f.cleaningType, priority: f.priority, sceneId: f.sceneId || null, takeNumber: f.takeNumber ? Number(f.takeNumber) : null, expectedReadyAt: f.expectedReadyAt || null, notes: f.notes || null } })).id;
+      await attachMedia({ projectId, entityType: "CLEANING", entityId: createdId.current, files: media, kind: "STAIN", keep: setMedia, savedNote: "The request is saved — press Request again to attach what is left." });
+    },
+    onSuccess: () => { createdId.current = null; qc.invalidateQueries(); closeForm(); setF({ ...f, costume: null, problem: "" }); toast.push("Cleaning requested", "ok"); },
   });
 
   if (isLoading || !data) return <Spinner />;
@@ -92,7 +101,7 @@ export default function Cleaning() {
         </Card>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Request cleaning" footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!f.costume || !f.problem || create.isPending} onClick={() => create.mutate()}>Request</button></>}>
+      <Modal open={open} onClose={closeForm} title="Request cleaning" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-primary" disabled={!f.costume || !f.problem || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Saving…" : "Request"}</button></>}>
         <div className="form-grid">
           <Field label="Costume" span2>
             {f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}
@@ -103,6 +112,7 @@ export default function Cleaning() {
           <Field label="Scene"><SceneSelect value={f.sceneId} onChange={(sceneId) => setF({ ...f, sceneId })} /></Field>
           <Field label="Take"><Input type="number" value={f.takeNumber} onChange={(e) => setF({ ...f, takeNumber: e.target.value })} /></Field>
           <Field label="Needed by" span2><Input type="datetime-local" value={f.expectedReadyAt} onChange={(e) => setF({ ...f, expectedReadyAt: e.target.value })} /></Field>
+          <Field label="Photos & video" span2 help="Shoot the stain now, pick from the gallery, or scan a note"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>
           <Field label="Notes" span2><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
         </div>
         <ErrorBox error={create.error} />

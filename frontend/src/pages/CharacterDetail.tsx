@@ -45,7 +45,7 @@ export default function CharacterDetail() {
   const [actorOpen, setActorOpen] = useState(false);
   const [fitOpen, setFitOpen] = useState(false);
   const [fitPick, setFitPick] = useState(false);
-  const [ff, setFf] = useState<{ scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] });
+  const [ff, setFf] = useState<{ scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ scheduledAt: "", location: "", notes: "", costumes: [] });
   // -1 while adding a row, the row's index while editing one, null when the dialog is closed.
   const [detailAt, setDetailAt] = useState<number | null>(null);
   const [df, setDf] = useState<CharacterDetailRow>({ label: "", value: "" });
@@ -70,7 +70,7 @@ export default function CharacterDetail() {
       if (!fittingId.current) fittingId.current = (await api<Fitting>(p(projectId, "/fittings"), { body: { characterId: id, scheduledAt: ff.scheduledAt || new Date().toISOString(), location: ff.location || null, notes: ff.notes || null, costumeIds: ff.costumes.map((c) => c.id) } })).id;
       await attachMedia({ projectId, entityType: "FITTING", entityId: fittingId.current, files: fitMedia, kind: "REFERENCE", keep: setFitMedia, savedNote: "The fitting is saved — press Schedule again to attach what is left." });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeFitting(); setFf({ scheduledAt: "", location: "Wardrobe Truck", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeFitting(); setFf({ scheduledAt: "", location: "", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
   /** The whole list travels with each save, so add, edit and delete are one code path. */
   const saveDetails = useMutation({

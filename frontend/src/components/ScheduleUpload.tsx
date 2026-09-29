@@ -84,11 +84,6 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
     },
   });
   const reset = () => { setFile(null); setResult(null); setDates({}); setExcluded(new Set()); setManualNo(""); setManualDate(""); if (fileRef.current) fileRef.current.value = ""; };
-  /** No file, or a file that named nothing: start an empty review and add the scenes by hand. */
-  const byHand = () => {
-    setResult({ kind, file: "", format: "manual", date: kind === "CALLSHEET" ? todayISO() : null, dayNumber: null, days: 0, scenes: [], warnings: [], breakdownEmpty: false, knownCastNumbers: 0 });
-    setDates({}); setExcluded(new Set()); setCreateMissing(true);
-  };
   const manualKey = manualNo.trim().toUpperCase().replace(/^0+(?=\d)/, "");
   const manualDup = !!manualKey && rows.some((s) => s.number.toUpperCase() === manualKey);
   const defaultManualDate = manualDate || rows.map((sc) => dates[sc.number]).filter(Boolean).sort()[0] || result?.date || todayISO();
@@ -126,10 +121,8 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
             <div className="subtle mt-1">PDF from Movie Magic, StudioBinder, Celtx, Word or Excel · CSV · plain text</div>
             <input ref={fileRef} type="file" accept=".pdf,.csv,.tsv,.txt,application/pdf,text/csv,text/plain" hidden onChange={(e) => pick(e.target.files?.[0] || null)} />
           </div>
-          <div className="row between wrap gap-2">
-            <div className="subtle">Scenes already in the breakdown keep what they have; only blanks are filled in. Nothing is ever deleted.</div>
-            <button type="button" className="btn btn-sm" onClick={byHand}><PenLine size={14} /> Add the scenes by hand</button>
-          </div>
+          {/* Scenes are added by hand in the review, after the file is read. */}
+          <div className="subtle">Scenes already in the breakdown keep what they have; only blanks are filled in. Nothing is ever deleted.</div>
           <ErrorBox error={parse.error} />
         </div>
       ) : (
@@ -183,7 +176,7 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
           <div className="row gap-2 wrap" style={{ alignItems: "flex-end" }}>
             <div className="field" style={{ width: 130 }}><label>Scene #</label><Input value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }} placeholder="e.g. 47" aria-label="Scene number to add" /></div>
             <div className="field"><label>Shoot date</label><Input type="date" value={defaultManualDate} onChange={(e) => setManualDate(e.target.value)} style={{ minWidth: 150 }} aria-label="Shoot date for the scene to add" /></div>
-            <button type="button" className="btn" disabled={!manualKey || manualDup} onClick={addManual} title={manualDup ? "That scene is already in the list" : undefined}><Plus size={16} /> Add scene</button>
+            <button type="button" className="btn" disabled={!manualKey || manualDup} onClick={addManual} title={manualDup ? "That scene is already in the list" : undefined}><Plus size={16} /> Add the scene by hand</button>
             <span className="subtle small">{manualDup ? "That scene is already in the list." : `Missed a scene? Add it by hand: a scene in the breakdown gets this date, a new number is added as a new scene.`}</span>
           </div>
           {result.breakdownEmpty && <div className="subtle">This production has no scenes yet, so every scene here will be added.</div>}
