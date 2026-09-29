@@ -52,11 +52,11 @@ function NewContactModal({ open, onClose, onCreated }: { open: boolean; onClose:
     <Modal open={open} onClose={onClose} title="New contact"
       footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!f.name.trim() || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Adding…" : "Add"}</button></>}>
       <div className="form-grid">
-        <Field label="Name" span2><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Ramesh Tailor" autoFocus /></Field>
-        <Field label="Company"><Input value={f.company} onChange={(e) => setF({ ...f, company: e.target.value })} placeholder="Raj Tailors" /></Field>
-        <Field label="What they do"><Input value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} placeholder="Tailor" /></Field>
+        <Field label="Name" span2><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoFocus /></Field>
+        <Field label="Company"><Input value={f.company} onChange={(e) => setF({ ...f, company: e.target.value })} /></Field>
+        <Field label="What they do"><Input value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} /></Field>
         <Field label="Email"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
-        <Field label="Phone"><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="+91…" /></Field>
+        <Field label="Phone"><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
       </div>
       <ErrorBox error={create.error} />
     </Modal>
@@ -78,7 +78,7 @@ function NewVendorModal({ open, onClose, onCreated }: { open: boolean; onClose: 
     <Modal open={open} onClose={onClose} title="New vendor"
       footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!f.name.trim() || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Adding…" : "Add"}</button></>}>
       <div className="form-grid">
-        <Field label="Name" span2><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="XYZ Costumes" autoFocus /></Field>
+        <Field label="Name" span2><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoFocus /></Field>
         <Field label="Contact"><Input value={f.contactName} onChange={(e) => setF({ ...f, contactName: e.target.value })} /></Field>
         <Field label="Phone"><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
         <Field label="Email" span2><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>

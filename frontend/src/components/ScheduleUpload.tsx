@@ -182,7 +182,7 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
             </div>
           ) : (
             <div className="row gap-2 wrap" style={{ alignItems: "flex-end" }}>
-              <div className="field" style={{ width: 130 }}><label>Scene #</label><Input value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }} placeholder="e.g. 47" aria-label="Scene number to add" autoFocus /></div>
+              <div className="field" style={{ width: 130 }}><label>Scene #</label><Input value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }} aria-label="Scene number to add" autoFocus /></div>
               <div className="field"><label>Shoot date</label><Input type="date" value={defaultManualDate} onChange={(e) => setManualDate(e.target.value)} style={{ minWidth: 150 }} aria-label="Shoot date for the scene to add" /></div>
               <button type="button" className="btn btn-primary" disabled={!manualKey || manualDup} onClick={addManual} title={manualDup ? "That scene is already in the list" : undefined}><Plus size={16} /> Add</button>
               <button type="button" className="btn btn-ghost" onClick={() => { setManualOpen(false); setManualNo(""); }}>Done</button>

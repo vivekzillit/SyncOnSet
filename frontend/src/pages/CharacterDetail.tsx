@@ -261,8 +261,8 @@ export default function CharacterDetail() {
       <Modal open={detailAt !== null} onClose={() => setDetailAt(null)} title={detailAt === -1 ? "Add detail" : "Edit detail"}
         footer={<><button className="btn" onClick={() => setDetailAt(null)}>Cancel</button><button className="btn btn-primary" disabled={!df.label.trim() || !df.value.trim() || saveDetails.isPending} onClick={commitDetail}>Save</button></>}>
         <div className="col">
-          <Field label="Title" help="Name the field yourself — anything the department needs to remember"><Input value={df.label} onChange={(e) => setDf({ ...df, label: e.target.value })} placeholder="e.g. Wig, Tattoo cover, Dresser" autoFocus /></Field>
-          <Field label="Description"><Textarea value={df.value} onChange={(e) => setDf({ ...df, value: e.target.value })} placeholder="e.g. Short crop, hired from Anand Wigs" /></Field>
+          <Field label="Title" help="Name the field yourself — anything the department needs to remember"><Input value={df.label} onChange={(e) => setDf({ ...df, label: e.target.value })} autoFocus /></Field>
+          <Field label="Description"><Textarea value={df.value} onChange={(e) => setDf({ ...df, value: e.target.value })} /></Field>
         </div>
         <ErrorBox error={saveDetails.error} />
       </Modal>

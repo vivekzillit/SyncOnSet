@@ -64,7 +64,7 @@ export default function CleaningDetail() {
             <Card title="Work the ticket">
               <div className="col gap-2">
                 {!r.assignedToId && <button className="btn" onClick={() => assignMe.mutate()}><UserCheck size={16} /> Assign to me</button>}
-                <Field label="Note (optional)"><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Pre-treated with stain remover" /></Field>
+                <Field label="Note (optional)"><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
                 {r.status === "QUALITY_CHECK" ? (
                   <div className="row gap-1 wrap">
                     <button className="btn btn-primary" disabled={advance.isPending} onClick={() => advance.mutate({ qcResult: "PASS", qcNotes: note || null })}><CheckCircle2 size={16} /> QC pass → Ready</button>

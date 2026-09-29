@@ -72,7 +72,7 @@ export default function Scan() {
           <Card title="Context for actions">
             <div className="form-grid">
               <div className="field"><label>Scene</label><select className="select" value={sceneId} onChange={(e) => setSceneId(e.target.value)}><option value="">—</option>{(scenes || []).map((s) => <option key={s.id} value={s.id}>Sc {s.number}{s.name ? ` · ${s.name}` : ""}</option>)}</select></div>
-              <div className="field"><label>Take</label><Input type="number" value={take} onChange={(e) => setTake(e.target.value)} placeholder="3" /></div>
+              <div className="field"><label>Take</label><Input type="number" value={take} onChange={(e) => setTake(e.target.value)} /></div>
             </div>
           </Card>
           {recent.length > 0 && (

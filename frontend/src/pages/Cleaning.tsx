@@ -125,7 +125,7 @@ export default function Cleaning() {
           <Field label="Costume" span2>
             {f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}
           </Field>
-          <Field label="Problem" span2><Input value={f.problem} onChange={(e) => setF({ ...f, problem: e.target.value })} placeholder="Sweat marks, mud on hem…" /></Field>
+          <Field label="Problem" span2><Input value={f.problem} onChange={(e) => setF({ ...f, problem: e.target.value })} /></Field>
           <Field label="Cleaning type"><Select value={f.cleaningType} onChange={(e) => setF({ ...f, cleaningType: e.target.value })} options={meta?.cleaningTypes || []} /></Field>
           <Field label="Priority"><Select value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })} options={meta?.priorities || []} /></Field>
           <Field label="Scene"><SceneSelect value={f.sceneId} onChange={(sceneId) => setF({ ...f, sceneId })} /></Field>

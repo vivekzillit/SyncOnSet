@@ -70,8 +70,8 @@ export default function Projects() {
       </div>
       <Modal open={open} onClose={() => setOpen(false)} title="New production" footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={create.isPending || !form.name || !form.code} onClick={() => create.mutate()}>Create</button></>}>
         <div className="form-grid">
-          <Field label="Title" span2><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Movie ABC" /></Field>
-          <Field label="Code" help="Short code used in reports"><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="ABC" /></Field>
+          <Field label="Title" span2><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+          <Field label="Code" help="Short code used in reports"><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} /></Field>
           <Field label="Status"><Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={meta?.projectStatuses || ["PREP"]} /></Field>
           <Field label="Current location"><Input value={form.currentLocation} onChange={(e) => setForm({ ...form, currentLocation: e.target.value })} /></Field>
           <Field label="Currency"><Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} options={["INR", "USD", "GBP", "EUR", "AED"]} placeholder="None" humanizeLabels={false} /></Field>

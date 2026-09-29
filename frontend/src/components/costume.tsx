@@ -128,7 +128,7 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
           {action !== "RETIRE" && (
             <Field label="To location" span2>
               <Select value={af.toLocation} onChange={(e) => setAf({ ...af, toLocation: e.target.value })} options={locOpts} placeholder="— choose —" humanizeLabels={false} />
-              <Input className="mt-1" value={af.toLocation} onChange={(e) => setAf({ ...af, toLocation: e.target.value })} placeholder="or type a location (e.g. Vanity Van 2)" />
+              <Input className="mt-1" value={af.toLocation} onChange={(e) => setAf({ ...af, toLocation: e.target.value })} />
             </Field>
           )}
           {["ISSUE", "TO_SET", "RETURN"].includes(action) && (<>
@@ -144,7 +144,7 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
         footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button>{modal === "emergency" ? <button className="btn btn-emergency" disabled={!cf.problem || emergency.isPending} onClick={() => emergency.mutate()}>{emergency.isPending ? "Raising…" : "Raise emergency"}</button> : <button className="btn btn-primary" disabled={!cf.problem || clean.isPending} onClick={() => clean.mutate()}>{clean.isPending ? "Saving…" : "Request"}</button>}</>}>
         {modal === "emergency" && <div className="notice mb-2">This marks the costume unavailable, alerts laundry and the supervisor, and finds a replacement instantly.</div>}
         <div className="form-grid">
-          <Field label="Problem" span2><Input value={cf.problem} onChange={(e) => setCf({ ...cf, problem: e.target.value })} placeholder="e.g. Coffee spill on chest" autoFocus /></Field>
+          <Field label="Problem" span2><Input value={cf.problem} onChange={(e) => setCf({ ...cf, problem: e.target.value })} autoFocus /></Field>
           <Field label="Cleaning type"><Select value={cf.cleaningType} onChange={(e) => setCf({ ...cf, cleaningType: e.target.value })} options={meta?.cleaningTypes || []} /></Field>
           {modal === "cleaning" ? <Field label="Priority"><Select value={cf.priority} onChange={(e) => setCf({ ...cf, priority: e.target.value })} options={meta?.priorities || []} /></Field> : <Field label="Priority"><Badge status="URGENT" lg>Urgent</Badge></Field>}
           <Field label="Scene"><SceneSelect value={cf.sceneId} onChange={(sceneId) => setCf({ ...cf, sceneId })} /></Field>
@@ -180,7 +180,7 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
 
       <Modal open={modal === "damage"} onClose={() => setModal(null)} title={`Report damage · ${costume.assetNumber}`} footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-danger" disabled={!df.description || damage.isPending} onClick={() => damage.mutate()}>Report</button></>}>
         <div className="form-grid">
-          <Field label="Damage" span2><Input value={df.description} onChange={(e) => setDf({ ...df, description: e.target.value })} placeholder="e.g. Torn sleeve" autoFocus /></Field>
+          <Field label="Damage" span2><Input value={df.description} onChange={(e) => setDf({ ...df, description: e.target.value })} autoFocus /></Field>
           <Field label="Scene"><SceneSelect value={df.sceneId} onChange={(sceneId) => setDf({ ...df, sceneId })} /></Field>
           <Field label="Take"><Input type="number" value={df.takeNumber} onChange={(e) => setDf({ ...df, takeNumber: e.target.value })} /></Field>
           {can(FINANCE_ROLES) && <Field label="Estimated repair cost"><Input type="number" value={df.estimatedRepairCost} onChange={(e) => setDf({ ...df, estimatedRepairCost: e.target.value })} /></Field>}
@@ -191,8 +191,8 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
 
       <Modal open={modal === "alteration"} onClose={() => setModal(null)} title={`Alteration · ${costume.assetNumber}`} footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-primary" disabled={!alf.issue || !alf.required || alteration.isPending} onClick={() => alteration.mutate()}>Request</button></>}>
         <div className="form-grid">
-          <Field label="Issue" span2><Input value={alf.issue} onChange={(e) => setAlf({ ...alf, issue: e.target.value })} placeholder="Sleeves too long" autoFocus /></Field>
-          <Field label="Required" span2><Input value={alf.required} onChange={(e) => setAlf({ ...alf, required: e.target.value })} placeholder="Reduce 1.5 inch" /></Field>
+          <Field label="Issue" span2><Input value={alf.issue} onChange={(e) => setAlf({ ...alf, issue: e.target.value })} autoFocus /></Field>
+          <Field label="Required" span2><Input value={alf.required} onChange={(e) => setAlf({ ...alf, required: e.target.value })} /></Field>
           <Field label="Tailor"><Input value={alf.tailorName} onChange={(e) => setAlf({ ...alf, tailorName: e.target.value })} /></Field>
           <Field label="Priority"><Select value={alf.priority} onChange={(e) => setAlf({ ...alf, priority: e.target.value })} options={meta?.priorities || []} /></Field>
           <Field label="Deadline" span2><Input type="datetime-local" value={alf.deadline} onChange={(e) => setAlf({ ...alf, deadline: e.target.value })} /></Field>
@@ -251,10 +251,10 @@ export function CostumeFormModal({ open, onClose, initial, onSaved, defaultChara
   return (
     <Modal open={open} onClose={onClose} title={initial ? `Edit ${initial.assetNumber}` : "New costume piece"} wide footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!f.name || save.isPending} onClick={() => save.mutate()}>{initial ? "Save" : "Add to inventory"}</button></>}>
       <div className="form-grid">
-        <Field label="Asset number" help={initial ? undefined : "Leave blank to auto-generate (CST-000123)"}><Input value={f.assetNumber} onChange={(e) => setF({ ...f, assetNumber: e.target.value.toUpperCase() })} placeholder="auto" className="mono" /></Field>
-        <Field label="Name"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="White Formal Shirt" autoFocus /></Field>
+        <Field label="Asset number" help={initial ? undefined : "Leave blank to auto-generate (CST-000123)"}><Input value={f.assetNumber} onChange={(e) => setF({ ...f, assetNumber: e.target.value.toUpperCase() })} className="mono" /></Field>
+        <Field label="Name"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoFocus /></Field>
         <Field label="Category"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value, type: "" })} options={meta?.costumeCategories || []} /></Field>
-        <Field label="Type"><Select value={types.includes(f.type) ? f.type : f.type ? "__custom" : ""} onChange={(e) => setF({ ...f, type: e.target.value === "__custom" ? f.type : e.target.value })} options={[...types.map((t) => ({ value: t, label: t })), ...(f.type && !types.includes(f.type) ? [{ value: "__custom", label: f.type }] : [])]} placeholder="—" /><Input className="mt-1" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} placeholder="or type…" /></Field>
+        <Field label="Type"><Select value={types.includes(f.type) ? f.type : f.type ? "__custom" : ""} onChange={(e) => setF({ ...f, type: e.target.value === "__custom" ? f.type : e.target.value })} options={[...types.map((t) => ({ value: t, label: t })), ...(f.type && !types.includes(f.type) ? [{ value: "__custom", label: f.type }] : [])]} placeholder="—" /><Input className="mt-1" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} /></Field>
         <Field label="Colour"><Input value={f.color} onChange={(e) => setF({ ...f, color: e.target.value })} /></Field>
         <Field label="Size"><Input value={f.size} onChange={(e) => setF({ ...f, size: e.target.value })} /></Field>
         <Field label="Brand"><Input value={f.brand} onChange={(e) => setF({ ...f, brand: e.target.value })} /></Field>
@@ -266,7 +266,7 @@ export function CostumeFormModal({ open, onClose, initial, onSaved, defaultChara
         {can(FINANCE_ROLES) && <Field label={`Purchase cost${inCurrency(currency)}`}><Input type="number" value={f.purchaseCost} onChange={(e) => setF({ ...f, purchaseCost: e.target.value })} /></Field>}
         {can(FINANCE_ROLES) && <Field label={`Rental / day${inCurrency(currency)}`}><Input type="number" value={f.rentalCostPerDay} onChange={(e) => setF({ ...f, rentalCostPerDay: e.target.value })} /></Field>}
         <Field label="Quantity"><Input type="number" min={1} value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} /></Field>
-        <Field label="Care instructions"><Input value={f.careInstructions} onChange={(e) => setF({ ...f, careInstructions: e.target.value })} placeholder="Cold wash, no bleach" /></Field>
+        <Field label="Care instructions"><Input value={f.careInstructions} onChange={(e) => setF({ ...f, careInstructions: e.target.value })} /></Field>
         <Field label="Notes" span2><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
         <Field label="Photos & video" span2 help="Shoot it now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={save.isPending} /></Field>
       </div>

@@ -87,7 +87,7 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
       <div className="col">
         {locked ? (<>
           <div className="grid grid-2">
-            {episodes && <Field label="Episode"><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} placeholder="Ep" /></Field>}
+            {episodes && <Field label="Episode"><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} /></Field>}
             {/* A row edits the scene it sits in, never which scene that is: the number is shown, not changed, here. */}
             <Field label="Scene #"><Input value={d.number} readOnly disabled aria-readonly title="The scene number can't be changed from a breakdown row" /></Field>
             {/* Day/Night and its number each carry a label, so a filled-in number still says what it is. */}
@@ -96,18 +96,18 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
                 <Field label="Script day"><Select value={d.dayPrefix} onChange={(e) => set({ dayPrefix: e.target.value })} options={DAY_PREFIXES} placeholder="—" humanizeLabels={false} /></Field>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <Field label="Day number"><Input value={d.dayN} onChange={(e) => set({ dayN: e.target.value })} placeholder="Day number, e.g. 3" inputMode="numeric" aria-label="Script day number" /></Field>
+                <Field label="Day number"><Input value={d.dayN} onChange={(e) => set({ dayN: e.target.value })} inputMode="numeric" aria-label="Script day number" /></Field>
               </div>
             </div>
             <Field label="Script location">
               <div className="row gap-1">
                 <Select value={d.intExt} onChange={(e) => set({ intExt: e.target.value })} options={intExtOptions} placeholder="—" humanizeLabels={false} style={{ width: 110 }} />
-                <Input list={LOCATION_LIST_ID} value={d.location} onChange={(e) => set({ location: e.target.value })} placeholder="Location" style={{ flex: 1 }} />
+                <Input list={LOCATION_LIST_ID} value={d.location} onChange={(e) => set({ location: e.target.value })} style={{ flex: 1 }} />
               </div>
             </Field>
             <Field label="Shoot date"><Input type="date" value={d.shootDate} onChange={(e) => set({ shootDate: e.target.value })} /></Field>
           </div>
-          <Field label="Scene description"><Textarea value={d.synopsis} onChange={(e) => set({ synopsis: e.target.value })} placeholder="Scene description" rows={3} /></Field>
+          <Field label="Scene description"><Textarea value={d.synopsis} onChange={(e) => set({ synopsis: e.target.value })} rows={3} /></Field>
           {/* The row is this character in this scene: tapping the name opens their page for the scene, not a picker. */}
           <Field label="Character" help="Opens the character's page for this scene">
             <Link to={`/p/${projectId}/characters/${af.characterId}/scenes/${af.sceneId}`} className="btn btn-block" style={{ justifyContent: "space-between" }}>

@@ -306,8 +306,8 @@ export function PhotoGrid({ photos, entityType, entityId, kinds, compact, attach
       <Modal open={linkOpen} onClose={() => setLinkOpen(false)} title="Add a link"
         footer={<><button className="btn" onClick={() => setLinkOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={!link.url.trim() || addLink.isPending} onClick={() => addLink.mutate()}>{addLink.isPending ? "Adding…" : "Add link"}</button></>}>
         <div className="col">
-          <Field label="Address" help="A shared drive folder, a mood board, a supplier page."><Input value={link.url} onChange={(e) => setLink({ ...link, url: e.target.value })} placeholder="https://drive.google.com/…" autoFocus /></Field>
-          <Field label="Title" help="Optional; the site name is used if you leave it blank."><Input value={link.title} onChange={(e) => setLink({ ...link, title: e.target.value })} placeholder="Reference board" /></Field>
+          <Field label="Address" help="A shared drive folder, a mood board, a supplier page."><Input value={link.url} onChange={(e) => setLink({ ...link, url: e.target.value })} autoFocus /></Field>
+          <Field label="Title" help="Optional; the site name is used if you leave it blank."><Input value={link.title} onChange={(e) => setLink({ ...link, title: e.target.value })} /></Field>
         </div>
       </Modal>
     </div>

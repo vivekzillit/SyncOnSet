@@ -105,7 +105,7 @@ export default function Characters() {
                 );
                 return numbering ? (
                   <div key={c.id} className="item">
-                    <Input type="number" min={0} step={1} className="mono" style={{ width: 78 }} placeholder="#" aria-label={`Cast number for ${c.name}`}
+                    <Input type="number" min={0} step={1} className="mono" style={{ width: 78 }} aria-label={`Cast number for ${c.name}`}
                       value={draft[c.id] ?? (c.castNumber != null ? String(c.castNumber) : "")}
                       onChange={(e) => setDraft({ ...draft, [c.id]: e.target.value })}
                       onBlur={() => commitCast(c)}
@@ -148,7 +148,7 @@ export default function Characters() {
           <Field label="Age"><Input type="number" value={cf.age} onChange={(e) => setCf({ ...cf, age: e.target.value })} /></Field>
           <Field label="Cast number" help="As on call sheets and sides"><Input type="number" value={cf.castNumber} onChange={(e) => setCf({ ...cf, castNumber: e.target.value })} /></Field>
           <Field label="Actor" span2><ActorSelect value={cf.actorId} onChange={(actorId) => setCf({ ...cf, actorId })} /></Field>
-          <Field label="Description" span2><Textarea value={cf.description} onChange={(e) => setCf({ ...cf, description: e.target.value })} placeholder="Look, palette, references…" /></Field>
+          <Field label="Description" span2><Textarea value={cf.description} onChange={(e) => setCf({ ...cf, description: e.target.value })} /></Field>
         </div>
         <ErrorBox error={createChar.error} />
       </Modal>
@@ -162,7 +162,7 @@ export default function Characters() {
           {MEASURES.map((m) => (
             <Field key={m} label={humanize(m)}><Input value={af.measurements[m] || ""} onChange={(e) => setAf({ ...af, measurements: { ...af.measurements, [m]: e.target.value } })} /></Field>
           ))}
-          <Field label="Notes" span2><Textarea value={af.notes} onChange={(e) => setAf({ ...af, notes: e.target.value })} placeholder="Allergies, preferences…" /></Field>
+          <Field label="Notes" span2><Textarea value={af.notes} onChange={(e) => setAf({ ...af, notes: e.target.value })} /></Field>
         </div>
         <ErrorBox error={createActor.error} />
       </Modal>

@@ -96,8 +96,8 @@ export default function FittingDetail() {
       <Modal open={!!alt} onClose={() => setAlt(null)} title="Alteration required" footer={<><button className="btn" onClick={() => setAlt(null)}>Cancel</button><button className="btn btn-primary" disabled={!alt?.issue || !alt?.required || setItem.isPending} onClick={() => alt && setItem.mutate({ costumeId: alt.costumeId, status: "ALTERATION_REQUIRED", notes: alt.issue, alteration: { issue: alt.issue, required: alt.required, deadline: alt.deadline || null } })}>Raise alteration</button></>}>
         {alt && (
           <div className="col">
-            <Field label="Issue"><Input value={alt.issue} onChange={(e) => setAlt({ ...alt, issue: e.target.value })} placeholder="Sleeves too long" autoFocus /></Field>
-            <Field label="Required"><Input value={alt.required} onChange={(e) => setAlt({ ...alt, required: e.target.value })} placeholder="Reduce 1.5 inch" /></Field>
+            <Field label="Issue"><Input value={alt.issue} onChange={(e) => setAlt({ ...alt, issue: e.target.value })} autoFocus /></Field>
+            <Field label="Required"><Input value={alt.required} onChange={(e) => setAlt({ ...alt, required: e.target.value })} /></Field>
             <Field label="Deadline"><Input type="datetime-local" value={alt.deadline} onChange={(e) => setAlt({ ...alt, deadline: e.target.value })} /></Field>
             <div className="subtle">The costume is sent to the tailor and marked unavailable until the alteration is complete.</div>
           </div>

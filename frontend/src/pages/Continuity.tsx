@@ -306,8 +306,8 @@ export default function ContinuityOnSet() {
                 <div className="col gap-1">
                   {f.details.map((d, i) => (
                     <div key={i} className="row gap-1">
-                      <Input value={d.k} onChange={(e) => edit({ details: f.details.map((x, j) => (j === i ? { ...x, k: e.target.value } : x)) })} placeholder="Sleeves" style={{ maxWidth: 140 }} />
-                      <Input value={d.v} onChange={(e) => edit({ details: f.details.map((x, j) => (j === i ? { ...x, v: e.target.value } : x)) })} placeholder="Rolled twice" />
+                      <Input value={d.k} onChange={(e) => edit({ details: f.details.map((x, j) => (j === i ? { ...x, k: e.target.value } : x)) })} style={{ maxWidth: 140 }} />
+                      <Input value={d.v} onChange={(e) => edit({ details: f.details.map((x, j) => (j === i ? { ...x, v: e.target.value } : x)) })} />
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => edit({ details: f.details.filter((_, j) => j !== i) })} aria-label="Remove detail"><Trash2 size={14} /></button>
                     </div>
                   ))}
@@ -319,7 +319,7 @@ export default function ContinuityOnSet() {
                   {f.accessories.map((a, i) => (
                     <div key={i} className="row gap-1">
                       <label className="check"><input type="checkbox" checked={a.present} onChange={(e) => edit({ accessories: f.accessories.map((x, j) => (j === i ? { ...x, present: e.target.checked } : x)) })} /></label>
-                      <Input value={a.name} onChange={(e) => edit({ accessories: f.accessories.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} placeholder="Watch" />
+                      <Input value={a.name} onChange={(e) => edit({ accessories: f.accessories.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} />
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => edit({ accessories: f.accessories.filter((_, j) => j !== i) })} aria-label="Remove accessory"><Trash2 size={14} /></button>
                     </div>
                   ))}
@@ -332,7 +332,7 @@ export default function ContinuityOnSet() {
               <Field label="Photos & videos" help="Shoot with the camera or pick from the gallery; they are saved with the take.">
                 <TakeMedia files={media} onChange={setMedia} disabled={create.isPending} />
               </Field>
-              <Field label="Notes"><Textarea value={f.notes} onChange={(e) => edit({ notes: e.target.value })} placeholder="Coffee spill at end of take…" /></Field>
+              <Field label="Notes"><Textarea value={f.notes} onChange={(e) => edit({ notes: e.target.value })} /></Field>
             </div>
             <ErrorBox error={create.error} />
           </Card>

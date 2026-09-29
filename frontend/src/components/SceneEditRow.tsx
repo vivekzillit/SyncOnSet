@@ -205,7 +205,7 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
     const problem = castNumberProblem(castNumberOf(c));
     // Deliberately not type="number": that hands back an empty string for anything it cannot parse,
     // which would read as "clear this cast number", and a stray scroll wheel would retype it.
-    return <Input value={castNumberOf(c)} onChange={(e) => setCast(c, { castNumber: e.target.value })} disabled={busy} inputMode="numeric" pattern="[0-9]*" className="mono" placeholder="#" aria-label={`Cast number for ${c.name}`} aria-invalid={!!problem} title={problem || undefined} style={{ width: 72, borderColor: problem ? "var(--danger)" : undefined }} />;
+    return <Input value={castNumberOf(c)} onChange={(e) => setCast(c, { castNumber: e.target.value })} disabled={busy} inputMode="numeric" pattern="[0-9]*" className="mono" aria-label={`Cast number for ${c.name}`} aria-invalid={!!problem} title={problem || undefined} style={{ width: 72, borderColor: problem ? "var(--danger)" : undefined }} />;
   };
   const actorInput = (c: Character) => <ActorSelect value={actorOf(c)} onChange={(actorId) => setCast(c, { actorId })} disabled={busy} label={`Actor for ${c.name}`} quick />;
   const castProblemNote = castProblem && <div className="tiny" style={{ color: "var(--danger)", marginTop: 2 }}>{castProblem}</div>;
@@ -226,27 +226,27 @@ export function EditRow({ d, onChange, meta, isNew, onSave, onCancel, busy, onPr
       {/* The split view keeps a row's own buttons at its left edge, where the pencil and ✕ are read. */}
       {split && <td rowSpan={span} style={top} className="nowrap">{saveCancel}</td>}
       <td rowSpan={span} style={top} />
-      {episodes && <td rowSpan={span} style={top}><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} placeholder="Ep" disabled={busy} style={{ minWidth: 64, maxWidth: 84 }} /></td>}
+      {episodes && <td rowSpan={span} style={top}><Input value={d.episode} onChange={(e) => set({ episode: e.target.value })} disabled={busy} style={{ minWidth: 64, maxWidth: 84 }} /></td>}
       <td rowSpan={span} style={top}>
         {/* A scene keeps its number: it is what the script, schedule and call sheets match on. Only a new scene takes one here. */}
         {isNew
-          ? <Input value={d.number} onChange={(e) => set({ number: e.target.value })} placeholder="Scene #" autoFocus disabled={busy} aria-invalid={!!error} title={error} style={{ minWidth: 84, maxWidth: 110, borderColor: error ? "var(--danger)" : undefined }} />
+          ? <Input value={d.number} onChange={(e) => set({ number: e.target.value })} autoFocus disabled={busy} aria-invalid={!!error} title={error} style={{ minWidth: 84, maxWidth: 110, borderColor: error ? "var(--danger)" : undefined }} />
           : <span className="bold mono" style={{ display: "inline-block", minWidth: 48, padding: "8px 0" }} title="The scene number cannot be changed">{d.number}</span>}
         {error && <div className="tiny" style={{ color: "var(--danger)", marginTop: 2 }}>{error}</div>}
       </td>
       <td rowSpan={span} style={top}>
         <div className="row gap-1" style={{ minWidth: 168 }}>
           <Select value={d.dayPrefix} onChange={(e) => set({ dayPrefix: e.target.value })} options={DAY_PREFIXES} placeholder="—" humanizeLabels={false} disabled={busy} style={{ width: 96 }} />
-          <Input value={d.dayN} onChange={(e) => set({ dayN: e.target.value })} placeholder="No." title="Script day number" aria-label="Script day number" inputMode="numeric" pattern="[0-9A-Za-z]*" disabled={busy} style={{ width: 66 }} />
+          <Input value={d.dayN} onChange={(e) => set({ dayN: e.target.value })} title="Script day number" aria-label="Script day number" inputMode="numeric" pattern="[0-9A-Za-z]*" disabled={busy} style={{ width: 66 }} />
         </div>
       </td>
       <td rowSpan={span} style={top}>
         <div className="row gap-1" style={{ minWidth: 250 }}>
           <Select value={d.intExt} onChange={(e) => set({ intExt: e.target.value })} options={intExtOptions} placeholder="—" humanizeLabels={false} disabled={busy} style={{ width: 104 }} />
-          <Input list={LOCATION_LIST_ID} value={d.location} onChange={(e) => set({ location: e.target.value })} placeholder="Location" disabled={busy} style={{ minWidth: 140 }} />
+          <Input list={LOCATION_LIST_ID} value={d.location} onChange={(e) => set({ location: e.target.value })} disabled={busy} style={{ minWidth: 140 }} />
         </div>
       </td>
-      <td rowSpan={span} style={top}><Input value={d.synopsis} onChange={(e) => set({ synopsis: e.target.value })} placeholder="Scene description" disabled={busy} style={{ minWidth: 220 }} /></td>
+      <td rowSpan={span} style={top}><Input value={d.synopsis} onChange={(e) => set({ synopsis: e.target.value })} disabled={busy} style={{ minWidth: 220 }} /></td>
     </>
   );
   const tailCells = (

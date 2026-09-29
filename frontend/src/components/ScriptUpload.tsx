@@ -193,7 +193,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
             : <div className="notice">{kept} scene{kept === 1 ? " is" : "s are"} set to keep, so nothing is wiped: the rest are matched by number and updated in place.</div>)}
           {result.warnings.map((w, i) => <div key={i} className="notice">{w}</div>)}
           <div className="row gap-2 wrap">
-            <div className="field" style={{ minWidth: 260 }}><label>Revision name</label><Input value={revision} onChange={(e) => setRevision(e.target.value)} placeholder='e.g. "Blue 2026-09-08"' /><span className="help">Stamped on new and changed scenes. Use the colour and script date so the team can tell drafts apart.</span></div>
+            <div className="field" style={{ minWidth: 260 }}><label>Revision name</label><Input value={revision} onChange={(e) => setRevision(e.target.value)} /><span className="help">Stamped on new and changed scenes. Use the colour and script date so the team can tell drafts apart.</span></div>
             <div className="notice ok grow" style={{ alignSelf: "stretch" }}>{newScenes} new · {updates} updated · {unchanged} unchanged scene{included.length === 1 ? "" : "s"}{kept ? ` · ${kept} kept as they are` : ""}{editedCount ? ` · ${editedCount} corrected by hand` : ""}. Characters: {newChars.length} new{ignored ? `, ${ignored} ignored` : ""}. Nothing is ever deleted by an upload.</div>
           </div>
           <div className="tabs" style={{ marginBottom: 4 }}>
@@ -263,11 +263,11 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
                           <div className="scene-edit-grid">
                             {/* The server takes these two as fixed lists, so they are chosen rather than typed. */}
                             <Field label="INT / EXT"><Select value={edit.intExt || ""} onChange={(e) => editField(s.number, { intExt: e.target.value || null })} options={meta?.intExt || ["INT", "EXT", "INT/EXT"]} placeholder="—" humanizeLabels={false} aria-label={`INT/EXT for scene ${s.number}`} /></Field>
-                            <Field label="Location"><Input value={edit.location || ""} onChange={(e) => editField(s.number, { location: e.target.value })} placeholder="Location" aria-label={`Location for scene ${s.number}`} /></Field>
+                            <Field label="Location"><Input value={edit.location || ""} onChange={(e) => editField(s.number, { location: e.target.value })} aria-label={`Location for scene ${s.number}`} /></Field>
                             <Field label="Time of day"><Select value={edit.timeOfDay || ""} onChange={(e) => editField(s.number, { timeOfDay: e.target.value || null })} options={meta?.timesOfDay || []} placeholder="—" aria-label={`Time of day for scene ${s.number}`} /></Field>
-                            <Field label="Script day"><Input value={edit.scriptDay || ""} onChange={(e) => editField(s.number, { scriptDay: e.target.value })} placeholder="Day 1" aria-label={`Script day for scene ${s.number}`} /></Field>
-                            <Field label="Pages"><Input value={edit.pages || ""} onChange={(e) => editField(s.number, { pages: e.target.value })} placeholder="1/8" className="mono" aria-label={`Pages for scene ${s.number}`} /></Field>
-                            <div className="scene-edit-synopsis"><Field label="Synopsis"><Textarea value={edit.synopsis || ""} onChange={(e) => editField(s.number, { synopsis: e.target.value })} placeholder="Synopsis" rows={2} aria-label={`Synopsis for scene ${s.number}`} /></Field></div>
+                            <Field label="Script day"><Input value={edit.scriptDay || ""} onChange={(e) => editField(s.number, { scriptDay: e.target.value })} aria-label={`Script day for scene ${s.number}`} /></Field>
+                            <Field label="Pages"><Input value={edit.pages || ""} onChange={(e) => editField(s.number, { pages: e.target.value })} className="mono" aria-label={`Pages for scene ${s.number}`} /></Field>
+                            <div className="scene-edit-synopsis"><Field label="Synopsis"><Textarea value={edit.synopsis || ""} onChange={(e) => editField(s.number, { synopsis: e.target.value })} rows={2} aria-label={`Synopsis for scene ${s.number}`} /></Field></div>
                           </div>
                         </td>
                       </tr>

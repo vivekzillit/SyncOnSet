@@ -96,8 +96,8 @@ export default function Alterations() {
       <Modal open={open} onClose={closeForm} title="Alteration request" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-primary" disabled={!f.costume || !f.issue || !f.required || create.isPending} onClick={() => create.mutate()}>Request</button></>}>
         <div className="form-grid">
           <Field label="Costume" span2>{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
-          <Field label="Issue" span2><Input value={f.issue} onChange={(e) => setF({ ...f, issue: e.target.value })} placeholder="Sleeves too long" /></Field>
-          <Field label="Required" span2><Input value={f.required} onChange={(e) => setF({ ...f, required: e.target.value })} placeholder="Reduce 1.5 inch" /></Field>
+          <Field label="Issue" span2><Input value={f.issue} onChange={(e) => setF({ ...f, issue: e.target.value })} /></Field>
+          <Field label="Required" span2><Input value={f.required} onChange={(e) => setF({ ...f, required: e.target.value })} /></Field>
           <Field label="Tailor"><Input value={f.tailorName} onChange={(e) => setF({ ...f, tailorName: e.target.value })} /></Field>
           <Field label="Priority"><Select value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })} options={meta?.priorities || []} /></Field>
           <Field label="Deadline" span2><Input type="datetime-local" value={f.deadline} onChange={(e) => setF({ ...f, deadline: e.target.value })} /></Field>

@@ -99,7 +99,7 @@ export default function Missing() {
       <Modal open={open} onClose={closeForm} title="Report missing" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-danger" disabled={!f.costume || create.isPending} onClick={() => create.mutate()}>Report</button></>}>
         <div className="col">
           <Field label="Costume">{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
-          <Field label="Last seen location"><Input value={f.lastSeenLocation} onChange={(e) => setF({ ...f, lastSeenLocation: e.target.value })} placeholder="Set B" /></Field>
+          <Field label="Last seen location"><Input value={f.lastSeenLocation} onChange={(e) => setF({ ...f, lastSeenLocation: e.target.value })} /></Field>
           <Field label="Last assigned to"><Input value={f.lastAssignedTo} onChange={(e) => setF({ ...f, lastAssignedTo: e.target.value })} /></Field>
           <Field label="Notes"><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
           <Field label="Photos & video" help="Shoot it now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>

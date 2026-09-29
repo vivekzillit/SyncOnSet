@@ -254,7 +254,7 @@ export default function Budget() {
           <Field label="Pay to" help="Who the line pays: a crew member or supplier"><Input value={f.payee} onChange={(e) => setF({ ...f, payee: e.target.value })} /></Field>
           <Field label="Category" help={ownCategory ? "Type the name this production uses" : undefined}>
             <Select value={ownCategory ? OTHER : f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={cats} />
-            {ownCategory && <Input className="mt-1" value={f.category === OTHER ? "" : humanize(f.category)} onChange={(e) => setF({ ...f, category: e.target.value.trim() ? e.target.value : OTHER })} placeholder="Consumables, petty cash…" aria-label="New category name" />}
+            {ownCategory && <Input className="mt-1" value={f.category === OTHER ? "" : humanize(f.category)} onChange={(e) => setF({ ...f, category: e.target.value.trim() ? e.target.value : OTHER })} aria-label="New category name" />}
           </Field>
           <div className="span-2">
             <div className="row gap-1 wrap" style={{ alignItems: "flex-end" }}>

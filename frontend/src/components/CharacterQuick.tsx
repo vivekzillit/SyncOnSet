@@ -35,7 +35,7 @@ export function NewCharacterModal({ open, onClose, onCreated }: { open: boolean;
     <Modal open={open} onClose={onClose} title="New character"
       footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!f.name.trim() || bad || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Adding…" : "Add"}</button></>}>
       <div className="form-grid">
-        <Field label="Name" span2><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Inspector Pandey" autoFocus /></Field>
+        <Field label="Name" span2><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoFocus /></Field>
         <Field label="Type"><Select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} options={meta?.characterTypes || []} /></Field>
         <Field label="Cast number" help="As on call sheets and sides"><Input value={f.castNumber} onChange={(e) => setF({ ...f, castNumber: e.target.value })} inputMode="numeric" className="mono" aria-invalid={bad} /></Field>
       </div>

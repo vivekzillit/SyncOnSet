@@ -85,10 +85,10 @@ export function CharacterConfirmation({ rows, onChange, detected, existing }: { 
               return (
                 // Rows are only ever appended, and deleting flags rather than removes, so the index is a stable key.
                 <tr key={i} style={{ opacity: r.deleted ? 0.45 : 1 }}>
-                  <td>{r.deleted ? <span className="subtle">—</span> : <Input type="number" min={0} step={1} placeholder="#" value={r.castNumber} onChange={(e) => set(i, { castNumber: e.target.value })} style={numStyle} className="mono" />}</td>
+                  <td>{r.deleted ? <span className="subtle">—</span> : <Input type="number" min={0} step={1} value={r.castNumber} onChange={(e) => set(i, { castNumber: e.target.value })} style={numStyle} className="mono" />}</td>
                   <td>
                     {r.manual && !r.deleted
-                      ? <Input value={r.name} onChange={(e) => set(i, { name: e.target.value })} placeholder="Character name" style={{ minHeight: 34, padding: "4px 8px" }} autoFocus />
+                      ? <Input value={r.name} onChange={(e) => set(i, { name: e.target.value })} style={{ minHeight: 34, padding: "4px 8px" }} autoFocus />
                       : <span className="bold" style={{ textDecoration: r.deleted ? "line-through" : undefined }}>{r.name.toUpperCase() || "—"}</span>}
                     {ex && !r.deleted && <span className="subtle tiny"> · existing{ex.castNumber != null ? ` #${ex.castNumber}` : ""}</span>}
                   </td>

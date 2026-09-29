@@ -76,8 +76,8 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
       <Modal open={open} onClose={onClose} title="Create Actor"
         footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!f.first.trim() || save.isPending} onClick={create}>{save.isPending ? "Creating…" : saveLabel || "Create"}</button></>}>
         <div className="form-grid" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); create(); } }}>
-          <Field label="First name"><Input value={f.first} onChange={(e) => setF({ ...f, first: e.target.value })} placeholder="First Name" autoFocus /></Field>
-          <Field label="Last name"><Input value={f.last} onChange={(e) => setF({ ...f, last: e.target.value })} placeholder="Last Name" /></Field>
+          <Field label="First name"><Input value={f.first} onChange={(e) => setF({ ...f, first: e.target.value })} autoFocus /></Field>
+          <Field label="Last name"><Input value={f.last} onChange={(e) => setF({ ...f, last: e.target.value })} /></Field>
         </div>
         <ErrorBox error={save.error} />
       </Modal>
@@ -88,10 +88,10 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
     <Modal open={open} onClose={onClose} title={editing ? "Edit Actor" : "Create Actor"} wide
       footer={<><button className="btn" onClick={onClose}>Cancel</button>{!editing && allowAddAnother && <button className="btn" disabled={!f.first.trim() || save.isPending} onClick={() => { setAddAnother(true); save.mutate(); }} title="Create and add another">Create +</button>}<button className="btn btn-primary" disabled={!f.first.trim() || save.isPending} onClick={() => { setAddAnother(false); save.mutate(); }}>{editing ? "Save" : saveLabel || "Create"}</button></>}>
       <div className="form-grid">
-        <Field label="Name"><div className="row gap-1"><Input value={f.first} onChange={(e) => setF({ ...f, first: e.target.value })} placeholder="First Name" autoFocus /><Input value={f.last} onChange={(e) => setF({ ...f, last: e.target.value })} placeholder="Last Name" /></div></Field>
-        <Field label="Phone"><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="Phone" /></Field>
-        <Field label="Gender / Age"><div className="row gap-1"><Select value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })} options={meta?.genders || ["FEMALE", "MALE", "NON_BINARY", "OTHER"]} placeholder="Select" /><Input type="number" value={f.age} onChange={(e) => setF({ ...f, age: e.target.value })} placeholder="Age" style={{ width: 90 }} /></div></Field>
-        <Field label="Phone 2"><Input value={f.phone2} onChange={(e) => setF({ ...f, phone2: e.target.value })} placeholder="Phone 2" /></Field>
+        <Field label="Name"><div className="row gap-1"><Input value={f.first} onChange={(e) => setF({ ...f, first: e.target.value })} autoFocus /><Input value={f.last} onChange={(e) => setF({ ...f, last: e.target.value })} /></div></Field>
+        <Field label="Phone"><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
+        <Field label="Gender / Age"><div className="row gap-1"><Select value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })} options={meta?.genders || ["FEMALE", "MALE", "NON_BINARY", "OTHER"]} placeholder="Select" /><Input type="number" value={f.age} onChange={(e) => setF({ ...f, age: e.target.value })} style={{ width: 90 }} /></div></Field>
+        <Field label="Phone 2"><Input value={f.phone2} onChange={(e) => setF({ ...f, phone2: e.target.value })} /></Field>
         {forCharacter ? (
           <Field label="Character" help="This actor is being added for this character">
             <label className="check" style={{ padding: "3px 4px" }}><input type="checkbox" checked disabled /> {charLabel(forCharacter)}</label>
@@ -103,13 +103,13 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
           </div>
           {can(MANAGER_ROLES) && <button type="button" className="btn btn-sm mt-1" onClick={() => setCharOpen(true)}><Plus size={14} /> Add character</button>}
         </Field>}
-        <Field label="Email"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="Email" /></Field>
-        <Field label="Notes"><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="Notes" rows={3} /></Field>
-        <Field label="Email 2"><Input type="email" value={f.email2} onChange={(e) => setF({ ...f, email2: e.target.value })} placeholder="Email 2" /></Field>
+        <Field label="Email"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
+        <Field label="Notes"><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} rows={3} /></Field>
+        <Field label="Email 2"><Input type="email" value={f.email2} onChange={(e) => setF({ ...f, email2: e.target.value })} /></Field>
         <Field label="Next Costume Fitting"><Input type="datetime-local" value={f.nextFittingAt} onChange={(e) => setF({ ...f, nextFittingAt: e.target.value })} /></Field>
         <Field label="Start Work Date"><Input type="date" value={f.startWorkDate} onChange={(e) => setF({ ...f, startWorkDate: e.target.value })} /></Field>
-        <Field label="Comment"><Input value={f.fittingComment} onChange={(e) => setF({ ...f, fittingComment: e.target.value })} placeholder="Fitting Comment" /></Field>
-        <Field label="Agency"><Input value={f.agency} onChange={(e) => setF({ ...f, agency: e.target.value })} placeholder="Agency" /></Field>
+        <Field label="Comment"><Input value={f.fittingComment} onChange={(e) => setF({ ...f, fittingComment: e.target.value })} /></Field>
+        <Field label="Agency"><Input value={f.agency} onChange={(e) => setF({ ...f, agency: e.target.value })} /></Field>
         <div />
         <div className="span-2 row between" style={{ marginTop: 4 }}>
           <span className="bold small">Measurements</span>
@@ -129,9 +129,9 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
           <span className="bold small">Talent representative</span>
           <button type="button" className="btn btn-sm" onClick={() => setRep([...f.talentRepDetails, { label: "", value: "" }])}><Plus size={14} /> Add more</button>
         </div>
-        <Field label="Name"><Input value={f.talentRep} onChange={(e) => setF({ ...f, talentRep: e.target.value })} placeholder="Representative's name" /></Field>
-        <Field label="Email"><Input type="email" value={f.talentRepEmail} onChange={(e) => setF({ ...f, talentRepEmail: e.target.value })} placeholder="Representative's email" /></Field>
-        <Field label="Phone"><Input value={f.talentRepPhone} onChange={(e) => setF({ ...f, talentRepPhone: e.target.value })} placeholder="Representative's phone" /></Field>
+        <Field label="Name"><Input value={f.talentRep} onChange={(e) => setF({ ...f, talentRep: e.target.value })} /></Field>
+        <Field label="Email"><Input type="email" value={f.talentRepEmail} onChange={(e) => setF({ ...f, talentRepEmail: e.target.value })} /></Field>
+        <Field label="Phone"><Input value={f.talentRepPhone} onChange={(e) => setF({ ...f, talentRepPhone: e.target.value })} /></Field>
         <div />
         {/* Anything else about the rep (agency office, assistant, notes), named by the user like a character's More details. */}
         {f.talentRepDetails.map((d, i) => (
@@ -149,7 +149,7 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
           <Field label="Type"><Select value={cf.type} onChange={(e) => setCf({ ...cf, type: e.target.value })} options={meta?.characterTypes || []} /></Field>
           <Field label="Age"><Input type="number" value={cf.age} onChange={(e) => setCf({ ...cf, age: e.target.value })} /></Field>
           <Field label="Cast number" span2 help="As on call sheets and sides"><Input type="number" value={cf.castNumber} onChange={(e) => setCf({ ...cf, castNumber: e.target.value })} /></Field>
-          <Field label="Description" span2><Textarea value={cf.description} onChange={(e) => setCf({ ...cf, description: e.target.value })} placeholder="Look, palette, references…" /></Field>
+          <Field label="Description" span2><Textarea value={cf.description} onChange={(e) => setCf({ ...cf, description: e.target.value })} /></Field>
         </div>
         <ErrorBox error={createCharacter.error} />
       </Modal>

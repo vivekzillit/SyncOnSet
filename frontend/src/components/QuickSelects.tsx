@@ -46,9 +46,9 @@ export function NewSceneModal({ open, onClose, onCreated }: { open: boolean; onC
     <Modal open={open} onClose={onClose} title="New scene"
       footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={!f.number.trim() || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Adding…" : "Add"}</button></>}>
       <div className="form-grid">
-        <Field label="Scene #"><Input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="e.g. 47A" autoFocus /></Field>
+        <Field label="Scene #"><Input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} autoFocus /></Field>
         <Field label="INT / EXT"><Select value={f.intExt} onChange={(e) => setF({ ...f, intExt: e.target.value })} options={meta?.intExt || ["INT", "EXT", "INT/EXT"]} placeholder="—" humanizeLabels={false} /></Field>
-        <Field label="Location"><Input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} placeholder="Comfort House - Kitchen" /></Field>
+        <Field label="Location"><Input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></Field>
         <Field label="Time of day"><Select value={f.timeOfDay} onChange={(e) => setF({ ...f, timeOfDay: e.target.value })} options={meta?.timesOfDay || []} placeholder="—" /></Field>
         <Field label="Description" span2><Textarea value={f.synopsis} onChange={(e) => setF({ ...f, synopsis: e.target.value })} rows={2} /></Field>
       </div>

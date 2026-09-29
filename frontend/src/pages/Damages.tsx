@@ -91,7 +91,7 @@ export default function Damages() {
       <Modal open={open} onClose={closeForm} title="Report damage" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-danger" disabled={!f.costume || !f.description || create.isPending} onClick={() => create.mutate()}>Report</button></>}>
         <div className="form-grid">
           <Field label="Costume" span2>{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
-          <Field label="Damage" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Torn sleeve" /></Field>
+          <Field label="Damage" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
           <Field label="Scene"><SceneSelect value={f.sceneId} onChange={(sceneId) => setF({ ...f, sceneId })} /></Field>
           <Field label="Take"><Input type="number" value={f.takeNumber} onChange={(e) => setF({ ...f, takeNumber: e.target.value })} /></Field>
           {can(FINANCE_ROLES) && <Field label={`Estimated repair${inCurrency(currency)}`}><Input type="number" value={f.estimatedRepairCost} onChange={(e) => setF({ ...f, estimatedRepairCost: e.target.value })} /></Field>}

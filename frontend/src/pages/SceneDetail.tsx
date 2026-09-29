@@ -190,7 +190,7 @@ export default function SceneDetail() {
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit scene" footer={<><button className="btn" onClick={() => setEditOpen(false)}>Cancel</button><button className="btn btn-primary" disabled={update.isPending} onClick={() => update.mutate()}>Save</button></>}>
         <div className="form-grid">
           <Field label="Scene number"><Input value={form.number} readOnly disabled aria-readonly title="The scene number cannot be changed" /></Field>
-          {episodes && <Field label="Episode"><Input value={form.episode || ""} onChange={(e) => setForm({ ...form, episode: e.target.value })} placeholder="101" /></Field>}
+          {episodes && <Field label="Episode"><Input value={form.episode || ""} onChange={(e) => setForm({ ...form, episode: e.target.value })} /></Field>}
           <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
           <Field label="Location"><Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
           <Field label="Script day"><Input value={form.scriptDay} onChange={(e) => setForm({ ...form, scriptDay: e.target.value })} /></Field>
