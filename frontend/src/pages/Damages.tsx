@@ -104,7 +104,7 @@ export default function Damages() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · damage"
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title={chase?.entityId ? "Send a request · this damage" : "Send a reminder request · damage"}
         defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="DAMAGE" entityId={chase?.entityId} />
     </div>
   );

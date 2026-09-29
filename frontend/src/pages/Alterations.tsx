@@ -109,7 +109,7 @@ export default function Alterations() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} filter={(c) => !["ALTERATION", "CLEANING", "MISSING"].includes(c.status)} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · alterations"
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title={chase?.entityId ? "Send a request · this alteration" : "Send a reminder request · alterations"}
         defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="ALTERATION" entityId={chase?.entityId} />
     </div>
   );

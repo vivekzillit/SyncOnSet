@@ -110,7 +110,7 @@ export default function Missing() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => { setF({ ...f, costume: c, lastSeenLocation: c.location }); }} filter={(c) => c.status !== "MISSING"} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · missing"
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title={chase?.entityId ? "Send a request · this missing piece" : "Send a reminder request · missing"}
         defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="MISSING" entityId={chase?.entityId} />
     </div>
   );

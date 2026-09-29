@@ -25,13 +25,15 @@ export default function Fittings() {
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
   const [open, setOpen] = useState(false);
   /** The message a call starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
-  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
+  const [chase, setChase] = useState<{ title: string; body: string; entityId?: string } | null>(null);
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ characterId: string; scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] });
   const [media, setMedia] = useState<File[]>([]);
   const [newChar, setNewChar] = useState(false);
   const [showChar, setShowChar] = useState(false);
   const createdId = useRef<string | null>(null);
+  /** Set by "Schedule & send": once the fitting is booked, the Send request dialog opens about it. */
+  const sendAfter = useRef(false);
   /** Closing drops what was picked, so it can never ride along to the next fitting. */
   const closeForm = () => { setOpen(false); setMedia([]); setShowChar(false); createdId.current = null; };
   const create = useMutation({
@@ -40,8 +42,9 @@ export default function Fittings() {
     mutationFn: async () => {
       if (!createdId.current) createdId.current = (await api<Fitting>(p(projectId, "/fittings"), { body: { characterId: f.characterId, scheduledAt: f.scheduledAt || new Date().toISOString(), location: f.location || null, notes: f.notes || null, costumeIds: f.costumes.map((c) => c.id) } })).id;
       await attachMedia({ projectId, entityType: "FITTING", entityId: createdId.current, files: media, kind: "REFERENCE", keep: setMedia, savedNote: "The fitting is saved — press Schedule again to attach what is left." });
+      return createdId.current;
     },
-    onSuccess: () => { createdId.current = null; qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeForm(); setF({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
+    onSuccess: (id) => { createdId.current = null; if (sendAfter.current && id) { const ch = characters?.find((c) => c.id === f.characterId); const when = f.scheduledAt || new Date().toISOString(); setChase({ title: `Fitting · ${ch?.name || "Character"}`.slice(0, 160), body: `Fitting for ${ch?.name || "the character"}${ch?.actor ? ` (${ch.actor.name})` : ""} on ${fmtDate(when)} at ${fmtTime(when)}${f.location ? `, ${f.location}` : ""}.${f.costumes.length ? `\nPieces: ${f.costumes.map((c) => `${c.assetNumber} ${c.name}`).join(", ")}` : ""}${f.notes ? `\n${f.notes}` : ""}\n\nPlease confirm you can make it.`, entityId: id }); } sendAfter.current = false; qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeForm(); setF({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
   const list = (data || []).filter((x) => (!status || x.status === status) && matches(q, x.character.name, x.actor?.name, x.location));
   // The call covers every fitting still open — not what the filters are showing. What is still to come leads,
@@ -90,7 +93,7 @@ export default function Fittings() {
           </div>
         )}
       </Card>
-      <Modal open={open} onClose={closeForm} title="Schedule fitting" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-primary" disabled={!f.characterId || create.isPending} onClick={() => create.mutate()}>Schedule</button></>}>
+      <Modal open={open} onClose={closeForm} title="Schedule fitting" footer={<><button className="btn" onClick={closeForm}>Cancel</button>{can(REQUEST_ROLES) && <button className="btn" disabled={!f.characterId || create.isPending} onClick={() => { sendAfter.current = true; create.mutate(); }} title="Book it, then send a request about it"><Megaphone size={15} /> Schedule & send</button>}<button className="btn btn-primary" disabled={!f.characterId || create.isPending} onClick={() => { sendAfter.current = false; create.mutate(); }}>Schedule</button></>}>
         <div className="form-grid">
           {/* Somebody the script reader missed can be added from here rather than on another page. */}
           <Field label="Character" span2>
@@ -121,8 +124,8 @@ export default function Fittings() {
       </Modal>
       <NewCharacterModal open={newChar} onClose={() => setNewChar(false)} onCreated={(c) => setF({ ...f, characterId: c.id, costumes: [] })} />
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costumes: f.costumes.some((x) => x.id === c.id) ? f.costumes : [...f.costumes, c] })} characterId={f.characterId || null} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · fittings"
-        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="FITTING" />
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title={chase?.entityId ? "Send a request · this fitting" : "Send a reminder request · fittings"}
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="FITTING" entityId={chase?.entityId} />
     </div>
   );
 }

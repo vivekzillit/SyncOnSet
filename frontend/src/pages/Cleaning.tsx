@@ -140,7 +140,7 @@ export default function Cleaning() {
         <ErrorBox error={create.error} />
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} filter={(c) => c.status !== "CLEANING"} />
-      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a reminder request · cleaning"
+      <SendRequestModal open={!!chase} onClose={() => setChase(null)} title={chase?.entityId ? "Send a request · this ticket" : "Send a reminder request · cleaning"}
         defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="CLEANING" entityId={chase?.entityId} />
     </div>
   );
