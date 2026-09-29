@@ -246,7 +246,8 @@ export default function Budget() {
           <Field label="Account code" help="Picking a known code fills the name"><Input list={ACCOUNT_LIST_ID} value={f.accountCode} onChange={(e) => setCode(e.target.value)} className="mono" /></Field>
           <Field label="Account name"><Input value={f.accountName} onChange={(e) => setF({ ...f, accountName: e.target.value })} /></Field>
           <Field label="Description" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
-          <Field label="Name" help="Who the line pays: a crew member or supplier"><Input value={f.payee} onChange={(e) => setF({ ...f, payee: e.target.value })} /></Field>
+          <Field label="Character"><CharacterSelect value={f.characterId} onChange={(characterId) => setF({ ...f, characterId })} /></Field>
+          <Field label="Pay to" help="Who the line pays: a crew member or supplier"><Input value={f.payee} onChange={(e) => setF({ ...f, payee: e.target.value })} /></Field>
           <Field label="Category"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={cats} /></Field>
           <div className="span-2">
             <div className="row gap-1 wrap" style={{ alignItems: "flex-end" }}>
@@ -263,7 +264,6 @@ export default function Budget() {
             </div>
           </div>
           <Field label="Scene"><SceneSelect value={f.sceneId} onChange={(sceneId) => setF({ ...f, sceneId })} /></Field>
-          <Field label="Character"><CharacterSelect value={f.characterId} onChange={(characterId) => setF({ ...f, characterId })} /></Field>
           <Field label="Vendor"><VendorSelect value={f.vendorId} onChange={(vendorId) => setF({ ...f, vendorId })} /></Field>
           <Field label="Date"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
         </div>
