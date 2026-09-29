@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
 import type { Actor, Character, Costume, Photo } from "@/api/types";
 import { ErrorBox, Field, Input, Modal, Select, Spinner, useToast } from "@/components/ui";
 import { ActorSelect, CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
-import { ActorModal } from "@/components/ActorModal";
+import { ActorModal, type ActorRow } from "@/components/ActorModal";
 
 /** The option that stands for "this person is not on the list yet" wherever characters are picked. */
 export const NEW_CHARACTER = "__new_character__";
@@ -55,9 +55,12 @@ export function CharacterQuickPanel({ characterId }: { characterId: string }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [actorOpen, setActorOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
   const canEdit = can(MANAGER_ROLES);
   const { data: ch, isLoading } = useQuery({ queryKey: ["character", characterId], queryFn: () => api<Detail>(p(projectId, `/characters/${characterId}`)), enabled: !!characterId });
+  // The full actor record (characters, measurements, rep) comes from the actors list the dropdown already loads.
+  const { data: actors } = useQuery({ queryKey: ["actors", projectId], queryFn: () => api<ActorRow[]>(p(projectId, "/actors")), enabled: !!characterId });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["character", characterId] }); qc.invalidateQueries({ queryKey: ["characters", projectId] }); };
   const setActor = useMutation({
     mutationFn: (actorId: string | null) => api(p(projectId, `/characters/${characterId}`), { method: "PATCH", body: { actorId } }),
@@ -71,13 +74,17 @@ export function CharacterQuickPanel({ characterId }: { characterId: string }) {
   });
 
   if (!characterId) return <div className="subtle">Pick a character first.</div>;
+  const currentActor = ch?.actor ? (actors || []).find((a) => a.id === ch.actor!.id) || null : null;
   if (isLoading || !ch) return <Spinner />;
   return (
     <div className="col gap-2">
       <Field label="Actor & measurements">
         <div className="row gap-1 wrap">
           <div style={{ minWidth: 200, flex: 1 }}><ActorSelect value={ch.actor?.id || ""} onChange={(id) => setActor.mutate(id || null)} label={`Actor for ${ch.name}`} /></div>
-          {canEdit && <button type="button" className="btn btn-sm" onClick={() => setActorOpen(true)}><Plus size={14} /> Add actor</button>}
+          {/* Nobody cast: add one. Somebody cast: edit them, with their details already filled in. */}
+          {canEdit && (ch.actor
+            ? <button type="button" className="btn btn-sm" disabled={!currentActor} onClick={() => setEditOpen(true)}><Pencil size={14} /> Edit</button>
+            : <button type="button" className="btn btn-sm" onClick={() => setActorOpen(true)}><Plus size={14} /> Add actor</button>)}
         </div>
       </Field>
       <Field label="References">
@@ -89,6 +96,7 @@ export function CharacterQuickPanel({ characterId }: { characterId: string }) {
       </Field>
 
       <ActorModal open={actorOpen} onClose={() => setActorOpen(false)} onSaved={(a) => setActor.mutate(a.id)} allowAddAnother={false} saveLabel="Create & cast" forCharacter={ch} />
+      <ActorModal open={editOpen} onClose={() => setEditOpen(false)} editing={currentActor} onSaved={refresh} />
       <CostumePicker open={pickOpen} onClose={() => setPickOpen(false)} title={`Pick a piece for ${ch.name}`} filter={(c) => c.characterId !== ch.id} onPick={(c) => tagPiece.mutate(c.id)} />
     </div>
   );
