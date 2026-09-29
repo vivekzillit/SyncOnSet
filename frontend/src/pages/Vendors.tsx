@@ -10,9 +10,10 @@ import type { Costume, Rental, Vendor } from "@/api/types";
 import { Badge, Card, Empty, ErrorBox, Field, Input, Modal, PageHead, SearchBox, Select, Spinner, Tabs, Textarea, useToast } from "@/components/ui";
 import { VendorSelect } from "@/components/QuickSelects";
 import { CostumePicker, CostumeRow } from "@/components/domain";
+import { SendRequestModal } from "@/components/SendRequest";
 
 export default function Vendors() {
-  const { projectId, can, currency } = useProject();
+  const { projectId, can, currency, project } = useProject();
   const { meta } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -32,14 +33,19 @@ export default function Vendors() {
     onSuccess: () => { qc.invalidateQueries(); setROpen(false); setRf({ costume: null, vendorId: "", ratePerDay: "", pickupDate: "", returnDate: "", notes: "" }); toast.push("Rental recorded", "ok"); },
   });
   const setStatus = useMutation({ mutationFn: (v: { id: string; status: string }) => api(p(projectId, `/rentals/${v.id}`), { method: "PATCH", body: { status: v.status } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
-  const remind = useMutation({ mutationFn: () => api<{ reminded: number }>(p(projectId, "/rentals/remind"), { body: {} }), onSuccess: (r) => toast.push(`${r.reminded} reminder${r.reminded === 1 ? "" : "s"} sent`, "ok") });
+  const [remindOpen, setRemindOpen] = useState(false);
+  /** Everything due back within the next day, which is what a return reminder is about. */
+  const dueSoon = (rentals || []).filter((r) => ["BOOKED", "PICKED_UP", "OVERDUE"].includes(r.status) && r.returnDate && new Date(r.returnDate).getTime() <= Date.now() + 86400000);
+  const reminderText = dueSoon.length
+    ? `These are due back:\n${dueSoon.map((r) => `· ${r.costume.assetNumber} ${r.costume.name} (${r.vendor.name}) — due ${fmtDate(r.returnDate)}`).join("\n")}`
+    : "Nothing is due back in the next day. Please confirm what is still out.";
 
   if (isLoading) return <Spinner />;
   const shownRentals = (rentals || []).filter((r) => matches(q, r.costume.assetNumber, r.costume.name, r.vendor.name, r.status.replace(/_/g, " ")));
   const shownVendors = (vendors || []).filter((v) => matches(q, v.name, v.contactName, v.phone, v.email, v.address));
   return (
     <div>
-      <PageHead title="Vendors & Rentals" sub="Who we rent from, what is due back, and when." actions={can(OPS_ROLES) && (tab === "rentals" ? <><button className="btn" onClick={() => remind.mutate()}><BellRing size={16} /> Send return reminders</button><button className="btn btn-primary" onClick={() => setROpen(true)}><Plus size={16} /> Rental</button></> : <button className="btn btn-primary" onClick={() => setVOpen(true)}><Plus size={16} /> Vendor</button>)} />
+      <PageHead title="Vendors & Rentals" sub="Who we rent from, what is due back, and when." actions={can(OPS_ROLES) && (tab === "rentals" ? <><button className="btn" onClick={() => setRemindOpen(true)}><BellRing size={16} /> Send return reminders</button><button className="btn btn-primary" onClick={() => setROpen(true)}><Plus size={16} /> Rental</button></> : <button className="btn btn-primary" onClick={() => setVOpen(true)}><Plus size={16} /> Vendor</button>)} />
       <Tabs tabs={[{ key: "rentals", label: `Rentals (${rentals?.length ?? 0})` }, { key: "vendors", label: `Vendors (${vendors?.length ?? 0})` }]} value={tab} onChange={setTab} />
       {(tab === "rentals" ? !!rentals?.length : !!vendors?.length) && (
         <div className="filters"><SearchBox value={q} onChange={setQ} placeholder={tab === "rentals" ? "Search costume, vendor, status…" : "Search vendor, contact, phone, email…"} /></div>
@@ -104,6 +110,9 @@ export default function Vendors() {
         </div>
         <ErrorBox error={createRental.error} />
       </Modal>
+      <SendRequestModal open={remindOpen} onClose={() => setRemindOpen(false)} title="Send return reminders"
+        defaultTitle={dueSoon.length ? `Rental returns due · ${project?.name || "Production"}` : `Rentals still out · ${project?.name || "Production"}`}
+        defaultBody={reminderText} entityType="RENTAL" entityId={dueSoon[0]?.id} />
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setRf({ ...rf, costume: c, vendorId: c.vendorId || rf.vendorId, ratePerDay: c.rentalCostPerDay ? String(c.rentalCostPerDay) : rf.ratePerDay })} />
     </div>
   );

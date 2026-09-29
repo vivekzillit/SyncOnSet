@@ -68,6 +68,7 @@ model Project {
   damages       DamageReport[]
   missing       MissingItem[]
   vendors       Vendor[]
+  contacts      ExternalContact[]
   rentals       Rental[]
   expenses      Expense[]
   notifications Notification[]
@@ -504,6 +505,23 @@ model Vendor {
   costumes Costume[]
   rentals  Rental[]
   expenses Expense[]
+}
+
+/// Somebody a request can be sent to who does not sign in to the app: a tailor, a dyer, a driver, a hire company's rep.
+model ExternalContact {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  company   String?
+  role      String?
+  email     String?
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 model Rental {
