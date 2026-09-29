@@ -156,22 +156,25 @@ export default function CharacterDetail() {
           <div className="subtle">{viaScene.change ? `Wears change #${viaScene.change.changeNumber} ${viaScene.change.name}` : "No change assigned for this scene"}</div>
         </Card>
       )}
-      <div className="grid grid-2" style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
-        <div className="col gap-2">
-          <Card title="List of Scenes" pad0>
-            {ch.scenes.length === 0 ? <Empty icon="🎬" title="Not in any scene yet" /> : (
-              <div className="list">
-                {ch.scenes.map((s) => (
-                  <Link key={s.scene.id} to={`${base}/characters/${id}/scenes/${s.scene.id}`} className="item link" style={s.scene.id === sceneId ? { background: "var(--surface-2)" } : undefined}>
-                    <div className="avatar">{s.scene.number}</div>
-                    <div className="grow"><div className="title">{s.scene.name || `Scene ${s.scene.number}`}</div><div className="meta">{s.change ? `Change #${s.change.changeNumber} ${s.change.name}` : "No change assigned"}</div></div>
-                    <div className="end subtle">{s.scene.shootDate ? fmtDate(s.scene.shootDate) : ""}</div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
+      {/* Opened from one scene, that scene is named above and the whole list is noise, so the rest has the page. */}
+      <div className={viaScene ? "col gap-2" : "grid grid-2"} style={viaScene ? undefined : { gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
+        {!viaScene && (
+          <div className="col gap-2">
+            <Card title="List of Scenes" pad0>
+              {ch.scenes.length === 0 ? <Empty icon="🎬" title="Not in any scene yet" /> : (
+                <div className="list">
+                  {ch.scenes.map((s) => (
+                    <Link key={s.scene.id} to={`${base}/characters/${id}/scenes/${s.scene.id}`} className="item link">
+                      <div className="avatar">{s.scene.number}</div>
+                      <div className="grow"><div className="title">{s.scene.name || `Scene ${s.scene.number}`}</div><div className="meta">{s.change ? `Change #${s.change.changeNumber} ${s.change.name}` : "No change assigned"}</div></div>
+                      <div className="end subtle">{s.scene.shootDate ? fmtDate(s.scene.shootDate) : ""}</div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
         <div className="col gap-2">
           <Card title="Actor & measurements">
             {ch.actor ? (
