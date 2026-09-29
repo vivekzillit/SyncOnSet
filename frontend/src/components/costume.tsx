@@ -44,6 +44,16 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
   const cleanId = useRef<string | null>(null);
   const cleanRes = useRef<{ request: CleaningRequest; alternatives: Costume[]; replacement: Costume | null } | null>(null);
   useEffect(() => { if (modal !== "cleaning" && modal !== "emergency") { setCleanMedia([]); cleanId.current = null; cleanRes.current = null; } }, [modal]);
+  /** Photos / videos for a damage, alteration or missing report (one is open at a time). The record is filed once,
+      so pressing the button again after a failed upload retries only the files, never a second report. */
+  const [reportMedia, setReportMedia] = useState<File[]>([]);
+  const reportId = useRef<string | null>(null);
+  useEffect(() => { if (modal !== "damage" && modal !== "alteration" && modal !== "missing") { setReportMedia([]); reportId.current = null; } }, [modal]);
+  const fileReport = async (path: string, entityType: string, kind: string, body: Record<string, unknown>) => {
+    if (!reportId.current) reportId.current = (await api<{ id: string }>(p(projectId, path), { body })).id;
+    await attachMedia({ projectId, entityType, entityId: reportId.current, files: reportMedia, kind, keep: setReportMedia, savedNote: "It is saved — press the button again to attach what is left." });
+  };
+  const reportPhotos = (busy: boolean) => <Field label="Photos & video" span2 help="Shoot it now, pick from the gallery, or scan a note"><MediaPicker files={reportMedia} onChange={setReportMedia} disabled={busy} /></Field>;
   const attachStain = (id: string) => attachMedia({ projectId, entityType: "CLEANING", entityId: id, files: cleanMedia, kind: "STAIN", keep: setCleanMedia, savedNote: "The ticket is raised — press the button again to attach what is left." });
 
   useEffect(() => { setCf((c) => ({ ...c, sceneId: sceneId || c.sceneId })); setAf((a) => ({ ...a, sceneId: sceneId || a.sceneId })); }, [sceneId]);
@@ -77,15 +87,15 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
     onSuccess: (c) => { qc.invalidateQueries(); setResult((r) => (r ? { ...r, replacement: c } : r)); toast.push(`${c.assetNumber} assigned as replacement`, "ok"); }, onError: fail,
   });
   const damage = useMutation({
-    mutationFn: () => api(p(projectId, "/damages"), { body: { costumeId: costume.id, description: df.description, estimatedRepairCost: num(df.estimatedRepairCost), responsible: df.responsible || null, sceneId: df.sceneId || null, takeNumber: num(df.takeNumber) } }),
+    mutationFn: () => fileReport("/damages", "DAMAGE", "DETAIL", { costumeId: costume.id, description: df.description, estimatedRepairCost: num(df.estimatedRepairCost), responsible: df.responsible || null, sceneId: df.sceneId || null, takeNumber: num(df.takeNumber) }),
     onSuccess: () => done("Damage reported"), onError: fail,
   });
   const alteration = useMutation({
-    mutationFn: () => api(p(projectId, "/alterations"), { body: { costumeId: costume.id, issue: alf.issue, required: alf.required, tailorName: alf.tailorName || null, priority: alf.priority, deadline: alf.deadline || null } }),
+    mutationFn: () => fileReport("/alterations", "ALTERATION", "DETAIL", { costumeId: costume.id, issue: alf.issue, required: alf.required, tailorName: alf.tailorName || null, priority: alf.priority, deadline: alf.deadline || null }),
     onSuccess: () => done("Alteration requested"), onError: fail,
   });
   const missing = useMutation({
-    mutationFn: () => api(p(projectId, "/missing"), { body: { costumeId: costume.id, lastSeenLocation: mf.lastSeenLocation || null, notes: mf.notes || null } }),
+    mutationFn: () => fileReport("/missing", "MISSING", "REFERENCE", { costumeId: costume.id, lastSeenLocation: mf.lastSeenLocation || null, notes: mf.notes || null }),
     onSuccess: () => done("Marked missing"), onError: fail,
   });
 
@@ -178,32 +188,35 @@ export function CostumeActions({ costume, sceneId, takeNumber, onChanged, emphas
         )}
       </Modal>
 
-      <Modal open={modal === "damage"} onClose={() => setModal(null)} title={`Report damage · ${costume.assetNumber}`} footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-danger" disabled={!df.description || damage.isPending} onClick={() => damage.mutate()}>Report</button></>}>
+      <Modal open={modal === "damage"} onClose={() => setModal(null)} title={`Report damage · ${costume.assetNumber}`} footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-danger" disabled={!df.description || damage.isPending} onClick={() => damage.mutate()}>{damage.isPending ? "Saving…" : "Report"}</button></>}>
         <div className="form-grid">
           <Field label="Damage" span2><Input value={df.description} onChange={(e) => setDf({ ...df, description: e.target.value })} autoFocus /></Field>
           <Field label="Scene"><SceneSelect value={df.sceneId} onChange={(sceneId) => setDf({ ...df, sceneId })} /></Field>
           <Field label="Take"><Input type="number" value={df.takeNumber} onChange={(e) => setDf({ ...df, takeNumber: e.target.value })} /></Field>
           {can(FINANCE_ROLES) && <Field label="Estimated repair cost"><Input type="number" value={df.estimatedRepairCost} onChange={(e) => setDf({ ...df, estimatedRepairCost: e.target.value })} /></Field>}
           <Field label="Responsible"><Select value={df.responsible} onChange={(e) => setDf({ ...df, responsible: e.target.value })} options={meta?.damageResponsible || []} /></Field>
+          {reportPhotos(damage.isPending)}
         </div>
         <ErrorBox error={damage.error} />
       </Modal>
 
-      <Modal open={modal === "alteration"} onClose={() => setModal(null)} title={`Alteration · ${costume.assetNumber}`} footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-primary" disabled={!alf.issue || !alf.required || alteration.isPending} onClick={() => alteration.mutate()}>Request</button></>}>
+      <Modal open={modal === "alteration"} onClose={() => setModal(null)} title={`Alteration · ${costume.assetNumber}`} footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-primary" disabled={!alf.issue || !alf.required || alteration.isPending} onClick={() => alteration.mutate()}>{alteration.isPending ? "Saving…" : "Request"}</button></>}>
         <div className="form-grid">
           <Field label="Issue" span2><Input value={alf.issue} onChange={(e) => setAlf({ ...alf, issue: e.target.value })} autoFocus /></Field>
           <Field label="Required" span2><Input value={alf.required} onChange={(e) => setAlf({ ...alf, required: e.target.value })} /></Field>
           <Field label="Tailor"><Input value={alf.tailorName} onChange={(e) => setAlf({ ...alf, tailorName: e.target.value })} /></Field>
           <Field label="Priority"><Select value={alf.priority} onChange={(e) => setAlf({ ...alf, priority: e.target.value })} options={meta?.priorities || []} /></Field>
           <Field label="Deadline" span2><Input type="datetime-local" value={alf.deadline} onChange={(e) => setAlf({ ...alf, deadline: e.target.value })} /></Field>
+          {reportPhotos(alteration.isPending)}
         </div>
         <ErrorBox error={alteration.error} />
       </Modal>
 
-      <Modal open={modal === "missing"} onClose={() => setModal(null)} title={`Mark missing · ${costume.assetNumber}`} footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-danger" disabled={missing.isPending} onClick={() => missing.mutate()}>Mark missing</button></>}>
+      <Modal open={modal === "missing"} onClose={() => setModal(null)} title={`Mark missing · ${costume.assetNumber}`} footer={<><button className="btn" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-danger" disabled={missing.isPending} onClick={() => missing.mutate()}>{missing.isPending ? "Saving…" : "Mark missing"}</button></>}>
         <div className="col">
           <Field label="Last seen location"><Input value={mf.lastSeenLocation} onChange={(e) => setMf({ ...mf, lastSeenLocation: e.target.value })} /></Field>
           <Field label="Notes"><Textarea value={mf.notes} onChange={(e) => setMf({ ...mf, notes: e.target.value })} /></Field>
+          {reportPhotos(missing.isPending)}
         </div>
         <ErrorBox error={missing.error} />
       </Modal>
