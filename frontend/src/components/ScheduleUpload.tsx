@@ -37,6 +37,8 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
   const [createMissing, setCreateMissing] = useState(true);
   const [fillBlanks, setFillBlanks] = useState(true);
   const [manualNo, setManualNo] = useState("");
+  // The by-hand fields stay tucked away until "Add the scene by hand" is pressed.
+  const [manualOpen, setManualOpen] = useState(false);
   const [manualDate, setManualDate] = useState("");
   const { data: breakdown } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")), enabled: open && !!result });
 
@@ -83,7 +85,7 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
       onApplied?.(sheetDay); reset(); onClose();
     },
   });
-  const reset = () => { setFile(null); setResult(null); setDates({}); setExcluded(new Set()); setManualNo(""); setManualDate(""); if (fileRef.current) fileRef.current.value = ""; };
+  const reset = () => { setFile(null); setResult(null); setDates({}); setExcluded(new Set()); setManualNo(""); setManualDate(""); setManualOpen(false); if (fileRef.current) fileRef.current.value = ""; };
   const manualKey = manualNo.trim().toUpperCase().replace(/^0+(?=\d)/, "");
   const manualDup = !!manualKey && rows.some((s) => s.number.toUpperCase() === manualKey);
   const defaultManualDate = manualDate || rows.map((sc) => dates[sc.number]).filter(Boolean).sort()[0] || result?.date || todayISO();
@@ -173,12 +175,20 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
               </tbody>
             </table>
           </div>
-          <div className="row gap-2 wrap" style={{ alignItems: "flex-end" }}>
-            <div className="field" style={{ width: 130 }}><label>Scene #</label><Input value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }} placeholder="e.g. 47" aria-label="Scene number to add" /></div>
-            <div className="field"><label>Shoot date</label><Input type="date" value={defaultManualDate} onChange={(e) => setManualDate(e.target.value)} style={{ minWidth: 150 }} aria-label="Shoot date for the scene to add" /></div>
-            <button type="button" className="btn" disabled={!manualKey || manualDup} onClick={addManual} title={manualDup ? "That scene is already in the list" : undefined}><Plus size={16} /> Add the scene by hand</button>
-            <span className="subtle small">{manualDup ? "That scene is already in the list." : `Missed a scene? Add it by hand: a scene in the breakdown gets this date, a new number is added as a new scene.`}</span>
-          </div>
+          {!manualOpen ? (
+            <div className="row gap-2 wrap">
+              <button type="button" className="btn" onClick={() => setManualOpen(true)}><Plus size={16} /> Add the scene by hand</button>
+              <span className="subtle small">Missed a scene? Add it by hand: a scene in the breakdown gets its date, a new number is added as a new scene.</span>
+            </div>
+          ) : (
+            <div className="row gap-2 wrap" style={{ alignItems: "flex-end" }}>
+              <div className="field" style={{ width: 130 }}><label>Scene #</label><Input value={manualNo} onChange={(e) => setManualNo(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }} placeholder="e.g. 47" aria-label="Scene number to add" autoFocus /></div>
+              <div className="field"><label>Shoot date</label><Input type="date" value={defaultManualDate} onChange={(e) => setManualDate(e.target.value)} style={{ minWidth: 150 }} aria-label="Shoot date for the scene to add" /></div>
+              <button type="button" className="btn btn-primary" disabled={!manualKey || manualDup} onClick={addManual} title={manualDup ? "That scene is already in the list" : undefined}><Plus size={16} /> Add</button>
+              <button type="button" className="btn btn-ghost" onClick={() => { setManualOpen(false); setManualNo(""); }}>Done</button>
+              {manualDup && <span className="subtle small">That scene is already in the list.</span>}
+            </div>
+          )}
           {result.breakdownEmpty && <div className="subtle">This production has no scenes yet, so every scene here will be added.</div>}
           {!result.knownCastNumbers && rows.some((s) => s.cast.length) && <div className="subtle">Cast numbers were found but no character has a cast number yet, so they cannot be linked. Set cast numbers on the Characters page first.</div>}
           <ErrorBox error={apply.error} />
