@@ -110,7 +110,7 @@ export function BreakdownRowModal({ open, target, onClose, scenes, characters, e
           <Field label="Scene description"><Textarea value={d.synopsis} onChange={(e) => set({ synopsis: e.target.value })} rows={3} /></Field>
           {/* The row is this character in this scene: tapping the name opens their page for the scene, not a picker. */}
           <Field label="Character" help="Opens the character's page for this scene">
-            <Link to={`/p/${projectId}/characters/${af.characterId}/scenes/${af.sceneId}`} className="btn btn-block" style={{ justifyContent: "space-between" }}>
+            <Link to={`/p/${projectId}/characters/${af.characterId}/scenes/${af.sceneId}?via=row`} className="btn btn-block" style={{ justifyContent: "space-between" }}>
               <span>{character ? (character.castNumber != null ? `${character.castNumber}. ${character.name}` : character.name) : "—"}</span>
               <ChevronRight size={16} />
             </Link>

@@ -20,7 +20,10 @@ const SHOW_NEW_CHANGE = false;
 
 export default function CharacterDetail() {
   const { id = "", sceneId = "" } = useParams();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  // Arrived straight from a breakdown row: that one scene is the whole point of the visit, so the list of the
+  // others is left out. Reached any other way — the Character Breakdown, the scene picker — the list stays.
+  const viaRow = new URLSearchParams(search).get("via") === "row";
   const { projectId, can } = useProject();
   const { meta } = useAuth();
   const qc = useQueryClient();
@@ -109,6 +112,7 @@ export default function CharacterDetail() {
   // With one scene there is nothing to choose, so the character opens straight onto their details.
   // "…/all" is the way past the picker for anyone who wants the whole character rather than one scene.
   const pickScene = !sceneId && !pathname.endsWith("/all") && ch.scenes.length > 1;
+  const hideScenes = !!viaScene && viaRow;
   const details = ch.details || [];
   const openDetail = (at: number) => { setDf(at < 0 ? { label: "", value: "" } : details[at]); setDetailAt(at); };
   const commitDetail = () => {
@@ -156,15 +160,15 @@ export default function CharacterDetail() {
           <div className="subtle">{viaScene.change ? `Wears change #${viaScene.change.changeNumber} ${viaScene.change.name}` : "No change assigned for this scene"}</div>
         </Card>
       )}
-      {/* Opened from one scene, that scene is named above and the whole list is noise, so the rest has the page. */}
-      <div className={viaScene ? "col gap-2" : "grid grid-2"} style={viaScene ? undefined : { gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
-        {!viaScene && (
+      {/* Opened from a breakdown row, that scene is named above and the whole list is noise, so the rest has the page. */}
+      <div className={hideScenes ? "col gap-2" : "grid grid-2"} style={hideScenes ? undefined : { gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)" }}>
+        {!hideScenes && (
           <div className="col gap-2">
             <Card title="List of Scenes" pad0>
               {ch.scenes.length === 0 ? <Empty icon="🎬" title="Not in any scene yet" /> : (
                 <div className="list">
                   {ch.scenes.map((s) => (
-                    <Link key={s.scene.id} to={`${base}/characters/${id}/scenes/${s.scene.id}`} className="item link">
+                    <Link key={s.scene.id} to={`${base}/characters/${id}/scenes/${s.scene.id}`} className="item link" style={s.scene.id === sceneId ? { background: "var(--surface-2)" } : undefined}>
                       <div className="avatar">{s.scene.number}</div>
                       <div className="grow"><div className="title">{s.scene.name || `Scene ${s.scene.number}`}</div><div className="meta">{s.change ? `Change #${s.change.changeNumber} ${s.change.name}` : "No change assigned"}</div></div>
                       <div className="end subtle">{s.scene.shootDate ? fmtDate(s.scene.shootDate) : ""}</div>
