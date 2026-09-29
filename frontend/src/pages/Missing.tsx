@@ -23,11 +23,13 @@ export default function Missing() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   /** The message a search starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
-  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
+  const [chase, setChase] = useState<{ title: string; body: string; entityId?: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; lastSeenLocation: string; lastAssignedTo: string; notes: string }>({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" });
   const [found, setFound] = useState<{ id: string; location: string } | null>(null);
   const [media, setMedia] = useState<File[]>([]);
   const createdId = useRef<string | null>(null);
+  /** Set by the form's "… & send" button: once the record is saved, the Send request dialog opens about it. */
+  const sendAfter = useRef(false);
   /** Closing drops what was picked, so it can never ride along to the next record. */
   const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
   const create = useMutation({
@@ -36,8 +38,9 @@ export default function Missing() {
     mutationFn: async () => {
       if (!createdId.current) createdId.current = (await api<{ id: string }>(p(projectId, "/missing"), { body: { costumeId: f.costume!.id, lastSeenLocation: f.lastSeenLocation || null, lastAssignedTo: f.lastAssignedTo || null, notes: f.notes || null } })).id;
       await attachMedia({ projectId, entityType: "MISSING", entityId: createdId.current, files: media, kind: "REFERENCE", keep: setMedia, savedNote: "The report is saved — press Report again to attach what is left." });
+      return createdId.current;
     },
-    onSuccess: () => { createdId.current = null; qc.invalidateQueries(); closeForm(); setF({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" }); toast.push("Reported missing", "ok"); },
+    onSuccess: (id) => { createdId.current = null; if (sendAfter.current && id) setChase({ title: `Missing · ${f.costume!.assetNumber} ${f.costume!.name}`.slice(0, 160), body: `${f.costume!.assetNumber} ${f.costume!.name} is missing.${f.lastSeenLocation ? `\nLast seen: ${f.lastSeenLocation}` : ""}${f.lastAssignedTo ? `\nLast with: ${f.lastAssignedTo}` : ""}${f.notes ? `\n${f.notes}` : ""}\n\nPlease check and say if you have seen it.`, entityId: id }); sendAfter.current = false; qc.invalidateQueries(); closeForm(); setF({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" }); toast.push("Reported missing", "ok"); },
   });
   const resolve = useMutation({ mutationFn: (v: { id: string; status: string; foundLocation?: string }) => api(p(projectId, `/missing/${v.id}`), { method: "PATCH", body: v }), onSuccess: () => { qc.invalidateQueries(); setFound(null); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -96,7 +99,7 @@ export default function Missing() {
           ))}
         </div>
       )}
-      <Modal open={open} onClose={closeForm} title="Report missing" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-danger" disabled={!f.costume || create.isPending} onClick={() => create.mutate()}>Report</button></>}>
+      <Modal open={open} onClose={closeForm} title="Report missing" footer={<><button className="btn" onClick={closeForm}>Cancel</button>{can(REQUEST_ROLES) && <button className="btn" disabled={!f.costume || create.isPending} onClick={() => { sendAfter.current = true; create.mutate(); }} title="Save it, then send a request about it"><Megaphone size={15} /> Report & send</button>}<button className="btn btn-danger" disabled={!f.costume || create.isPending} onClick={() => { sendAfter.current = false; create.mutate(); }}>Report</button></>}>
         <div className="col">
           <Field label="Costume">{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
           <Field label="Last seen location"><Input value={f.lastSeenLocation} onChange={(e) => setF({ ...f, lastSeenLocation: e.target.value })} /></Field>
@@ -108,7 +111,7 @@ export default function Missing() {
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => { setF({ ...f, costume: c, lastSeenLocation: c.location }); }} filter={(c) => c.status !== "MISSING"} />
       <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · missing"
-        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="MISSING" />
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="MISSING" entityId={chase?.entityId} />
     </div>
   );
 }

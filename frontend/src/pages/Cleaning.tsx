@@ -25,10 +25,12 @@ export default function Cleaning() {
   const [pick, setPick] = useState(false);
   /** The message a chase starts from, taken at the moment the button is pressed: the sink refetches every
    *  20 seconds, and a ticket moving on behind the dialog must not rewrite what is being typed. */
-  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
+  const [chase, setChase] = useState<{ title: string; body: string; entityId?: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; problem: string; cleaningType: string; priority: string; sceneId: string; takeNumber: string; expectedReadyAt: string; notes: string }>({ costume: null, problem: "", cleaningType: "SPOT_CLEANING", priority: "NORMAL", sceneId: "", takeNumber: "", expectedReadyAt: "", notes: "" });
   const [media, setMedia] = useState<File[]>([]);
   const createdId = useRef<string | null>(null);
+  /** Set by the form's "… & send" button: once the record is saved, the Send request dialog opens about it. */
+  const sendAfter = useRef(false);
   /** Closing drops what was picked, so it can never ride along to the next request. */
   const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
   const create = useMutation({
@@ -37,8 +39,9 @@ export default function Cleaning() {
     mutationFn: async () => {
       if (!createdId.current) createdId.current = (await api<CleaningRequest>(p(projectId, "/cleaning"), { body: { costumeId: f.costume!.id, problem: f.problem, cleaningType: f.cleaningType, priority: f.priority, sceneId: f.sceneId || null, takeNumber: f.takeNumber ? Number(f.takeNumber) : null, expectedReadyAt: f.expectedReadyAt || null, notes: f.notes || null } })).id;
       await attachMedia({ projectId, entityType: "CLEANING", entityId: createdId.current, files: media, kind: "STAIN", keep: setMedia, savedNote: "The request is saved — press Request again to attach what is left." });
+      return createdId.current;
     },
-    onSuccess: () => { createdId.current = null; qc.invalidateQueries(); closeForm(); setF({ ...f, costume: null, problem: "" }); toast.push("Cleaning requested", "ok"); },
+    onSuccess: (id) => { createdId.current = null; if (sendAfter.current && id) setChase({ title: `Cleaning · ${f.costume!.assetNumber} ${f.costume!.name}`.slice(0, 160), body: `${f.costume!.assetNumber} ${f.costume!.name} needs cleaning: ${f.problem}\n${humanize(f.cleaningType)} · ${humanize(f.priority)} priority${f.expectedReadyAt ? ` · needed by ${fmtDateTime(f.expectedReadyAt)}` : ""}${f.notes ? `\n${f.notes}` : ""}\n\nPlease confirm when it will be back.`, entityId: id }); sendAfter.current = false; qc.invalidateQueries(); closeForm(); setF({ ...f, costume: null, problem: "" }); toast.push("Cleaning requested", "ok"); },
   });
 
   if (isLoading || !data) return <Spinner />;
@@ -120,7 +123,7 @@ export default function Cleaning() {
         </Card>
       )}
 
-      <Modal open={open} onClose={closeForm} title="Request cleaning" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-primary" disabled={!f.costume || !f.problem || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Saving…" : "Request"}</button></>}>
+      <Modal open={open} onClose={closeForm} title="Request cleaning" footer={<><button className="btn" onClick={closeForm}>Cancel</button>{can(REQUEST_ROLES) && <button className="btn" disabled={!f.costume || !f.problem || create.isPending} onClick={() => { sendAfter.current = true; create.mutate(); }} title="Save it, then send a request about it"><Megaphone size={15} /> Request & send</button>}<button className="btn btn-primary" disabled={!f.costume || !f.problem || create.isPending} onClick={() => { sendAfter.current = false; create.mutate(); }}>{create.isPending ? "Saving…" : "Request"}</button></>}>
         <div className="form-grid">
           <Field label="Costume" span2>
             {f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}
@@ -138,7 +141,7 @@ export default function Cleaning() {
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} filter={(c) => c.status !== "CLEANING"} />
       <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · cleaning"
-        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="CLEANING" />
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="CLEANING" entityId={chase?.entityId} />
     </div>
   );
 }

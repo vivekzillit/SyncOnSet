@@ -25,10 +25,12 @@ export default function Damages() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   /** The message a chase starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
-  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
+  const [chase, setChase] = useState<{ title: string; body: string; entityId?: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; description: string; sceneId: string; takeNumber: string; estimatedRepairCost: string; responsible: string }>({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" });
   const [media, setMedia] = useState<File[]>([]);
   const createdId = useRef<string | null>(null);
+  /** Set by the form's "… & send" button: once the record is saved, the Send request dialog opens about it. */
+  const sendAfter = useRef(false);
   /** Closing drops what was picked, so it can never ride along to the next record. */
   const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
   const create = useMutation({
@@ -37,8 +39,9 @@ export default function Damages() {
     mutationFn: async () => {
       if (!createdId.current) createdId.current = (await api<{ id: string }>(p(projectId, "/damages"), { body: { costumeId: f.costume!.id, description: f.description, sceneId: f.sceneId || null, takeNumber: f.takeNumber ? Number(f.takeNumber) : null, estimatedRepairCost: f.estimatedRepairCost ? Number(f.estimatedRepairCost) : null, responsible: f.responsible || null } })).id;
       await attachMedia({ projectId, entityType: "DAMAGE", entityId: createdId.current, files: media, kind: "DETAIL", keep: setMedia, savedNote: "The report is saved — press Report again to attach what is left." });
+      return createdId.current;
     },
-    onSuccess: () => { createdId.current = null; qc.invalidateQueries(); closeForm(); setF({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" }); toast.push("Damage reported", "ok"); },
+    onSuccess: (id) => { createdId.current = null; if (sendAfter.current && id) setChase({ title: `Damage · ${f.costume!.assetNumber} ${f.costume!.name}`.slice(0, 160), body: `${f.costume!.assetNumber} ${f.costume!.name} is damaged: ${f.description}${f.estimatedRepairCost ? `\nEstimated repair: ${f.estimatedRepairCost}` : ""}\n\nPlease say when it can be repaired.`, entityId: id }); sendAfter.current = false; qc.invalidateQueries(); closeForm(); setF({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" }); toast.push("Damage reported", "ok"); },
   });
   const setStatus = useMutation({ mutationFn: (v: { id: string; status: string }) => api(p(projectId, `/damages/${v.id}`), { method: "PATCH", body: { status: v.status } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -88,7 +91,7 @@ export default function Damages() {
           ))}
         </div>
       )}
-      <Modal open={open} onClose={closeForm} title="Report damage" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-danger" disabled={!f.costume || !f.description || create.isPending} onClick={() => create.mutate()}>Report</button></>}>
+      <Modal open={open} onClose={closeForm} title="Report damage" footer={<><button className="btn" onClick={closeForm}>Cancel</button>{can(REQUEST_ROLES) && <button className="btn" disabled={!f.costume || !f.description || create.isPending} onClick={() => { sendAfter.current = true; create.mutate(); }} title="Save it, then send a request about it"><Megaphone size={15} /> Report & send</button>}<button className="btn btn-danger" disabled={!f.costume || !f.description || create.isPending} onClick={() => { sendAfter.current = false; create.mutate(); }}>Report</button></>}>
         <div className="form-grid">
           <Field label="Costume" span2>{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
           <Field label="Damage" span2><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
@@ -102,7 +105,7 @@ export default function Damages() {
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} />
       <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · damage"
-        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="DAMAGE" />
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="DAMAGE" entityId={chase?.entityId} />
     </div>
   );
 }

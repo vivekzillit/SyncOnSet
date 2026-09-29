@@ -24,10 +24,12 @@ export default function Alterations() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   /** The message a chase starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
-  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
+  const [chase, setChase] = useState<{ title: string; body: string; entityId?: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; issue: string; required: string; tailorName: string; priority: string; deadline: string }>({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" });
   const [media, setMedia] = useState<File[]>([]);
   const createdId = useRef<string | null>(null);
+  /** Set by the form's "… & send" button: once the record is saved, the Send request dialog opens about it. */
+  const sendAfter = useRef(false);
   /** Closing drops what was picked, so it can never ride along to the next record. */
   const closeForm = () => { setOpen(false); setMedia([]); createdId.current = null; };
   const create = useMutation({
@@ -36,8 +38,9 @@ export default function Alterations() {
     mutationFn: async () => {
       if (!createdId.current) createdId.current = (await api<{ id: string }>(p(projectId, "/alterations"), { body: { costumeId: f.costume!.id, issue: f.issue, required: f.required, tailorName: f.tailorName || null, priority: f.priority, deadline: f.deadline || null } })).id;
       await attachMedia({ projectId, entityType: "ALTERATION", entityId: createdId.current, files: media, kind: "DETAIL", keep: setMedia, savedNote: "The request is saved — press Request again to attach what is left." });
+      return createdId.current;
     },
-    onSuccess: () => { createdId.current = null; qc.invalidateQueries(); closeForm(); setF({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" }); toast.push("Alteration requested", "ok"); },
+    onSuccess: (id) => { createdId.current = null; if (sendAfter.current && id) setChase({ title: `Alteration · ${f.costume!.assetNumber} ${f.costume!.name}`.slice(0, 160), body: `${f.costume!.assetNumber} ${f.costume!.name} needs an alteration: ${f.issue} → ${f.required}${f.tailorName ? `\nTailor: ${f.tailorName}` : ""}${f.deadline ? `\nDue ${fmtDateTime(f.deadline)}` : ""}\n\nPlease confirm you can take it on.`, entityId: id }); sendAfter.current = false; qc.invalidateQueries(); closeForm(); setF({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" }); toast.push("Alteration requested", "ok"); },
   });
   const advance = useMutation({ mutationFn: (v: { id: string; toStatus?: string }) => api(p(projectId, `/alterations/${v.id}/advance`), { body: { toStatus: v.toStatus } }), onSuccess: () => { qc.invalidateQueries(); toast.push("Updated", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
@@ -93,7 +96,7 @@ export default function Alterations() {
           })}
         </div>
       )}
-      <Modal open={open} onClose={closeForm} title="Alteration request" footer={<><button className="btn" onClick={closeForm}>Cancel</button><button className="btn btn-primary" disabled={!f.costume || !f.issue || !f.required || create.isPending} onClick={() => create.mutate()}>Request</button></>}>
+      <Modal open={open} onClose={closeForm} title="Alteration request" footer={<><button className="btn" onClick={closeForm}>Cancel</button>{can(REQUEST_ROLES) && <button className="btn" disabled={!f.costume || !f.issue || !f.required || create.isPending} onClick={() => { sendAfter.current = true; create.mutate(); }} title="Save it, then send a request about it"><Megaphone size={15} /> Request & send</button>}<button className="btn btn-primary" disabled={!f.costume || !f.issue || !f.required || create.isPending} onClick={() => { sendAfter.current = false; create.mutate(); }}>Request</button></>}>
         <div className="form-grid">
           <Field label="Costume" span2>{f.costume ? <div className="list card flat pad-0"><CostumeRow c={f.costume} onClick={() => setPick(true)} end={<span className="subtle">change</span>} /></div> : <button type="button" className="btn" onClick={() => setPick(true)}>Choose costume…</button>}</Field>
           <Field label="Issue" span2><Input value={f.issue} onChange={(e) => setF({ ...f, issue: e.target.value })} /></Field>
@@ -107,7 +110,7 @@ export default function Alterations() {
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} filter={(c) => !["ALTERATION", "CLEANING", "MISSING"].includes(c.status)} />
       <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · alterations"
-        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="ALTERATION" />
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="ALTERATION" entityId={chase?.entityId} />
     </div>
   );
 }
