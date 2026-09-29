@@ -12,7 +12,7 @@ export interface ActorRow { id: string; name: string; gender?: string | null; ag
 
 const MEASURES = ["height", "chest", "bust", "waist", "hips", "inseam", "sleeve", "collar", "shoe", "head"];
 const blankCharacter = { name: "", type: "SUPPORTING", age: "", castNumber: "", description: "" };
-const blank = { first: "", last: "", gender: "", age: "", characterIds: [] as string[], notes: "", nextFittingAt: "", fittingComment: "", phone: "", phone2: "", email: "", email2: "", startWorkDate: "", agency: "", talentRep: "", talentRepEmail: "", talentRepPhone: "", talentRepDetails: [] as { label: string; value: string }[], measurements: {} as Record<string, string> };
+const blank = { first: "", last: "", gender: "", age: "", characterIds: [] as string[], notes: "", nextFittingAt: "", fittingComment: "", phone: "", phone2: "", email: "", email2: "", startWorkDate: "", agency: "", talentRep: "", talentRepEmail: "", talentRepPhone: "", talentRepDetails: [] as { label: string; value: string }[], measurements: {} as Record<string, string>, extraMeasures: [] as { label: string; value: string }[] };
 
 export const charLabel = (c: { name: string; castNumber?: number | null }) => `${c.castNumber != null ? `(${c.castNumber}) ` : ""}${c.name}`;
 
@@ -35,7 +35,7 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
   const [cf, setCf] = useState(blankCharacter);
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")), enabled: open });
 
-  const body = () => ({ name: `${f.first.trim()} ${f.last.trim()}`.trim(), gender: f.gender || null, age: f.age ? Number(f.age) : null, characterIds: f.characterIds, notes: f.notes || null, nextFittingAt: f.nextFittingAt || null, fittingComment: f.fittingComment || null, phone: f.phone || null, phone2: f.phone2 || null, email: f.email || null, email2: f.email2 || null, startWorkDate: f.startWorkDate || null, agency: f.agency || null, talentRep: f.talentRep || null, talentRepEmail: f.talentRepEmail || null, talentRepPhone: f.talentRepPhone || null, talentRepDetails: f.talentRepDetails.map((d) => ({ label: d.label.trim(), value: d.value.trim() })).filter((d) => d.label), measurements: Object.fromEntries(Object.entries(f.measurements).filter(([, v]) => v)) });
+  const body = () => ({ name: `${f.first.trim()} ${f.last.trim()}`.trim(), gender: f.gender || null, age: f.age ? Number(f.age) : null, characterIds: f.characterIds, notes: f.notes || null, nextFittingAt: f.nextFittingAt || null, fittingComment: f.fittingComment || null, phone: f.phone || null, phone2: f.phone2 || null, email: f.email || null, email2: f.email2 || null, startWorkDate: f.startWorkDate || null, agency: f.agency || null, talentRep: f.talentRep || null, talentRepEmail: f.talentRepEmail || null, talentRepPhone: f.talentRepPhone || null, talentRepDetails: f.talentRepDetails.map((d) => ({ label: d.label.trim(), value: d.value.trim() })).filter((d) => d.label), measurements: Object.fromEntries([...Object.entries(f.measurements), ...f.extraMeasures.map((m) => [m.label.trim(), m.value.trim()])].filter(([k, v]) => k && v)) });
   const save = useMutation({
     mutationFn: () => (editing ? api<ActorRow>(p(projectId, `/actors/${editing.id}`), { method: "PATCH", body: body() }) : api<ActorRow>(p(projectId, "/actors"), { body: body() })),
     onSuccess: (actor) => {
@@ -67,7 +67,7 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
     save.reset();
     if (!editing) return setF(forCharacter ? { ...blank, characterIds: [forCharacter.id] } : blank);
     const [first, ...rest] = editing.name.split(" ");
-    setF({ first, last: rest.join(" "), gender: editing.gender || "", age: editing.age != null ? String(editing.age) : "", characterIds: editing.characters.map((c) => c.id), notes: editing.notes || "", nextFittingAt: toLocalInput(editing.nextFittingAt), fittingComment: editing.fittingComment || "", phone: editing.phone || "", phone2: editing.phone2 || "", email: editing.email || "", email2: editing.email2 || "", startWorkDate: editing.startWorkDate ? toLocalInput(editing.startWorkDate).slice(0, 10) : "", agency: editing.agency || "", talentRep: editing.talentRep || "", talentRepEmail: editing.talentRepEmail || "", talentRepPhone: editing.talentRepPhone || "", talentRepDetails: editing.talentRepDetails || [], measurements: Object.fromEntries(Object.entries(editing.measurements || {}).map(([k, v]) => [k, String(v)])) });
+    setF({ first, last: rest.join(" "), gender: editing.gender || "", age: editing.age != null ? String(editing.age) : "", characterIds: editing.characters.map((c) => c.id), notes: editing.notes || "", nextFittingAt: toLocalInput(editing.nextFittingAt), fittingComment: editing.fittingComment || "", phone: editing.phone || "", phone2: editing.phone2 || "", email: editing.email || "", email2: editing.email2 || "", startWorkDate: editing.startWorkDate ? toLocalInput(editing.startWorkDate).slice(0, 10) : "", agency: editing.agency || "", talentRep: editing.talentRep || "", talentRepEmail: editing.talentRepEmail || "", talentRepPhone: editing.talentRepPhone || "", talentRepDetails: editing.talentRepDetails || [], measurements: Object.fromEntries(Object.entries(editing.measurements || {}).filter(([k]) => MEASURES.includes(k)).map(([k, v]) => [k, String(v)])), extraMeasures: Object.entries(editing.measurements || {}).filter(([k]) => !MEASURES.includes(k)).map(([label, v]) => ({ label, value: String(v) })) });
   }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (quick && !editing) {
@@ -112,6 +112,20 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
         <Field label="Agency"><Input value={f.agency} onChange={(e) => setF({ ...f, agency: e.target.value })} placeholder="Agency" /></Field>
         <div />
         <div className="span-2 row between" style={{ marginTop: 4 }}>
+          <span className="bold small">Measurements</span>
+          <button type="button" className="btn btn-sm" onClick={() => setF((prev) => ({ ...prev, extraMeasures: [...prev.extraMeasures, { label: "", value: "" }] }))}><Plus size={14} /> Add more</button>
+        </div>
+        {MEASURES.map((m) => <Field key={m} label={humanize(m)}><Input value={f.measurements[m] || ""} onChange={(e) => setF({ ...f, measurements: { ...f.measurements, [m]: e.target.value } })} /></Field>)}
+        {/* Any other measurement the costume team takes (thigh, neck to waist…), named by the user; saved alongside the standard ones. */}
+        {f.extraMeasures.map((m, i) => (
+          <div key={i} className="span-2 row gap-1">
+            <Input value={m.label} onChange={(e) => setF((prev) => ({ ...prev, extraMeasures: prev.extraMeasures.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) }))} placeholder="Measurement, e.g. Thigh" aria-label="Measurement name" style={{ flex: "0 0 38%" }} />
+            <Input value={m.value} onChange={(e) => setF((prev) => ({ ...prev, extraMeasures: prev.extraMeasures.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) }))} placeholder="Value" aria-label="Measurement value" />
+            <button type="button" className="btn btn-ghost btn-sm" aria-label="Remove measurement" onClick={() => setF((prev) => ({ ...prev, extraMeasures: prev.extraMeasures.filter((_, j) => j !== i) }))}><Trash2 size={14} /></button>
+          </div>
+        ))}
+        <div />
+        <div className="span-2 row between" style={{ marginTop: 4 }}>
           <span className="bold small">Talent representative</span>
           <button type="button" className="btn btn-sm" onClick={() => setRep([...f.talentRepDetails, { label: "", value: "" }])}><Plus size={14} /> Add more</button>
         </div>
@@ -127,8 +141,6 @@ export function ActorModal({ open, onClose, editing, onSaved, allowAddAnother = 
             <button type="button" className="btn btn-ghost btn-sm" aria-label="Remove detail" onClick={() => setRep(f.talentRepDetails.filter((_, j) => j !== i))}><Trash2 size={14} /></button>
           </div>
         ))}
-        <div className="span-2 bold small">Measurements</div>
-        {MEASURES.map((m) => <Field key={m} label={humanize(m)}><Input value={f.measurements[m] || ""} onChange={(e) => setF({ ...f, measurements: { ...f.measurements, [m]: e.target.value } })} /></Field>)}
       </div>
       <ErrorBox error={save.error} />
       <Modal open={charOpen} onClose={closeCharacter} title="New character" footer={<><button className="btn" onClick={closeCharacter}>Cancel</button><button className="btn btn-primary" disabled={!cf.name.trim() || createCharacter.isPending} onClick={() => createCharacter.mutate()}>Add & tick</button></>}>
