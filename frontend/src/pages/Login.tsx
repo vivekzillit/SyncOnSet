@@ -41,7 +41,7 @@ export default function Login() {
         <div className="row gap-2 mb-2">
           <div className="brand-mark">C&amp;S</div>
           <div>
-            <h1 style={{ fontSize: 20 }}>Costumes &amp; Set</h1>
+            <h1 style={{ fontSize: 20 }}>Costumes &amp; Set Sync</h1>
             <div className="subtle">Digital wardrobe & costume management</div>
           </div>
         </div>

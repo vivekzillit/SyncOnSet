@@ -31,7 +31,7 @@ export default function Projects() {
           <div className="row gap-2">
             <div className="brand-mark">C&amp;S</div>
             <div>
-              <div className="bold">Costumes &amp; Set</div>
+              <div className="bold">Costumes &amp; Set Sync</div>
               <div className="tiny" style={{ color: "#9a9da6" }}>{user?.name} · {humanize(user?.role)}</div>
             </div>
           </div>

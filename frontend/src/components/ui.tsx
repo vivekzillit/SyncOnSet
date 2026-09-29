@@ -61,9 +61,10 @@ export function Card({ title, actions, children, className = "", pad0 }: { title
   );
 }
 
-export function Stat({ label, value, hint, tone: t, onClick }: { label: string; value: ReactNode; hint?: ReactNode; tone?: string; onClick?: () => void }) {
+export function Stat({ label, value, hint, tone: t, onClick, active }: { label: string; value: ReactNode; hint?: ReactNode; tone?: string; onClick?: () => void; active?: boolean }) {
   return (
-    <div className={`stat ${t ? `tone-${t}` : ""} ${onClick ? "clickable" : ""}`} onClick={onClick}>
+    <div className={`stat ${t ? `tone-${t}` : ""} ${onClick ? "clickable" : ""} ${active ? "active" : ""}`} onClick={onClick}
+      {...(onClick ? { role: "button", tabIndex: 0, "aria-pressed": active, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } } : {})}>
       <span className="label">{label}</span>
       <span className="value">{value}</span>
       {hint && <span className="hint">{hint}</span>}

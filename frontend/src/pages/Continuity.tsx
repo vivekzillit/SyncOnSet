@@ -314,7 +314,7 @@ export default function ContinuityOnSet() {
                   <button type="button" className="btn btn-sm" onClick={() => edit({ details: [...f.details, { k: "", v: "" }] })}><Plus size={14} /> Detail</button>
                 </div>
               </Field>
-              <Field label="Pieces & accessories" help="Scan a label to add the piece the actor is wearing.">
+              <Field label="Pieces & accessories" help="Or scan a piece's label in Scan a label to add it.">
                 <div className="col gap-1">
                   {f.accessories.map((a, i) => (
                     <div key={i} className="row gap-1">
@@ -323,9 +323,9 @@ export default function ContinuityOnSet() {
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => edit({ accessories: f.accessories.filter((_, j) => j !== i) })} aria-label="Remove accessory"><Trash2 size={14} /></button>
                     </div>
                   ))}
+                  {/* Label scanning lives in the Scan a label panel, so the only Scan here is the one for photos below. */}
                   <div className="row gap-1">
                     <button type="button" className="btn btn-sm" onClick={() => edit({ accessories: [...f.accessories, { name: "", present: true }] })}><Plus size={14} /> Accessory</button>
-                    <button type="button" className="btn btn-sm" onClick={() => setCamera((v) => !v)}>{camera ? <><CameraOff size={14} /> Stop camera</> : <><Camera size={14} /> Scan</>}</button>
                   </div>
                 </div>
               </Field>
@@ -338,7 +338,7 @@ export default function ContinuityOnSet() {
           </Card>
 
           <div className="col gap-2">
-            <Card title="Scan a label">
+            <Card title="Scan a label" actions={<button type="button" className="btn btn-sm" onClick={() => setCamera((v) => !v)}>{camera ? <><CameraOff size={14} /> Stop camera</> : <><Camera size={14} /> Use camera</>}</button>}>
               <QRScanner active={camera} onScan={addScanned} />
               <form className="row gap-1 mt-2" onSubmit={(e) => { e.preventDefault(); addScanned(asset); }}>
                 <Keyboard size={18} color="var(--text-3)" />
@@ -346,7 +346,7 @@ export default function ContinuityOnSet() {
                 <button className="btn btn-primary" disabled={!asset}>Add</button>
               </form>
               {scanError && <div className="errorbox mt-2">{scanError}</div>}
-              {!camera && <div className="subtle mt-2">Press <b>Scan</b> to use the camera, or type the asset number.</div>}
+              {!camera && <div className="subtle mt-2">Press <b>Use camera</b> to scan the label, or type the asset number.</div>}
             </Card>
             <Card title={`Takes so far (${c.records.length})`} pad0>
               {c.isLoading ? <Spinner /> : c.records.length === 0 ? <Empty icon="📖" title="No takes yet" hint="Save take 1 and the next take is pre-filled from it." /> : (
