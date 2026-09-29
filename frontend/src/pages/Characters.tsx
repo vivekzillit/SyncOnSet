@@ -42,14 +42,34 @@ export default function Characters() {
     mutationFn: ({ id, castNumber }: { id: string; castNumber: number | null }) => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { castNumber } }),
     onError: (e: Error) => toast.push(e.message, "danger"),
   });
-  /** Rows are left where they are while numbering, and re-sorted once the list is put down. */
-  const stopNumbering = () => { setNumbering(false); setDraft({}); qc.invalidateQueries({ queryKey: ["characters", projectId] }); };
-  const commitCast = (c: Character) => {
+  /** What a box holds, or nothing at all. Throws on anything that is not a whole number. */
+  const typedCast = (c: Character) => {
     const raw = (draft[c.id] ?? "").trim();
     const next = raw === "" ? null : Number(raw);
-    if (next != null && (!Number.isInteger(next) || next < 0)) { toast.push("A cast number is a whole number", "danger"); return; }
-    if (next === (c.castNumber ?? null)) return;
-    setCast.mutate({ id: c.id, castNumber: next });
+    if (next != null && (!Number.isInteger(next) || next < 0)) throw new Error("A cast number is a whole number");
+    return next === (c.castNumber ?? null) ? undefined : next;
+  };
+  const commitCast = (c: Character) => {
+    try {
+      const next = typedCast(c);
+      if (next !== undefined) setCast.mutate({ id: c.id, castNumber: next });
+    } catch (e) { toast.push((e as Error).message, "danger"); }
+  };
+  /**
+   * Save takes whatever is still in the boxes with it — a number typed and not tabbed out of is still a number
+   * somebody typed. Rows are left where they are while numbering, and re-sorted once every one of them is in.
+   */
+  const saveNumbering = async () => {
+    try {
+      await Promise.all((characters || []).filter((c) => draft[c.id] !== undefined).map((c) => {
+        const next = typedCast(c);
+        return next === undefined ? null : setCast.mutateAsync({ id: c.id, castNumber: next });
+      }));
+    } catch (e) { toast.push((e as Error).message, "danger"); return; }
+    setNumbering(false);
+    setDraft({});
+    qc.invalidateQueries({ queryKey: ["characters", projectId] });
+    toast.push("Cast numbers saved", "ok");
   };
 
   const createActor = useMutation({
@@ -59,7 +79,7 @@ export default function Characters() {
 
   return (
     <div>
-      <PageHead title="List of Characters" sub={<>Who wears what. Cast numbers appear on sides and call sheets.<div style={{ color: "var(--danger)", marginTop: 4 }}>Default opening by a cast numbers if no cast number listed alphabetically</div></>} actions={<><Link to={`/p/${projectId}/actors`} className="btn">★ Actors</Link>{can(MANAGER_ROLES) && tab === "characters" && (numbering ? <button className="btn" onClick={stopNumbering}>Done</button> : <button className="btn" onClick={() => setNumbering(true)}><Hash size={16} /> Cast numbers</button>)}{can(MANAGER_ROLES) && (tab === "characters" ? <button className="btn btn-primary" onClick={() => setCharOpen(true)}><Plus size={16} /> Character</button> : <button className="btn btn-primary" onClick={() => setActorOpen(true)}><Plus size={16} /> Actor</button>)}</>} />
+      <PageHead title="List of Characters" sub={<>Who wears what. Cast numbers appear on sides and call sheets.<div style={{ color: "var(--danger)", marginTop: 4 }}>Default opening by a cast numbers if no cast number listed alphabetically</div></>} actions={<><Link to={`/p/${projectId}/actors`} className="btn">★ Actors</Link>{can(MANAGER_ROLES) && tab === "characters" && (numbering ? <button className="btn" disabled={setCast.isPending} onClick={saveNumbering}>{setCast.isPending ? "Saving…" : "Save"}</button> : <button className="btn" onClick={() => setNumbering(true)}><Hash size={16} /> Cast numbers</button>)}{can(MANAGER_ROLES) && (tab === "characters" ? <button className="btn btn-primary" onClick={() => setCharOpen(true)}><Plus size={16} /> Character</button> : <button className="btn btn-primary" onClick={() => setActorOpen(true)}><Plus size={16} /> Actor</button>)}</>} />
       <Tabs tabs={[{ key: "characters", label: `Characters (${characters?.length ?? 0})` }, { key: "actors", label: `Actors (${actors?.length ?? 0})` }]} value={tab} onChange={setTab} />
       {(tab === "characters" ? !!characters?.length : !!actors?.length) && (
         <div className="filters">
