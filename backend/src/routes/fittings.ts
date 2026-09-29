@@ -21,8 +21,9 @@ const schema = z.object({
 });
 
 const include = {
-  character: { select: { id: true, name: true } },
-  actor: { select: { id: true, name: true, phone: true } },
+  // The character's actor as well as the fitting's own: a fitting booked before casting has only the former.
+  character: { select: { id: true, name: true, actor: { select: { id: true, name: true } } } },
+  actor: { select: { id: true, name: true } },
   items: { include: { costume: { select: { id: true, assetNumber: true, name: true, size: true, status: true } } } },
 };
 

@@ -44,17 +44,21 @@ export default function Fittings() {
     onSuccess: () => { createdId.current = null; qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeForm(); setF({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
   const list = (data || []).filter((x) => (!status || x.status === status) && matches(q, x.character.name, x.actor?.name, x.location));
-  // The call covers every fitting still open, in the order they happen — not what the filters are showing.
-  // A slot that has already gone by is marked as missed rather than dropped: those are the ones to chase.
+  // The call covers every fitting still open — not what the filters are showing. What is still to come leads,
+  // because that is what people are being asked to confirm; a slot already gone by follows, marked as missed,
+  // so that a long list loses the oldest no-shows rather than tomorrow's appointments.
   const fromToday = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
-  const upcoming = (data || []).filter((x) => ["SCHEDULED", "IN_PROGRESS"].includes(x.status)).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
-  const missed = upcoming.filter((x) => x.scheduledAt < fromToday).length;
+  const still = (data || []).filter((x) => ["SCHEDULED", "IN_PROGRESS"].includes(x.status)).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+  const soon = still.filter((x) => x.scheduledAt >= fromToday);
+  const upcoming = [...soon, ...still.filter((x) => x.scheduledAt < fromToday)];
+  const missed = still.length - soon.length;
   const callFittings = () => setChase({
     title: `Fittings coming up · ${project?.name || "Production"}`.slice(0, 160),
     body: chaseBody({
       lead: `${upcoming.length} ${upcoming.length === 1 ? "fitting is" : "fittings are"} booked${missed ? `, ${missed} of them already missed` : ""}:`,
-      // The actor is who is being called in; the character is only which part they are being fitted for.
-      lines: upcoming.map((x) => `${fmtDate(x.scheduledAt)} ${fmtTime(x.scheduledAt)} — ${x.actor?.name || "actor not cast yet"}${x.actor?.phone ? ` (${x.actor.phone})` : ""} as ${x.character.name}${x.location ? ` · ${x.location}` : ""}${x.scheduledAt < fromToday ? " · missed" : ""}`),
+      // The actor is who is being called in; the character is only which part they are being fitted for, and
+      // their own number stays out of it — this can go to a hire company, and that is not theirs to have.
+      lines: upcoming.map((x) => `${fmtDate(x.scheduledAt)} ${fmtTime(x.scheduledAt)} — ${x.actor?.name || x.character.actor?.name || "actor not cast yet"} as ${x.character.name}${x.location ? ` · ${x.location}` : ""}${x.scheduledAt < fromToday ? " · missed" : ""}`),
       empty: "Nothing is booked in at the moment.",
       ask: "Please confirm your slot — and if it says missed, tell us when you can come in.",
     }),
@@ -62,7 +66,7 @@ export default function Fittings() {
   return (
     <div>
       <PageHead title="Fittings" sub="Schedule fittings, tick off each piece, raise alterations on the spot." actions={<>
-        {can(REQUEST_ROLES) && <button className="btn" onClick={callFittings}><Megaphone size={16} /> Send request</button>}
+        {can(REQUEST_ROLES) && <button className="btn" disabled={isLoading || !data} onClick={callFittings}><Megaphone size={16} /> Send request</button>}
         {can(OPS_ROLES) && <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Fitting</button>}
       </>} />
       <div className="filters"><SearchBox value={q} onChange={setQ} placeholder="Search character, actor, location…" /><Chips all="All" options={(meta?.fittingStatuses || []).map((s) => ({ key: s, label: s.replace(/_/g, " ").toLowerCase() }))} value={status} onChange={setStatus} /></div>
