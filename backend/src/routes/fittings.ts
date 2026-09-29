@@ -22,7 +22,7 @@ const schema = z.object({
 
 const include = {
   character: { select: { id: true, name: true } },
-  actor: { select: { id: true, name: true } },
+  actor: { select: { id: true, name: true, phone: true } },
   items: { include: { costume: { select: { id: true, assetNumber: true, name: true, size: true, status: true } } } },
 };
 

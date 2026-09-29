@@ -25,7 +25,7 @@ export default function Damages() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   /** The message a chase starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
-  const [chase, setChase] = useState<{ title: string; body: string; id?: string } | null>(null);
+  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; description: string; sceneId: string; takeNumber: string; estimatedRepairCost: string; responsible: string }>({ costume: null, description: "", sceneId: "", takeNumber: "", estimatedRepairCost: "", responsible: "PRODUCTION" });
   const [media, setMedia] = useState<File[]>([]);
   const createdId = useRef<string | null>(null);
@@ -46,7 +46,6 @@ export default function Damages() {
   // The chase covers every report still to be dealt with, not what the search happens to be showing.
   const unrepaired = data.filter((d) => ["OPEN", "REPAIRING"].includes(d.status));
   const chaseRepairs = () => setChase({
-    id: unrepaired[0]?.id,
     title: `Repairs needed · ${project?.name || "Production"}`.slice(0, 160),
     body: chaseBody({
       lead: `${unrepaired.length} ${unrepaired.length === 1 ? "piece needs" : "pieces need"} repair:`,
@@ -103,7 +102,7 @@ export default function Damages() {
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} />
       <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · damage"
-        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="DAMAGE" entityId={chase?.id} />
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="DAMAGE" />
     </div>
   );
 }

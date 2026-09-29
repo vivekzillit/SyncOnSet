@@ -32,7 +32,8 @@ contactsRouter.get(
 
 contactsRouter.post(
   "/",
-  requireRole(OPS_ROLES),
+  // Anyone who can send a request can name the person it is for, or the address book is a dead end for them.
+  requireRole(REQUEST_ROLES),
   wrap(async (req, res) => {
     const data = parse(contactSchema, req.body);
     const contact = await prisma.externalContact.create({ data: { ...data, email: data.email || null, projectId: req.projectId! } });

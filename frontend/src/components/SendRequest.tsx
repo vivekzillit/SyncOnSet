@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Mail, Plus, Send, Share2, Users } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
-import { OPS_ROLES } from "@/state/auth";
+import { OPS_ROLES, REQUEST_ROLES } from "@/state/auth";
 import { humanize } from "@/lib/format";
 import type { Vendor } from "@/api/types";
 import { ErrorBox, Field, Input, Modal, SearchBox, Textarea, useToast } from "@/components/ui";
@@ -98,8 +98,9 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
 }) {
   const { projectId, can } = useProject();
   const toast = useToast();
-  // Adding a vendor or an outside contact writes to the production's own lists, which is a wardrobe job.
-  const canAdd = can(OPS_ROLES);
+  // A new contact is part of addressing a request; a new vendor is a wardrobe record, so it stays with them.
+  const canAddContact = can(REQUEST_ROLES);
+  const canAddVendor = can(OPS_ROLES);
   const [group, setGroup] = useState<Group>("crew");
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState<Record<Group, Set<string>>>({ crew: new Set(), vendors: new Set(), contacts: new Set() });
@@ -132,8 +133,9 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
     mutationFn: () => api<SendResult>(p(projectId, "/requests"), { body: { title: subject.trim(), body: message.trim(), entityType, entityId, crewUserIds: [...picked.crew], vendorIds: [...picked.vendors], contactIds: [...picked.contacts] } }),
     onSuccess: (r) => {
       setSent(r);
-      toast.push(r.notified ? `Sent to ${r.notified} on the crew` : "Request recorded", "ok");
-      if (!r.offApp.length) { reset(); onClose(); }
+      toast.push(r.notified ? `Sent to ${r.notified} on the crew` : r.offApp.length ? "Ready to pass on" : "Nobody was reached", r.notified || r.offApp.length ? "ok" : "danger");
+      // Only close on a clean send to people who were actually reached; anything else has something to say.
+      if (!r.offApp.length && r.notified) { reset(); onClose(); }
     },
     onError: (e: Error) => toast.push(e.message, "danger"),
   });
@@ -168,7 +170,8 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
               {sent.notified
                 ? `${sent.notified} on the crew ${sent.notified === 1 ? "has" : "have"} been notified in the app.`
                 : sent.skippedSelf ? "You were the only crew member picked, so there was nobody to notify."
-                : "Nobody on the crew was picked."}
+                : sent.offApp.length ? "Nobody on the crew was picked."
+                : "Nothing was sent — pick who this is for and send it again."}
             </div>
             {sent.offApp.length > 0 && (
               <>
@@ -188,8 +191,8 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
           </div>
         ) : (
           <div className="col gap-2">
-            <Field label="Subject"><Input value={subject} onChange={(e) => setSubject(e.target.value)} /></Field>
-            <Field label="Message"><Textarea rows={4} value={message} onChange={(e) => setMessage(e.target.value)} /></Field>
+            <Field label="Subject"><Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={160} /></Field>
+            <Field label="Message" help={message.length > 3600 ? `${4000 - message.length} characters left` : undefined}><Textarea rows={4} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={4000} /></Field>
             <Field label={`Send to${count ? ` (${count})` : ""}`} help="Crew are told in the app; vendors and outside contacts get the message to pass on">
               <div className="tabs" style={{ marginBottom: 6 }}>
                 {GROUPS.map((g) => (
@@ -200,8 +203,8 @@ export function SendRequestModal({ open, onClose, title, defaultTitle, defaultBo
               </div>
               <div className="row gap-1 mb-2 wrap">
                 <div className="grow" style={{ minWidth: 200 }}><SearchBox value={q} onChange={setQ} placeholder={group === "crew" ? "Search crew…" : group === "vendors" ? "Search vendors…" : "Search contacts…"} /></div>
-                {canAdd && group === "vendors" && <button type="button" className="btn btn-sm" onClick={() => setNewVendor(true)}><Plus size={14} /> New vendor</button>}
-                {canAdd && group === "contacts" && <button type="button" className="btn btn-sm" onClick={() => setNewContact(true)}><Plus size={14} /> New contact</button>}
+                {canAddVendor && group === "vendors" && <button type="button" className="btn btn-sm" onClick={() => setNewVendor(true)}><Plus size={14} /> New vendor</button>}
+                {canAddContact && group === "contacts" && <button type="button" className="btn btn-sm" onClick={() => setNewContact(true)}><Plus size={14} /> New contact</button>}
                 {group === "crew" && <span className="subtle small row gap-1"><Users size={14} /> everyone on this production</span>}
               </div>
               <Rows items={rows} picked={picked[group]} onPick={(id) => toggle(group, id)} />
@@ -225,7 +228,7 @@ export function chaseBody({ lead, lines, empty, ask }: { lead: string; lines: st
   const MAX = 20;
   const shown = lines.slice(0, MAX).map((l) => `· ${l.slice(0, 160)}`);
   const rest = lines.length > MAX ? `\n· …and ${lines.length - MAX} more` : "";
-  return `${lines.length ? `${lead}\n${shown.join("\n")}${rest}` : empty}\n\n${ask}`;
+  return lines.length ? `${lead}\n${shown.join("\n")}${rest}\n\n${ask}` : empty;
 }
 
 /** The share sheet's own icon, for a button that opens this dialog. */

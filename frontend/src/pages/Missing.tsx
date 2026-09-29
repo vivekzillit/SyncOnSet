@@ -23,7 +23,7 @@ export default function Missing() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   /** The message a search starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
-  const [chase, setChase] = useState<{ title: string; body: string; id?: string } | null>(null);
+  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; lastSeenLocation: string; lastAssignedTo: string; notes: string }>({ costume: null, lastSeenLocation: "", lastAssignedTo: "", notes: "" });
   const [found, setFound] = useState<{ id: string; location: string } | null>(null);
   const [media, setMedia] = useState<File[]>([]);
@@ -45,7 +45,6 @@ export default function Missing() {
   // The search party covers everything still missing, not what the search box happens to be showing.
   const stillMissing = data.filter((m) => m.status === "OPEN");
   const putOutSearch = () => setChase({
-    id: stillMissing[0]?.id,
     title: `Missing from wardrobe · ${project?.name || "Production"}`.slice(0, 160),
     body: chaseBody({
       lead: `${stillMissing.length} ${stillMissing.length === 1 ? "piece is" : "pieces are"} missing:`,
@@ -109,7 +108,7 @@ export default function Missing() {
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => { setF({ ...f, costume: c, lastSeenLocation: c.location }); }} filter={(c) => c.status !== "MISSING"} />
       <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · missing"
-        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="MISSING" entityId={chase?.id} />
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="MISSING" />
     </div>
   );
 }

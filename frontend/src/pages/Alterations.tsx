@@ -24,7 +24,7 @@ export default function Alterations() {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   /** The message a chase starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
-  const [chase, setChase] = useState<{ title: string; body: string; id?: string } | null>(null);
+  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
   const [f, setF] = useState<{ costume: Costume | null; issue: string; required: string; tailorName: string; priority: string; deadline: string }>({ costume: null, issue: "", required: "", tailorName: "", priority: "NORMAL", deadline: "" });
   const [media, setMedia] = useState<File[]>([]);
   const createdId = useRef<string | null>(null);
@@ -45,7 +45,6 @@ export default function Alterations() {
   // The chase covers every alteration still outstanding, not what the search happens to be showing.
   const outstanding = data.items.filter((i) => !["COMPLETED", "CANCELLED"].includes(i.status));
   const chaseTailors = () => setChase({
-    id: outstanding[0]?.id,
     title: `Alterations outstanding · ${project?.name || "Production"}`.slice(0, 160),
     body: chaseBody({
       lead: `${outstanding.length} ${outstanding.length === 1 ? "alteration is" : "alterations are"} still open:`,
@@ -108,7 +107,7 @@ export default function Alterations() {
       </Modal>
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costume: c })} filter={(c) => !["ALTERATION", "CLEANING", "MISSING"].includes(c.status)} />
       <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · alterations"
-        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="ALTERATION" entityId={chase?.id} />
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="ALTERATION" />
     </div>
   );
 }

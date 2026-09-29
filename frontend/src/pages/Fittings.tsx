@@ -25,7 +25,7 @@ export default function Fittings() {
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
   const [open, setOpen] = useState(false);
   /** The message a call starts from, taken when the button is pressed so nothing rewrites it mid-sentence. */
-  const [chase, setChase] = useState<{ title: string; body: string; id?: string } | null>(null);
+  const [chase, setChase] = useState<{ title: string; body: string } | null>(null);
   const [pick, setPick] = useState(false);
   const [f, setF] = useState<{ characterId: string; scheduledAt: string; location: string; notes: string; costumes: Costume[] }>({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] });
   const [media, setMedia] = useState<File[]>([]);
@@ -44,16 +44,19 @@ export default function Fittings() {
     onSuccess: () => { createdId.current = null; qc.invalidateQueries({ queryKey: ["fittings", projectId] }); closeForm(); setF({ characterId: "", scheduledAt: "", location: "", notes: "", costumes: [] }); toast.push("Fitting scheduled", "ok"); },
   });
   const list = (data || []).filter((x) => (!status || x.status === status) && matches(q, x.character.name, x.actor?.name, x.location));
-  // The call covers every fitting still to happen, in the order they happen — not what the filters are showing.
+  // The call covers every fitting still open, in the order they happen — not what the filters are showing.
+  // A slot that has already gone by is marked as missed rather than dropped: those are the ones to chase.
+  const fromToday = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
   const upcoming = (data || []).filter((x) => ["SCHEDULED", "IN_PROGRESS"].includes(x.status)).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+  const missed = upcoming.filter((x) => x.scheduledAt < fromToday).length;
   const callFittings = () => setChase({
-    id: upcoming[0]?.id,
     title: `Fittings coming up · ${project?.name || "Production"}`.slice(0, 160),
     body: chaseBody({
-      lead: `${upcoming.length} ${upcoming.length === 1 ? "fitting is" : "fittings are"} booked:`,
-      lines: upcoming.map((x) => `${fmtDate(x.scheduledAt)} ${fmtTime(x.scheduledAt)} — ${x.character.name}${x.character.actor ? ` (${x.character.actor.name}${x.character.actor.phone ? `, ${x.character.actor.phone}` : ""})` : ""}${x.location ? ` · ${x.location}` : ""}`),
+      lead: `${upcoming.length} ${upcoming.length === 1 ? "fitting is" : "fittings are"} booked${missed ? `, ${missed} of them already missed` : ""}:`,
+      // The actor is who is being called in; the character is only which part they are being fitted for.
+      lines: upcoming.map((x) => `${fmtDate(x.scheduledAt)} ${fmtTime(x.scheduledAt)} — ${x.actor?.name || "actor not cast yet"}${x.actor?.phone ? ` (${x.actor.phone})` : ""} as ${x.character.name}${x.location ? ` · ${x.location}` : ""}${x.scheduledAt < fromToday ? " · missed" : ""}`),
       empty: "Nothing is booked in at the moment.",
-      ask: "Please confirm you can make your slot, or tell us what suits you better.",
+      ask: "Please confirm your slot — and if it says missed, tell us when you can come in.",
     }),
   });
   return (
@@ -99,10 +102,15 @@ export default function Fittings() {
           <Field label="Photos & video" span2 help="Shoot it now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>
           {/* The character's own things — who is cast, their references, the pieces tagged to them — without leaving this form. */}
           <div className="span-2">
-            <button type="button" className="btn btn-sm" disabled={!f.characterId} onClick={() => setShowChar((v) => !v)}>
+            <button type="button" className="btn btn-sm" onClick={() => setShowChar((v) => !v)} aria-expanded={showChar}>
               {showChar ? "Hide character details" : "Character details"}
             </button>
-            {showChar && f.characterId && <div className="card flat mt-2" style={{ padding: 12 }}><CharacterQuickPanel characterId={f.characterId} /></div>}
+            {showChar && (
+              <div className="card flat mt-2" style={{ padding: 12 }}>
+                {/* It opens either way: a button that does nothing when nobody is picked reads as broken. */}
+                {f.characterId ? <CharacterQuickPanel characterId={f.characterId} /> : <div className="subtle">Pick a character above and their actor, references and pieces open here.</div>}
+              </div>
+            )}
           </div>
         </div>
         <ErrorBox error={create.error} />
@@ -110,7 +118,7 @@ export default function Fittings() {
       <NewCharacterModal open={newChar} onClose={() => setNewChar(false)} onCreated={(c) => setF({ ...f, characterId: c.id, costumes: [] })} />
       <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setF({ ...f, costumes: f.costumes.some((x) => x.id === c.id) ? f.costumes : [...f.costumes, c] })} characterId={f.characterId || null} />
       <SendRequestModal open={!!chase} onClose={() => setChase(null)} title="Send a request · fittings"
-        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="FITTING" entityId={chase?.id} />
+        defaultTitle={chase?.title || ""} defaultBody={chase?.body || ""} entityType="FITTING" />
     </div>
   );
 }

@@ -13,6 +13,16 @@ import "./discussion.css";
 const ZILLIT_WEB = "https://web.zillit.com";
 
 export type ChatEntity = "BUDGET" | "EXPENSE" | "ALTERATION" | "DAMAGE" | "MISSING" | "FITTING";
+
+/** What a request about this kind of record is actually asking for — a status dump on its own asks nothing. */
+const ASK: Record<ChatEntity, string> = {
+  ALTERATION: "Please confirm you have this and when it will be ready.",
+  DAMAGE: "Please say whether you can repair this, and by when.",
+  MISSING: "Please say if you have seen this, or where it was last with you.",
+  FITTING: "Please confirm this slot, or tell us what suits you better.",
+  EXPENSE: "Please look this over and send anything still outstanding.",
+  BUDGET: "Please look this over and send anything still outstanding.",
+};
 interface Comment { id: string; userId: string; userName: string; body: string; createdAt: string }
 
 /**
@@ -62,7 +72,7 @@ export function RecordActions({ entityType, entityId, title, summary, path }: { 
       </button>
       <SendRequestModal open={sendOpen} onClose={() => setSendOpen(false)} title={`Send a request · ${title}`}
         defaultTitle={`${title}${project?.name ? ` · ${project.name}` : ""}`.slice(0, 160)}
-        defaultBody={`${summary}\n${url}`} entityType={entityType} entityId={entityId} />
+        defaultBody={`${summary}\n\n${ASK[entityType]}\n${url}`} entityType={entityType} entityId={entityId} />
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} title={title} summary={summary} url={url} />
       <ChatModal open={chatOpen} onClose={() => setChatOpen(false)} entityType={entityType} entityId={entityId} title={title} />
     </span>
