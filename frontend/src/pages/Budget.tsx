@@ -11,6 +11,7 @@ import { Card, ConfirmButton, Empty, ErrorBox, Field, Input, Modal, PageHead, Se
 import { RecordActions } from "@/components/Discussion";
 import { BudgetUpload } from "@/components/BudgetUpload";
 import { BudgetSheet, type SheetGroup } from "@/components/BudgetSheet";
+import { BudgetDocument, topSheetText } from "@/components/BudgetDocument";
 import { BUDGET_UNITS, CURRENCIES, WARDROBE_ACCOUNTS, departmentOf, sumByCurrency } from "@/lib/budgetAccounts";
 
 interface BudgetReport { total: number; byCategory: Record<string, number>; byCharacter: Record<string, number>; byScene: Record<string, number>; inventoryValue: number; rentalCommitted: number; expenses: Expense[]; rentals: Rental[] }
@@ -152,6 +153,7 @@ export default function Budget() {
 
   return (
     <div>
+      <div className={tab === "full" ? "no-print" : undefined}>
       <PageHead title="Budget" sub="Spend for the whole production, scene by scene or by character."
         actions={<><button className={`btn ${tab === "full" ? "btn-blue" : ""}`} onClick={() => { setTab("full"); setQ(""); }}><Layers size={16} /> Full budget</button><button className="btn" onClick={() => setUploadOpen(true)}><FileSpreadsheet size={16} /> Upload budget sheet</button><button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Budget</button></>} />
       <div className="grid grid-stats mb-2">
@@ -174,6 +176,8 @@ export default function Budget() {
           <button type="button" className="btn btn-sm" onClick={() => setCat("")}>Show all categories</button>
         </div>
       )}
+      </div>
+
       {tab === "all" && needle && (
         <div className="subtle mb-2">
           Matching · <b>{sumByCurrency(shownExpenses, currency, fmtMoney)}</b> across {shownExpenses.length} expense{shownExpenses.length === 1 ? "" : "s"}
@@ -181,7 +185,7 @@ export default function Budget() {
       )}
 
       {tab === "full" ? (
-        <div className="col gap-2">
+        <div className="col gap-2 no-print">
           <Card>
             <div className="row between wrap gap-2">
               <div>
@@ -190,8 +194,9 @@ export default function Budget() {
               </div>
               {/* Chat and share are about the budget as a whole here, not one line of it. */}
               <div className="row gap-1">
+                {/* Shared as the top sheet reads on paper, account by account, rather than a line of totals. */}
                 <RecordActions entityType="BUDGET" entityId={projectId} title={`${project?.name || "Production"} · budget`} path={`/p/${projectId}/budget?tab=full`}
-                  summary={`Budget · ${project?.name || "Production"}\nTotal ${sumByCurrency(expenses, currency, fmtMoney)} across ${expenses.length} line${expenses.length === 1 ? "" : "s"}\n${cats.map((c) => `${humanize(c)}: ${sumByCurrency(expenses.filter((e) => e.category === c), currency, fmtMoney)}`).join("\n")}`} />
+                  summary={topSheetText(project, expenses, currency, money)} />
                 <button className="btn btn-sm" onClick={() => window.print()}><Printer size={15} /> Print / PDF</button>
               </div>
             </div>
@@ -228,6 +233,8 @@ export default function Budget() {
         )}
       </Card>
       )}
+
+      {tab === "full" && <BudgetDocument project={project} expenses={expenses} groups={deptGroups.length ? deptGroups : [{ key: "all", title: "All budget lines", lines: expenses }]} currency={currency} fmt={money} />}
 
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} projectId={projectId} currency={currency} />
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? "Edit budget line" : "Add budget line"} wide

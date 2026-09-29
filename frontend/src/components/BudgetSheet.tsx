@@ -32,7 +32,7 @@ const num = (n?: number | null) => (n == null ? "" : new Intl.NumberFormat(undef
  * The budget read the way a production budget prints (Movie Magic): a header per scene or character, a block per account
  * code with its title, "Name:" rows for who is paid, then Amt · Unit · X · Rate · Subtotal lines and a Total per account.
  */
-export function BudgetSheet({ groups, currency, fmt, onEdit, empty, lineActions }: { groups: SheetGroup[]; currency: string; fmt: (n: number, currency: string) => string; onEdit?: (e: Expense) => void; empty?: ReactNode; lineActions?: (e: Expense) => ReactNode }) {
+export function BudgetSheet({ groups, currency, fmt, onEdit, empty, lineActions, plain }: { groups: SheetGroup[]; currency: string; fmt: (n: number, currency: string) => string; onEdit?: (e: Expense) => void; empty?: ReactNode; lineActions?: (e: Expense) => ReactNode; plain?: boolean }) {
   const total = (lines: Expense[]) => sumByCurrency(lines, currency, fmt);
   // An actions column (share, discuss, delete) sits after Subtotal when the page asks for one.
   const cols = lineActions ? 8 : 7;
@@ -43,7 +43,8 @@ export function BudgetSheet({ groups, currency, fmt, onEdit, empty, lineActions 
     <td className="bs-code" style={first ? undefined : { borderTopColor: "transparent" }}>{first && text ? <span className="bs-code-mark">{text}</span> : null}</td>
   );
   return (
-    <div className="table-wrap table-scroll">
+    // `plain` drops the scroll box: a printed budget runs down the page instead of inside a window.
+    <div className={plain ? undefined : "table-wrap table-scroll"}>
       <table className="table budget-sheet">
         <thead><tr><th style={{ width: 96 }}>Account</th><th>Description</th><th className="right" style={{ width: 70 }}>Amt</th><th style={{ width: 80 }}>Unit</th><th className="right" style={{ width: 50 }}>X</th><th className="right" style={{ width: 100 }}>Rate</th><th className="right" style={{ width: 120 }}>Subtotal</th>{lineActions && <th style={{ width: 130 }}><span className="sr-only">Actions</span></th>}</tr></thead>
         <tbody>

@@ -403,3 +403,35 @@ button.item { width: 100%; background: none; border: 0; text-align: left; font: 
 .sidebar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.06); }
 .sidebar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.28); border-color: transparent; }
 .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.42); }
+
+/* ---------- Budget document (printed / shared full budget) ---------- */
+/* Laid out the way a production budget prints: a top sheet of departments, then the detail pages. */
+.budget-doc { color: #000; font-size: 11.5px; }
+.budget-doc .bd-cover { text-align: center; padding: 6mm 0 8mm; }
+.budget-doc .bd-cover h1 { font-size: 20px; letter-spacing: 0.06em; text-transform: uppercase; margin: 0; }
+.budget-doc .bd-sub { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #444; margin-top: 3px; }
+.budget-doc .bd-meta { display: flex; justify-content: space-between; gap: 20px; margin-top: 10mm; text-align: left; font-size: 11px; }
+.budget-doc .bd-meta .right { text-align: right; }
+.budget-doc table { width: 100%; border-collapse: collapse; }
+.budget-doc th, .budget-doc td { border: 1px solid #999; padding: 3px 6px; }
+.budget-doc thead th { background: #e9e9e9; text-transform: none; letter-spacing: 0; color: #000; font-size: 11px; }
+.budget-doc .bd-top tbody tr:nth-child(even) td { background: #f4f4f4; }
+.budget-doc .bd-section td { background: #d9d9d9; font-weight: 700; }
+.budget-doc .bd-grand td { background: #c9c9c9; font-weight: 800; }
+.budget-doc .bd-details { break-before: page; }
+.budget-doc .bd-label { font-weight: 600; margin: 0 0 3px; }
+.budget-doc .bd-foot { display: none; }
+/* The detail sheet keeps its own shape, drawn for paper rather than for a screen. */
+.budget-doc .budget-sheet .bs-code-mark { background: none; color: #000; padding: 0; font-size: 11px; }
+.budget-doc .budget-sheet .bs-code { background: #f4f4f4; }
+.budget-doc .budget-sheet .bs-line:nth-child(even) td:not(.bs-code) { background: #f7f7f7; }
+.budget-doc .budget-sheet .bs-total td:not(.bs-code), .budget-doc .budget-sheet .bs-group-total td { background: #d9d9d9; }
+.budget-doc .budget-sheet .bs-grand td { background: #c9c9c9; color: #000; }
+@media print {
+  @page { size: A4 portrait; margin: 14mm 10mm 16mm; }
+  /* Shaded totals are how a budget is read; keep them when the page is printed. */
+  .budget-doc { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .budget-doc thead { display: table-header-group; }
+  .budget-doc tr { break-inside: avoid; }
+  .budget-doc .bd-foot { display: block; position: fixed; bottom: 0; left: 0; font-size: 10px; color: #444; }
+}
