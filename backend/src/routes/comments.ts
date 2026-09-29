@@ -8,13 +8,16 @@ import { notify } from "../services/notify";
 /** Team chat on a single record. Anyone on the production can read and post; only the author deletes. */
 export const commentsRouter = Router({ mergeParams: true });
 
-export const CHAT_ENTITIES = ["EXPENSE", "ALTERATION", "DAMAGE", "MISSING", "FITTING"] as const;
+/** BUDGET is the production's whole budget — one per project, so its entityId is the project id. */
+export const CHAT_ENTITIES = ["BUDGET", "EXPENSE", "ALTERATION", "DAMAGE", "MISSING", "FITTING"] as const;
 type ChatEntity = (typeof CHAT_ENTITIES)[number];
 
 /** The record's one-line name for notifications, or null when it is not in this production. */
 async function recordLabel(projectId: string, type: ChatEntity, id: string): Promise<string | null> {
   const where = { id, projectId };
   switch (type) {
+    // The budget is the production's own, so the id is the project's and there is nothing to look up.
+    case "BUDGET": { const p = await prisma.project.findFirst({ where: { id: projectId }, select: { name: true } }); return p && `Budget · ${p.name}`; }
     case "EXPENSE": { const e = await prisma.expense.findFirst({ where, select: { description: true } }); return e && `Expense · ${e.description}`; }
     case "ALTERATION": { const a = await prisma.alterationRequest.findFirst({ where, select: { costume: { select: { assetNumber: true, name: true } } } }); return a && `Alteration · ${a.costume.assetNumber} ${a.costume.name}`; }
     case "DAMAGE": { const d = await prisma.damageReport.findFirst({ where, select: { costume: { select: { assetNumber: true, name: true } } } }); return d && `Damage · ${d.costume.assetNumber} ${d.costume.name}`; }

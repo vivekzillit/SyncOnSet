@@ -11,7 +11,7 @@ import "./discussion.css";
 
 const ZILLIT_WEB = "https://web.zillit.com";
 
-export type ChatEntity = "EXPENSE" | "ALTERATION" | "DAMAGE" | "MISSING" | "FITTING";
+export type ChatEntity = "BUDGET" | "EXPENSE" | "ALTERATION" | "DAMAGE" | "MISSING" | "FITTING";
 interface Comment { id: string; userId: string; userName: string; body: string; createdAt: string }
 
 /**

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileSpreadsheet, Plus, Trash2 } from "lucide-react";
+import { FileSpreadsheet, Layers, Plus, Printer, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth } from "@/state/auth";
@@ -13,7 +14,7 @@ import { BudgetSheet, type SheetGroup } from "@/components/BudgetSheet";
 import { BUDGET_UNITS, CURRENCIES, WARDROBE_ACCOUNTS, departmentOf, sumByCurrency } from "@/lib/budgetAccounts";
 
 interface BudgetReport { total: number; byCategory: Record<string, number>; byCharacter: Record<string, number>; byScene: Record<string, number>; inventoryValue: number; rentalCommitted: number; expenses: Expense[]; rentals: Rental[] }
-type TabKey = "all" | "scenes" | "characters" | "accounts";
+type TabKey = "all" | "scenes" | "characters" | "accounts" | "full";
 /** Filter value for expenses not tagged to any scene / character. */
 const NONE = "__none__";
 const ACCOUNT_LIST_ID = "budget-accounts";
@@ -43,7 +44,7 @@ function rollup(expenses: Expense[], key: (e: Expense) => string | null | undefi
 }
 
 export default function Budget() {
-  const { projectId, currency } = useProject();
+  const { projectId, currency, project } = useProject();
   const { meta } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -52,6 +53,9 @@ export default function Budget() {
   const { data: scenes } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
   const { data: vendors } = useQuery({ queryKey: ["vendors", projectId], queryFn: () => api<Vendor[]>(p(projectId, "/vendors")) });
   const [tab, setTab] = useState<TabKey>("all");
+  /** A tapped spend tile: every tab below then shows only that category ("" = everything). */
+  const [cat, setCat] = useState("");
+  const nav = useNavigate();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -80,7 +84,8 @@ export default function Budget() {
   });
   const del = useMutation({ mutationFn: (id: string) => api(p(projectId, `/expenses/${id}`), { method: "DELETE" }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["budget", projectId] }); toast.push("Expense deleted", "ok"); }, onError: (e: Error) => toast.push(e.message, "danger") });
 
-  const expenses = useMemo(() => data?.expenses || [], [data]);
+  const allExpenses = useMemo(() => data?.expenses || [], [data]);
+  const expenses = useMemo(() => (cat ? allExpenses.filter((e) => e.category === cat) : allExpenses), [allExpenses, cat]);
   const byScene = useMemo(() => rollup(expenses, (e) => e.sceneId), [expenses]);
   const byChar = useMemo(() => rollup(expenses, (e) => e.characterId), [expenses]);
   const sceneById = useMemo(() => new Map((scenes || []).map((s) => [s.id, s])), [scenes]);
@@ -106,7 +111,7 @@ export default function Budget() {
   const openAdd = () => { setEditing(null); create.reset(); setF({ ...f, amount: "", description: "", quantity: "", rate: "", multiplier: "1", currency: f.currency || currency }); setOpen(true); };
   const openEdit = (e: Expense) => { setEditing(e.id); create.reset(); setF(toForm(e, currency)); setOpen(true); };
   /** Picking a known code fills its account name (only when the name is blank or still the old code's name). */
-  const knownAccounts = [...WARDROBE_ACCOUNTS, ...expenses.filter((e) => e.accountCode && e.accountName).map((e) => ({ code: e.accountCode!, name: e.accountName! }))];
+  const knownAccounts = [...WARDROBE_ACCOUNTS, ...allExpenses.filter((e) => e.accountCode && e.accountName).map((e) => ({ code: e.accountCode!, name: e.accountName! }))];
   const setCode = (code: string) => {
     const hit = knownAccounts.find((a) => a.code === code.trim());
     const oldName = knownAccounts.find((a) => a.code === f.accountCode.trim())?.name;
@@ -147,26 +152,58 @@ export default function Budget() {
 
   return (
     <div>
-      <PageHead title="Budget" sub="Spend for the whole production, scene by scene or by character." actions={<><button className="btn" onClick={() => setUploadOpen(true)}><FileSpreadsheet size={16} /> Upload budget sheet</button><button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Budget</button></>} />
+      <PageHead title="Budget" sub="Spend for the whole production, scene by scene or by character."
+        actions={<><button className={`btn ${tab === "full" ? "btn-blue" : ""}`} onClick={() => { setTab("full"); setQ(""); }}><Layers size={16} /> Full budget</button><button className="btn" onClick={() => setUploadOpen(true)}><FileSpreadsheet size={16} /> Upload budget sheet</button><button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Budget</button></>} />
       <div className="grid grid-stats mb-2">
         {/* Summed per currency, so a line in pounds is never added into a rupee total. */}
-        <Stat label="Total spend" value={sumByCurrency(expenses, currency, fmtMoney)} />
-        {cats.map((c) => <Stat key={c} label={humanize(c)} value={sumByCurrency(expenses.filter((e) => e.category === c), currency, fmtMoney)} />)}
-        <Stat label="Inventory value" value={m(data.inventoryValue)} hint="sum of purchase costs" />
-        <Stat label="Rental committed" value={m(data.rentalCommitted)} hint="rate × booked days" />
+        {/* Tap a category to see only its lines below, in every tab; tap it again (or Total spend) for everything. */}
+        <Stat label="Total spend" value={sumByCurrency(allExpenses, currency, fmtMoney)} active={!cat} onClick={() => setCat("")} />
+        {cats.map((c) => <Stat key={c} label={humanize(c)} value={sumByCurrency(allExpenses.filter((e) => e.category === c), currency, fmtMoney)} active={cat === c} onClick={() => setCat(cat === c ? "" : c)} />)}
+        <Stat label="Inventory value" value={m(data.inventoryValue)} hint="sum of purchase costs" onClick={() => nav(`/p/${projectId}/costumes`)} />
+        <Stat label="Rental committed" value={m(data.rentalCommitted)} hint="rate × booked days" onClick={() => nav(`/p/${projectId}/vendors`)} />
       </div>
 
-      <Tabs tabs={[{ key: "all", label: `All (${expenses.length})` }, { key: "scenes", label: `Scene by scene (${scenes?.length ?? 0})` }, { key: "characters", label: `By character (${characters?.length ?? 0})` }, { key: "accounts", label: `By account code (${accountOptions.length})` }]} value={tab} onChange={(t) => { setTab(t); setQ(""); }} />
-      <div className="filters">
+      <Tabs tabs={[{ key: "all", label: `All (${expenses.length})` }, { key: "scenes", label: `Scene by scene (${scenes?.length ?? 0})` }, { key: "characters", label: `By character (${characters?.length ?? 0})` }, { key: "accounts", label: `By account code (${accountOptions.length})` }, { key: "full", label: "Full budget" }]} value={tab} onChange={(t) => { setTab(t); setQ(""); }} />
+      {tab !== "full" && <div className="filters">
         <SearchBox value={q} onChange={setQ} placeholder={tab === "all" ? "Search description, account, name, vendor, piece…" : tab === "scenes" ? "Search scene number, name, location…" : tab === "accounts" ? "Search account code, account name, description…" : "Search character, actor, cast number…"} />
-      </div>
+      </div>}
 
+      {cat && (
+        <div className="row gap-1 mb-2 wrap">
+          <span className="subtle">Showing <b>{humanize(cat)}</b> only · {sumByCurrency(expenses, currency, fmtMoney)} across {expenses.length} line{expenses.length === 1 ? "" : "s"}</span>
+          <button type="button" className="btn btn-sm" onClick={() => setCat("")}>Show all categories</button>
+        </div>
+      )}
       {tab === "all" && needle && (
         <div className="subtle mb-2">
           Matching · <b>{sumByCurrency(shownExpenses, currency, fmtMoney)}</b> across {shownExpenses.length} expense{shownExpenses.length === 1 ? "" : "s"}
         </div>
       )}
 
+      {tab === "full" ? (
+        <div className="col gap-2">
+          <Card>
+            <div className="row between wrap gap-2">
+              <div>
+                <div className="bold" style={{ fontSize: 18 }}>{sumByCurrency(expenses, currency, fmtMoney)}</div>
+                <div className="subtle">{expenses.length} budget line{expenses.length === 1 ? "" : "s"} · {sceneGroups.length} scene{sceneGroups.length === 1 ? "" : "s"} · {charGroups.length} character{charGroups.length === 1 ? "" : "s"} · {deptGroups.length} account group{deptGroups.length === 1 ? "" : "s"}</div>
+              </div>
+              {/* Chat and share are about the budget as a whole here, not one line of it. */}
+              <div className="row gap-1">
+                <RecordActions entityType="BUDGET" entityId={projectId} title={`${project?.name || "Production"} · budget`} path={`/p/${projectId}/budget?tab=full`}
+                  summary={`Budget · ${project?.name || "Production"}\nTotal ${sumByCurrency(expenses, currency, fmtMoney)} across ${expenses.length} line${expenses.length === 1 ? "" : "s"}\n${cats.map((c) => `${humanize(c)}: ${sumByCurrency(expenses.filter((e) => e.category === c), currency, fmtMoney)}`).join("\n")}`} />
+                <button className="btn btn-sm" onClick={() => window.print()}><Printer size={15} /> Print / PDF</button>
+              </div>
+            </div>
+          </Card>
+          {!expenses.length ? <Card pad0><Empty icon="💸" title="No budget lines yet" hint="Add a budget line or upload a budget sheet." /></Card> : <>
+            <Card title="All budget lines" pad0><BudgetSheet groups={[{ key: "all", title: "All budget lines", lines: expenses }]} currency={currency} fmt={money} onEdit={openEdit} lineActions={lineActions} /></Card>
+            {sceneGroups.length > 0 && <Card title="Scene by scene" pad0><BudgetSheet groups={sceneGroups} currency={currency} fmt={money} onEdit={openEdit} /></Card>}
+            {charGroups.length > 0 && <Card title="By character" pad0><BudgetSheet groups={charGroups} currency={currency} fmt={money} onEdit={openEdit} /></Card>}
+            {deptGroups.length > 0 && <Card title="By account code" pad0><BudgetSheet groups={deptGroups} currency={currency} fmt={money} onEdit={openEdit} /></Card>}
+          </>}
+        </div>
+      ) : (
       <Card pad0>
         {tab === "all" ? (
           !expenses.length ? <Empty icon="💸" title="No budget lines yet" hint="Add a budget line or upload a budget, and tag lines to a scene or character to see spend broken down." /> : !shownExpenses.length ? <Empty icon="🔍" title="No budget lines match" /> : (
@@ -190,6 +227,7 @@ export default function Budget() {
           )
         )}
       </Card>
+      )}
 
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} projectId={projectId} currency={currency} />
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? "Edit budget line" : "Add budget line"} wide
