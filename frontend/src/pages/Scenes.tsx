@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, FileUp, CalendarDays, ChevronsDownUp, ChevronsUpDown, Pencil } from "lucide-react";
+import { Plus, FileUp, CalendarDays, ChevronsDownUp, ChevronsUpDown, Eye, Pencil } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
@@ -10,6 +10,7 @@ import type { Character, Scene, SceneCharacter } from "@/api/types";
 import { Badge, Card, Chips, ConfirmButton, Dot, Empty, PageHead, SearchBox, Select, Spinner, confirmAction, discardIfDirty, useToast, useUnsavedGuard } from "@/components/ui";
 import { ScriptUploadModal } from "@/components/ScriptUpload";
 import { ScheduleUploadModal, type DocKind } from "@/components/ScheduleUpload";
+import { DocumentViewer, useDocuments, type DocumentKind } from "@/components/DocumentViewer";
 import { PrincipalsModal, sortByCast } from "@/components/PrincipalsModal";
 import { BreakdownRowModal, readinessOf, type BreakdownTarget } from "@/components/BreakdownRowModal";
 import { EditRow, LOCATION_LIST_ID, NEW, PersistError, castMembers, castNumbers, changesOf, characterNames, characterNamesOf, emptyDraft, persistDraft, planSaveOrder, scriptLoc, toDraft, truncate, type Draft } from "@/components/SceneEditRow";
@@ -48,6 +49,9 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
   const [single, setSingle] = useState<string | null>(null);
   const [scriptOpen, setScriptOpen] = useState(false);
   const [docOpen, setDocOpen] = useState<DocKind | null>(null);
+  const [viewDoc, setViewDoc] = useState<DocumentKind | null>(null);
+  const { data: scriptDocs } = useDocuments("SCRIPT");
+  const { data: scheduleDocs } = useDocuments("SCHEDULE");
 
   const { data, isLoading } = useQuery({ queryKey: ["scenes", projectId], queryFn: () => api<Scene[]>(p(projectId, "/scenes")) });
   const { data: characters } = useQuery({ queryKey: ["characters", projectId], queryFn: () => api<Character[]>(p(projectId, "/characters")) });
@@ -218,10 +222,15 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
               {view === "breakdown"
                 ? <button className="btn" onClick={() => setView("scenes")} title="One row per scene"><ChevronsDownUp size={16} /> Collapse Scene Number</button>
                 : <button className="btn" onClick={() => setView("breakdown")} title="One row per character in each scene"><ChevronsUpDown size={16} /> Expand Scene Number</button>}
-              <button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button>
+              {/* Once a script / schedule has been applied its file is kept, so it can be opened beside the scenes it produced. */}
+              <div className="col" style={{ gap: 2 }}>
+                <button className="btn btn-accent" onClick={() => setScriptOpen(true)}><FileUp size={16} /> Upload script</button>
+                {scriptDocs?.length ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => setViewDoc("SCRIPT")}><Eye size={14} /> View uploaded script</button> : null}
+              </div>
               <div className="col" style={{ gap: 2 }}>
                 <button className="btn" onClick={() => setDocOpen("SCHEDULE")}><CalendarDays size={16} /> Upload schedule</button>
                 <span className="tiny" style={{ color: "var(--danger)" }}>Upload schedule to add characters and shoot date</span>
+                {scheduleDocs?.length ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => setViewDoc("SCHEDULE")}><Eye size={14} /> View uploaded schedule</button> : null}
               </div>
               <button className="btn" onClick={() => openLine(null)}><Plus size={16} /> Add to breakdown</button>
             </>}
@@ -358,6 +367,7 @@ export default function Scenes({ initialView = "scenes" }: { initialView?: View 
       <PrincipalsModal open={!!principalsDraft} onClose={() => setPrincipalsFor(null)} characters={characters || []} value={principalsDraft?.principals || []} onChange={(ids) => principalsFor && drafts[principalsFor] && setDraft(principalsFor, { ...drafts[principalsFor], principals: ids })} />
 
       <ScriptUploadModal open={scriptOpen} onClose={() => setScriptOpen(false)} onImported={() => { setWhen("all"); setRev(""); }} />
+      <DocumentViewer open={!!viewDoc} kind={viewDoc || "SCRIPT"} onClose={() => setViewDoc(null)} scenes={data || []} />
       <ScheduleUploadModal open={!!docOpen} kind={docOpen || "SCHEDULE"} onClose={() => setDocOpen(null)} onApplied={() => { setWhen(docOpen === "CALLSHEET" ? "today" : "upcoming"); setRev(""); }} />
     </div>
   );

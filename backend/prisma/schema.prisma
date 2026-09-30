@@ -71,6 +71,7 @@ model Project {
   contacts      ExternalContact[]
   rentals       Rental[]
   expenses      Expense[]
+  documents     ProjectDocument[]
   notifications Notification[]
   auditLogs     AuditLog[]
   comments      Comment[]
@@ -619,4 +620,24 @@ model AuditLog {
   project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
+}
+
+/// A script, schedule or call sheet kept once its upload was imported / applied, so it can be opened later and compared
+/// with the breakdown. Reading a file (the preview) records nothing; each apply adds a version, the newest first.
+model ProjectDocument {
+  id           String    @id @default(cuid())
+  projectId    String
+  kind         String    // SCRIPT | SCHEDULE | CALLSHEET
+  fileName     String
+  url          String    // /uploads/doc-….ext
+  mimeType     String?
+  size         Int?
+  revision     String?   // a script's draft name ("Blue 2026-09-08")
+  sheetDate    DateTime? // the day a call sheet is for
+  uploadedById String?
+  uploadedAt   DateTime  @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, kind, uploadedAt])
 }

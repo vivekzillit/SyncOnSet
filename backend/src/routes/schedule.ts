@@ -8,6 +8,7 @@ import { requireRole } from "../middleware/auth";
 import { INT_EXT, MANAGER_ROLES, TIMES_OF_DAY } from "../lib/constants";
 import { audit } from "../services/audit";
 import { extractDocumentText, normalizeNumber, parseScheduleText, type DocKind } from "../services/scheduleParser";
+import { keepDocument, stashUpload } from "../services/documents";
 
 /** Shooting schedules and call sheets: upload → preview of what the file says about each scene → apply. Same shape as the script upload. */
 export const scheduleRouter = Router({ mergeParams: true });
@@ -73,9 +74,10 @@ scheduleRouter.post(
         };
       }),
     ).sort((a, b) => a.sortOrder - b.sortOrder);
+    const fileToken = await stashUpload(req.file); // kept only if /apply sends it back
     await audit(req.user, req.projectId!, "SCHEDULE_PARSE", "SCENE", "preview", { kind, file: req.file.originalname, format, days: parsed.days.length, scenes: scenes.length, matched: scenes.filter((s) => s.exists).length });
     res.json({
-      kind, file: req.file.originalname, format,
+      kind, file: req.file.originalname, format, fileToken,
       date: parsed.date, dayNumber: parsed.dayNumber,
       days: ownDays.length,
       scenes,
@@ -109,6 +111,8 @@ const applySchema = z.object({
   /** A call sheet is remembered on the production (its day and file name) until the next one replaces it. */
   kind: z.enum(["SCHEDULE", "CALLSHEET"]).optional(),
   file: zOptionalString,
+  /** The file read by /parse, kept so it can be opened later and compared with the scenes. */
+  fileToken: zOptionalString,
   sheetDate: zDate,
 });
 
@@ -169,6 +173,8 @@ scheduleRouter.post(
       const sheetDate = body.sheetDate ?? body.assignments.map((a) => a.date).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
       await prisma.project.update({ where: { id: projectId }, data: { callsheetDate: sheetDate, callsheetFile: body.file || null, callsheetAt: new Date() } });
     }
+    await keepDocument({ projectId, kind: body.kind === "CALLSHEET" ? "CALLSHEET" : "SCHEDULE", token: body.fileToken, fileName: body.file, userId: req.user?.id,
+      sheetDate: body.kind === "CALLSHEET" ? (body.sheetDate ?? body.assignments.map((a) => a.date).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime())[0] ?? null) : null });
     await audit(req.user, projectId, "SCHEDULE_APPLY", "SCENE", "bulk", { updated, created, filled, linked, missing, overwrite: !!body.overwrite, kind: body.kind });
     res.json({ updated, created, filled, linked, missing });
   }),

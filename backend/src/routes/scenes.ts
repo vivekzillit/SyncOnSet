@@ -11,6 +11,7 @@ import { sceneReadiness } from "../services/readiness";
 import { detectFormat, parseScript } from "../services/scriptParser";
 import { readPdf } from "../services/scheduleParser";
 import { aiEnabled, extractAndStoreCues } from "../services/costumeCues";
+import { keepDocument, stashUpload } from "../services/documents";
 
 export const scenesRouter = Router({ mergeParams: true });
 
@@ -95,6 +96,9 @@ scenesRouter.post(
         castNumbers: z.record(z.number().int().min(0)).optional(),
         /** Start again: delete the scenes this production already has before importing. Characters are kept. */
         replace: z.boolean().optional(),
+        /** The script file read by /parse-script, kept so it can be opened later next to the breakdown. */
+        fileToken: z.string().max(80).optional().nullable(),
+        fileName: z.string().max(200).optional().nullable(),
       }),
       req.body,
     );
@@ -154,6 +158,7 @@ scenesRouter.post(
       }
     }
     await audit(req.user, projectId, "SCENE_IMPORT", "SCENE", "bulk", { created, updated, unchanged, charactersCreated, removed, revision: body.revision || null });
+    await keepDocument({ projectId, kind: "SCRIPT", token: body.fileToken, fileName: body.fileName, userId: req.user?.id, revision: body.revision || null });
     res.status(201).json({ scenes: created + updated + unchanged, created, updated, unchanged, removed, charactersCreated, revision: body.revision || null });
   }),
 );
@@ -185,10 +190,13 @@ scenesRouter.post(
     const stored = new Map((await prisma.scene.findMany({ where: { projectId: req.projectId }, select: { number: true, scriptText: true, revision: true, name: true, location: true, intExt: true, timeOfDay: true, scriptDay: true, synopsis: true, pages: true } })).map((sc) => [sc.number, sc]));
     const norm = (t: string | null | undefined) => (t || "").replace(/\s+/g, " ").trim().toLowerCase();
     await audit(req.user, req.projectId!, "SCRIPT_PARSE", "SCENE", "preview", { file: req.file.originalname, format, scenes: result.scenes.length });
+    // Set aside so it can be opened later once imported; nothing is recorded unless the import sends the token back.
+    const fileToken = await stashUpload(req.file);
     const existingList = await prisma.character.findMany({ where: { projectId: req.projectId }, select: { id: true, name: true, castNumber: true }, orderBy: { name: "asc" } });
     res.json({
       ...result,
       file: req.file.originalname,
+      fileToken,
       firstUpload: stored.size === 0,
       existingScenes: stored.size,
       existingCharacters: existingList,

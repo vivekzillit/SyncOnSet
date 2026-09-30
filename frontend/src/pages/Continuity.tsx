@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, FileText, Images, Keyboard, Printer, Video, X } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Camera, CameraOff, ClipboardList, Eye, FileText, Images, Keyboard, Printer, Video, X } from "lucide-react";
 import { api, ApiError, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { CONTINUITY_ROLES } from "@/state/auth";
@@ -11,6 +11,7 @@ import type { ContinuityRecord, Costume, Scene } from "@/api/types";
 import { Badge, Card, Dot, Empty, ErrorBox, Field, Input, PageHead, Spinner, Tabs, Textarea, discardIfDirty, useToast } from "@/components/ui";
 import { PhotoGrid, QRScanner } from "@/components/domain";
 import { ScheduleUploadModal } from "@/components/ScheduleUpload";
+import { DocumentViewer, useDocuments } from "@/components/DocumentViewer";
 import { ScanButton } from "@/components/DocumentScanner";
 
 const DEFAULT_DETAILS = ["Shirt", "Sleeves", "Collar", "Trousers", "Hair", "Accessories"];
@@ -222,6 +223,8 @@ export default function ContinuityOnSet() {
   const [touched, setTouched] = useState(false);
   const [media, setMedia] = useState<File[]>([]);
   const [callsheetOpen, setCallsheetOpen] = useState(false);
+  const [viewSheet, setViewSheet] = useState(false);
+  const { data: sheetDocs } = useDocuments("CALLSHEET");
   // The board opens on the day of the latest call sheet, which stays until a new one replaces it; picking a
   // date (or following a scene in) moves it for this visit only.
   const [pickedDay, setDay] = useState<string | null>(null);
@@ -368,7 +371,8 @@ export default function ContinuityOnSet() {
   return (
     <div>
       <PageHead title="On set" sub="Record what the actor is wearing, take by take."
-        actions={<>{mayRecord && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<Link to={`/p/${c.projectId}/continuity/book`} className="btn">Continuity book →</Link></>} />
+        actions={<>{sheetDocs?.length ? <button className="btn" onClick={() => setViewSheet(true)} title="Open the uploaded call sheet beside the scenes on its day"><Eye size={16} /> View callsheet</button> : null}{mayRecord && <button className="btn" onClick={() => setCallsheetOpen(true)}><ClipboardList size={16} /> Upload callsheet</button>}<Link to={`/p/${c.projectId}/continuity/book`} className="btn">Continuity book →</Link></>} />
+      <DocumentViewer open={viewSheet} kind="CALLSHEET" onClose={() => setViewSheet(false)} scenes={c.scenes || []} />
       <ScheduleUploadModal open={callsheetOpen} kind="CALLSHEET" onClose={() => setCallsheetOpen(false)} onApplied={(d) => d && setDay(d)} />
       <div className="mb-2" style={{ color: "var(--danger)", fontWeight: 600 }}>Click on scene number to add details on set</div>
       <ShootDay c={c} day={day} onDay={setDay} detail={detail} onClose={closeScene} />

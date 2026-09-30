@@ -17,7 +17,7 @@ interface PreviewScene {
   /** Added by hand in the review, because the file did not name it (or no file was read at all). */
   manual?: boolean;
 }
-interface ParseResult { kind: DocKind; file: string; format: string; date: string | null; dayNumber: number | null; days: number; scenes: PreviewScene[]; warnings: string[]; breakdownEmpty: boolean; knownCastNumbers: number }
+interface ParseResult { kind: DocKind; file: string; fileToken?: string | null; format: string; date: string | null; dayNumber: number | null; days: number; scenes: PreviewScene[]; warnings: string[]; breakdownEmpty: boolean; knownCastNumbers: number }
 
 const LABEL: Record<DocKind, string> = { SCHEDULE: "schedule", CALLSHEET: "callsheet" };
 /** yyyy-mm-dd from a date input → ISO at local midnight, the same convention as the scene editor. */
@@ -65,7 +65,7 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
   const apply = useMutation({
     mutationFn: () => api<{ updated: number; created: number; filled: number; linked: number }>(p(projectId, "/schedule/apply"), {
       body: {
-        kind, file: result?.file || null, sheetDate: sheetDay ? localMidnightISO(sheetDay) : null,
+        kind, file: result?.file || null, fileToken: result?.fileToken || null, sheetDate: sheetDay ? localMidnightISO(sheetDay) : null,
         assignments: included.map((s) => ({
           sceneId: s.id, number: s.number,
           date: dates[s.number] ? localMidnightISO(dates[s.number]) : null,
@@ -80,6 +80,7 @@ export function ScheduleUploadModal({ open, kind, onClose, onApplied }: { open: 
       qc.invalidateQueries({ queryKey: ["scenes", projectId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
       qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["documents", projectId] }); // the applied file is now kept and can be viewed
       const bits = [r.created ? `${r.created} scene${r.created === 1 ? "" : "s"} added` : "", r.updated ? `${r.updated} updated` : "", r.filled ? `${r.filled} detail${r.filled === 1 ? "" : "s"} filled in` : "", r.linked ? `${r.linked} cast link${r.linked === 1 ? "" : "s"}` : ""].filter(Boolean);
       toast.push(`${bits.join(", ") || "Nothing to change"} from the ${LABEL[kind]}`, "ok");
       onApplied?.(sheetDay); reset(); onClose();

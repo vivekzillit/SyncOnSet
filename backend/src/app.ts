@@ -23,6 +23,7 @@ import { missingRouter } from "./routes/missing";
 import { vendorsRouter, rentalsRouter } from "./routes/vendors";
 import { contactsRouter, requestsRouter } from "./routes/requests";
 import { expensesRouter } from "./routes/expenses";
+import { documentsRouter } from "./routes/documents";
 import { notificationsRouter } from "./routes/notifications";
 import { reportsRouter } from "./routes/reports";
 import { metaRouter } from "./routes/meta";
@@ -71,6 +72,7 @@ export function createApp() {
   scoped.use("/contacts", contactsRouter);
   scoped.use("/requests", requestsRouter);
   scoped.use("/expenses", expensesRouter);
+  scoped.use("/documents", documentsRouter);
   scoped.use("/notifications", notificationsRouter);
   scoped.use("/reports", reportsRouter);
   scoped.use("/cues", cuesRouter);

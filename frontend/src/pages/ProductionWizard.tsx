@@ -10,7 +10,7 @@ import { buildCharacterImport, initialRows, type ConfirmRow, type DetectedCharac
 const STEPS = 3;
 
 interface ParsedScene { number: string; name: string | null; location: string | null; intExt: string | null; timeOfDay: string | null; scriptDay?: string | null; synopsis: string | null; status?: string; characters: string[]; text?: string; pages?: string | null }
-interface ParseResult { format: string; file: string; scenes: ParsedScene[]; characters: DetectedCharacter[]; existingCharacters: ExistingCharacter[]; warnings: string[] }
+interface ParseResult { format: string; file: string; fileToken?: string | null; scenes: ParsedScene[]; characters: DetectedCharacter[]; existingCharacters: ExistingCharacter[]; warnings: string[] }
 type DateKey = "prepStartDate" | "prepEndDate" | "prepWrapDate" | "startDate" | "endDate" | "wrapDate";
 
 /** SyncOnSet-style production setup: type → prep & shoot dates → script upload (optional), then straight in. */
@@ -78,7 +78,7 @@ export default function ProductionWizard() {
       if (script) {
         const { characterMap, castNumbers } = buildCharacterImport(cast, script.existingCharacters);
         const scenes = script.scenes.map((s) => ({ number: s.number, name: s.name, location: s.location, intExt: s.intExt, timeOfDay: s.timeOfDay, scriptDay: s.scriptDay || null, synopsis: s.synopsis, status: s.status, pages: s.pages || null, characters: s.characters, scriptText: s.text || null }));
-        await api(p(id, "/scenes/import"), { body: { scenes, revision: f.revision || null, characterMap, castNumbers } });
+        await api(p(id, "/scenes/import"), { body: { scenes, revision: f.revision || null, characterMap, castNumbers, fileToken: parsed?.fileToken || null, fileName: parsed?.file || null } });
       }
       qc.invalidateQueries();
       nav(`/p/${id}`);

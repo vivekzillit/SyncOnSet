@@ -38,7 +38,7 @@ function changedFields(s: ParsedScene, edited?: SceneFields) {
   return FIELD_LABELS.filter((f) => !same(s.previous![f.key], next[f.key]));
 }
 type ParsedCharacter = DetectedCharacter;
-interface ParseResult { format: string; file: string; firstUpload: boolean; existingScenes: number; existingCharacters: ExistingCharacter[]; scenes: ParsedScene[]; characters: ParsedCharacter[]; warnings: string[]; stats: { elements: number; headings: number; cues: number } }
+interface ParseResult { format: string; file: string; fileToken?: string | null; firstUpload: boolean; existingScenes: number; existingCharacters: ExistingCharacter[]; scenes: ParsedScene[]; characters: ParsedCharacter[]; warnings: string[]; stats: { elements: number; headings: number; cues: number } }
 
 /** Upload a screenplay, preview the breakdown, then import scenes + characters. */
 export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean; onClose: () => void; onImported?: () => void }) {
@@ -84,7 +84,7 @@ export function ScriptUploadModal({ open, onClose, onImported }: { open: boolean
         return { number: s.number, name: v.name, location: v.location, intExt: v.intExt, timeOfDay: v.timeOfDay, scriptDay: v.scriptDay, synopsis: v.synopsis, status: s.status, pages: v.pages || null, characters: s.characters, scriptText: s.text || null, ...(force ? { force: true } : {}) };
       });
       const { characterMap, castNumbers } = buildCharacterImport(rows, result?.existingCharacters || []);
-      return api<{ scenes: number; created: number; updated: number; unchanged: number; removed: number; charactersCreated: number }>(p(projectId, "/scenes/import"), { body: { scenes, revision: revision || null, characterMap, castNumbers, replace } });
+      return api<{ scenes: number; created: number; updated: number; unchanged: number; removed: number; charactersCreated: number }>(p(projectId, "/scenes/import"), { body: { scenes, revision: revision || null, characterMap, castNumbers, replace, fileToken: result?.fileToken || null, fileName: result?.file || null } });
     },
     onSuccess: async (r) => {
       qc.invalidateQueries();
