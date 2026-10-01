@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth, MANAGER_ROLES } from "@/state/auth";
-import type { Actor, Character, Costume, Photo } from "@/api/types";
-import { ErrorBox, Field, Input, Modal, Select, Spinner, useToast } from "@/components/ui";
-import { ActorSelect, CostumePicker, CostumeRow, PhotoGrid } from "@/components/domain";
+import type { Actor, Character, Costume, CostumeChange, Photo } from "@/api/types";
+import { Badge, ConfirmButton, ErrorBox, Field, Input, Modal, Select, Spinner, Textarea, useToast } from "@/components/ui";
+import { ActorSelect, CostumePicker, CostumeRow, MediaPicker, PhotoGrid, attachMedia } from "@/components/domain";
 import { ActorModal, type ActorRow } from "@/components/ActorModal";
 
 /** The option that stands for "this person is not on the list yet" wherever characters are picked. */
@@ -44,7 +44,98 @@ export function NewCharacterModal({ open, onClose, onCreated }: { open: boolean;
   );
 }
 
-type Detail = Character & { actor?: Actor | null; costumes: Costume[]; photos: Photo[] };
+type DetailRow = { label: string; value: string };
+type Detail = Character & { actor?: Actor | null; costumes: Costume[]; photos: Photo[]; details?: DetailRow[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[] };
+
+/**
+ * A new numbered change (look) for a character: name, wear notes, its pieces, and photos or video of it. Shared by the
+ * character page and the character panel on the fitting form, so both make a change the same way.
+ */
+export function NewChangeModal({ open, onClose, character }: { open: boolean; onClose: () => void; character: Pick<Character, "id" | "name"> }) {
+  const { projectId } = useProject();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [nf, setNf] = useState<{ name: string; description: string; costumes: Costume[] }>({ name: "", description: "", costumes: [] });
+  const [pick, setPick] = useState(false);
+  const [media, setMedia] = useState<File[]>([]);
+  const changeId = useRef<string | null>(null);
+  /** Closing drops what was picked, so it can never ride along to the next change. */
+  const close = () => { setMedia([]); changeId.current = null; onClose(); };
+  const create = useMutation({
+    // Created once: a failed upload is retried from the same open form without making a second change,
+    // and whatever did not attach stays in the picker.
+    mutationFn: async () => {
+      if (!changeId.current) changeId.current = (await api<CostumeChange>(p(projectId, "/changes"), { body: { characterId: character.id, name: nf.name, description: nf.description || null, costumeIds: nf.costumes.map((c) => c.id) } })).id;
+      await attachMedia({ projectId, entityType: "CHANGE", entityId: changeId.current, files: media, kind: "REFERENCE", keep: setMedia, savedNote: "The change is saved — press Create again to attach what is left." });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", character.id] }); close(); setNf({ name: "", description: "", costumes: [] }); toast.push("Change created", "ok"); },
+  });
+  return (
+    <>
+      <Modal open={open} onClose={close} title={`New change for ${character.name}`} footer={<><button className="btn" onClick={close}>Cancel</button><button className="btn btn-primary" disabled={!nf.name || create.isPending} onClick={() => create.mutate()}>Create</button></>}>
+        <div className="col">
+          <Field label="Name" help="e.g. Restaurant - white shirt & jeans"><Input value={nf.name} onChange={(e) => setNf({ ...nf, name: e.target.value })} /></Field>
+          <Field label="Description / wear notes"><Textarea value={nf.description} onChange={(e) => setNf({ ...nf, description: e.target.value })} /></Field>
+          <Field label="Pieces">
+            <div className="list card flat pad-0">{nf.costumes.map((c) => <CostumeRow key={c.id} c={c} onClick={() => setNf({ ...nf, costumes: nf.costumes.filter((x) => x.id !== c.id) })} end={<span className="subtle">remove</span>} />)}</div>
+            <button type="button" className="btn btn-sm mt-1" onClick={() => setPick(true)}><Plus size={14} /> Add piece</button>
+          </Field>
+          <Field label="Photos & video" help="Shoot the look now, or pick from the gallery"><MediaPicker files={media} onChange={setMedia} disabled={create.isPending} /></Field>
+        </div>
+        <ErrorBox error={create.error} />
+      </Modal>
+      <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setNf((prev) => ({ ...prev, costumes: prev.costumes.some((x) => x.id === c.id) ? prev.costumes : [...prev.costumes, c] }))} characterId={character.id} />
+    </>
+  );
+}
+
+/** A character's "More details" rows (wig, tattoo cover, dresser…), each named by the user. The whole list travels with each save. */
+function MoreDetails({ characterId, details, editable }: { characterId: string; details: DetailRow[]; editable: boolean }) {
+  const { projectId } = useProject();
+  const qc = useQueryClient();
+  const toast = useToast();
+  // -1 while adding a row, the row's index while editing one, null when the dialog is closed.
+  const [at, setAt] = useState<number | null>(null);
+  const [df, setDf] = useState<DetailRow>({ label: "", value: "" });
+  const save = useMutation({
+    mutationFn: (rows: DetailRow[]) => api(p(projectId, `/characters/${characterId}`), { method: "PATCH", body: { details: rows } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", characterId] }); setAt(null); },
+    onError: (e: Error) => toast.push(e.message, "danger"),
+  });
+  const open = (i: number) => { setDf(i < 0 ? { label: "", value: "" } : details[i]); setAt(i); };
+  const commit = () => {
+    const row = { label: df.label.trim(), value: df.value.trim() };
+    save.mutate(at === -1 ? [...details, row] : details.map((d, i) => (i === at ? row : d)));
+  };
+  return (
+    <>
+      {details.length === 0 ? <div className="subtle">Nothing yet. Add any detail this production tracks — wig, tattoo cover, prop watch, dresser.</div> : (
+        <div className="list card flat pad-0">
+          {details.map((d, i) => (
+            <div key={`${d.label}-${i}`} className="item">
+              <div className="grow" style={{ minWidth: 0 }}><div className="title small">{d.label}</div><div className="meta" style={{ whiteSpace: "pre-wrap" }}>{d.value}</div></div>
+              {editable && (
+                <div className="row gap-1">
+                  <button type="button" className="btn btn-ghost btn-sm" aria-label={`Edit ${d.label}`} onClick={() => open(i)}><Pencil size={14} /></button>
+                  <ConfirmButton className="btn btn-ghost btn-sm" confirmText="Delete?" onConfirm={() => save.mutate(details.filter((_, x) => x !== i))}><Trash2 size={14} /></ConfirmButton>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {editable && <button type="button" className="btn btn-sm mt-1" onClick={() => open(-1)}><Plus size={14} /> Add more</button>}
+      <Modal open={at !== null} onClose={() => setAt(null)} title={at === -1 ? "Add detail" : "Edit detail"}
+        footer={<><button className="btn" onClick={() => setAt(null)}>Cancel</button><button className="btn btn-primary" disabled={!df.label.trim() || !df.value.trim() || save.isPending} onClick={commit}>Save</button></>}>
+        <div className="col">
+          <Field label="Title" help="Name the field yourself — anything the department needs to remember"><Input value={df.label} onChange={(e) => setDf({ ...df, label: e.target.value })} autoFocus /></Field>
+          <Field label="Description"><Textarea value={df.value} onChange={(e) => setDf({ ...df, value: e.target.value })} /></Field>
+        </div>
+        <ErrorBox error={save.error} />
+      </Modal>
+    </>
+  );
+}
 
 /**
  * The character's own things — who is cast, their references, the pieces tagged to them — brought into a form
@@ -57,6 +148,7 @@ export function CharacterQuickPanel({ characterId }: { characterId: string }) {
   const [actorOpen, setActorOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
+  const [changeOpen, setChangeOpen] = useState(false);
   const canEdit = can(MANAGER_ROLES);
   const { data: ch, isLoading } = useQuery({ queryKey: ["character", characterId], queryFn: () => api<Detail>(p(projectId, `/characters/${characterId}`)), enabled: !!characterId });
   // The full actor record (characters, measurements, rep) comes from the actors list the dropdown already loads.
@@ -94,9 +186,28 @@ export function CharacterQuickPanel({ characterId }: { characterId: string }) {
         {ch.costumes?.length ? <div className="list card flat pad-0">{ch.costumes.map((c) => <CostumeRow key={c.id} c={c} noStatus />)}</div> : <div className="subtle">No pieces tagged yet.</div>}
         {canEdit && <button type="button" className="btn btn-sm mt-1" onClick={() => setPickOpen(true)}><Plus size={14} /> Add piece</button>}
       </Field>
+      {/* Plain rows, not links: following one would leave the form this panel sits in. */}
+      <Field label={`Costume Changes (${ch.changes?.length ?? 0})`}>
+        {ch.changes?.length ? (
+          <div className="list card flat pad-0">
+            {ch.changes.map((c) => (
+              <div key={c.id} className="item" style={{ display: "block" }}>
+                <div className="row between"><span className="title small">Change #{c.changeNumber} · {c.name}</span><span className="subtle small">{c._count.sceneCharacters} scene{c._count.sceneCharacters === 1 ? "" : "s"}</span></div>
+                <div className="chips mt-1">
+                  {c.items.map((it) => <Badge key={it.id} status={it.costume.status}><span className="mono">{it.costume.assetNumber}</span> {it.costume.name}</Badge>)}
+                  {c.items.length === 0 && <span className="subtle small">No pieces attached</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <div className="subtle">No changes yet.</div>}
+        {canEdit && <button type="button" className="btn btn-sm mt-1" onClick={() => setChangeOpen(true)}><Plus size={14} /> Add change</button>}
+      </Field>
+      <Field label="More details"><MoreDetails characterId={ch.id} details={ch.details || []} editable={canEdit} /></Field>
 
       <ActorModal open={actorOpen} onClose={() => setActorOpen(false)} onSaved={(a) => setActor.mutate(a.id)} allowAddAnother={false} saveLabel="Create & cast" forCharacter={ch} />
       <ActorModal open={editOpen} onClose={() => setEditOpen(false)} editing={currentActor} onSaved={refresh} />
+      <NewChangeModal open={changeOpen} onClose={() => setChangeOpen(false)} character={ch} />
       <CostumePicker open={pickOpen} onClose={() => setPickOpen(false)} title={`Pick a piece for ${ch.name}`} filter={(c) => c.characterId !== ch.id} onPick={(c) => tagPiece.mutate(c.id)} />
     </div>
   );

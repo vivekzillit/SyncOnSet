@@ -11,6 +11,7 @@ import { Badge, Card, ConfirmButton, confirmAction, Empty, ErrorBox, Field, Inpu
 import { ActorSelect, Avatar, CostumePicker, CostumeRow, MediaPicker, PhotoGrid, attachMedia } from "@/components/domain";
 import { ActorModal } from "@/components/ActorModal";
 import { CostumeFormModal } from "@/components/costume";
+import { NewChangeModal } from "@/components/CharacterQuick";
 
 type CharacterDetailRow = { label: string; value: string };
 type Detail = Character & { actor?: Actor | null; details?: CharacterDetailRow[]; scenes: { scene: { id: string; number: string; name?: string | null; shootDate?: string | null; status: string }; change?: { id: string; changeNumber: number; name: string } | null }[]; changes: (CostumeChange & { _count: { sceneCharacters: number } })[]; costumes: Costume[]; fittings: Fitting[]; photos: Photo[] };
@@ -33,15 +34,10 @@ export default function CharacterDetail() {
   const [newOpen, setNewOpen] = useState(false);
   const [pieceOpen, setPieceOpen] = useState(false);
   const [tagOpen, setTagOpen] = useState(false);
-  const [nf, setNf] = useState<{ name: string; description: string; costumes: Costume[] }>({ name: "", description: "", costumes: [] });
-  const [pick, setPick] = useState(false);
   // Photos and video picked on the New change / Schedule fitting forms, attached once the record exists.
-  const [changeMedia, setChangeMedia] = useState<File[]>([]);
   const [fitMedia, setFitMedia] = useState<File[]>([]);
-  const changeId = useRef<string | null>(null);
   const fittingId = useRef<string | null>(null);
   /** Closing drops what was picked, so it can never ride along to the next change or fitting. */
-  const closeChange = () => { setNewOpen(false); setChangeMedia([]); changeId.current = null; };
   const closeFitting = () => { setFitOpen(false); setFitMedia([]); fittingId.current = null; };
   const [editOpen, setEditOpen] = useState(false);
   const [ef, setEf] = useState({ name: "", type: "", actorId: "", age: "", description: "", notes: "", castNumber: "" });
@@ -53,15 +49,6 @@ export default function CharacterDetail() {
   const [detailAt, setDetailAt] = useState<number | null>(null);
   const [df, setDf] = useState<CharacterDetailRow>({ label: "", value: "" });
 
-  const createChange = useMutation({
-    // Created once: a failed upload is retried from the same open form without making a second change,
-    // and whatever did not attach stays in the picker.
-    mutationFn: async () => {
-      if (!changeId.current) changeId.current = (await api<CostumeChange>(p(projectId, "/changes"), { body: { characterId: id, name: nf.name, description: nf.description || null, costumeIds: nf.costumes.map((c) => c.id) } })).id;
-      await attachMedia({ projectId, entityType: "CHANGE", entityId: changeId.current, files: changeMedia, kind: "REFERENCE", keep: setChangeMedia, savedNote: "The change is saved — press Create again to attach what is left." });
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["character", id] }); closeChange(); setNf({ name: "", description: "", costumes: [] }); toast.push("Change created", "ok"); },
-  });
   /** An actor created from this card is cast in the part on the spot — that is why it was opened. */
   const assignActor = useMutation({
     mutationFn: (actorId: string) => api(p(projectId, `/characters/${id}`), { method: "PATCH", body: { actorId } }),
@@ -251,19 +238,7 @@ export default function CharacterDetail() {
       {/* A piece added here belongs to this character from the start. */}
       <CostumePicker open={tagOpen} onClose={() => setTagOpen(false)} title={`Pick a piece for ${ch.name}`} filter={(c) => c.characterId !== ch.id} onPick={pickPiece} />
       <CostumeFormModal open={pieceOpen} onClose={() => setPieceOpen(false)} defaultCharacterId={ch.id} onSaved={() => { qc.invalidateQueries({ queryKey: ["character", id] }); qc.invalidateQueries({ queryKey: ["costumes", projectId] }); }} />
-      <Modal open={newOpen} onClose={closeChange} title={`New change for ${ch.name}`} footer={<><button className="btn" onClick={closeChange}>Cancel</button><button className="btn btn-primary" disabled={!nf.name || createChange.isPending} onClick={() => createChange.mutate()}>Create</button></>}>
-        <div className="col">
-          <Field label="Name" help="e.g. Restaurant - white shirt & jeans"><Input value={nf.name} onChange={(e) => setNf({ ...nf, name: e.target.value })} /></Field>
-          <Field label="Description / wear notes"><Textarea value={nf.description} onChange={(e) => setNf({ ...nf, description: e.target.value })} /></Field>
-          <Field label="Pieces">
-            <div className="list card flat pad-0">{nf.costumes.map((c) => <CostumeRow key={c.id} c={c} onClick={() => setNf({ ...nf, costumes: nf.costumes.filter((x) => x.id !== c.id) })} end={<span className="subtle">remove</span>} />)}</div>
-            <button type="button" className="btn btn-sm mt-1" onClick={() => setPick(true)}><Plus size={14} /> Add piece</button>
-          </Field>
-          <Field label="Photos & video" help="Shoot the look now, or pick from the gallery"><MediaPicker files={changeMedia} onChange={setChangeMedia} disabled={createChange.isPending} /></Field>
-        </div>
-        <ErrorBox error={createChange.error} />
-      </Modal>
-      <CostumePicker open={pick} onClose={() => setPick(false)} onPick={(c) => setNf({ ...nf, costumes: nf.costumes.some((x) => x.id === c.id) ? nf.costumes : [...nf.costumes, c] })} characterId={ch.id} />
+      <NewChangeModal open={newOpen} onClose={() => setNewOpen(false)} character={ch} />
 
       <Modal open={detailAt !== null} onClose={() => setDetailAt(null)} title={detailAt === -1 ? "Add detail" : "Edit detail"}
         footer={<><button className="btn" onClick={() => setDetailAt(null)}>Cancel</button><button className="btn btn-primary" disabled={!df.label.trim() || !df.value.trim() || saveDetails.isPending} onClick={commitDetail}>Save</button></>}>
