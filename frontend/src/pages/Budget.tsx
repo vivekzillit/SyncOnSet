@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileSpreadsheet, Layers, Plus, Printer, Trash2 } from "lucide-react";
+import { FileSpreadsheet, Plus, Printer, Trash2 } from "lucide-react";
 import { api, p } from "@/api/client";
 import { useProject } from "@/state/project";
 import { useAuth } from "@/state/auth";
@@ -160,7 +160,7 @@ export default function Budget() {
     <div>
       <div className={tab === "full" ? "no-print" : undefined}>
       <PageHead title="Budget" sub="Spend for the whole production, scene by scene or by character."
-        actions={<><button className={`btn ${tab === "full" ? "btn-blue" : ""}`} onClick={() => { setTab("full"); setQ(""); }}><Layers size={16} /> Full budget</button><button className="btn" onClick={() => setUploadOpen(true)}><FileSpreadsheet size={16} /> Upload budget sheet</button><button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Budget</button></>} />
+        actions={<><button className="btn" onClick={() => setUploadOpen(true)}><FileSpreadsheet size={16} /> Upload budget sheet</button><button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Budget</button></>} />
       <div className="grid grid-stats mb-2">
         {/* Summed per currency, so a line in pounds is never added into a rupee total. */}
         {/* Tap a category to see only its lines below, in every tab; tap it again (or Total spend) for everything. */}
