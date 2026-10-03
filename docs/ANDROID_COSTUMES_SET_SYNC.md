@@ -22,6 +22,8 @@ Applied to iOS today; build Android the same way.
 | Bug fix | `POST /schedule/parse` must always get the form field `kind`; without it a call sheet's `document_id` fails with "Document does not exist" | 2.9 (21) |
 | Bug fix | Scene Breakdown showed only its header after a successful import: don't put the table rows in a separately measured, height-capped scroll | 6.4 |
 | Share | **Zillit** on a Share dialog (Share… / Zillit / WhatsApp / Email / Copy) opens Zillit's **own share screen directly** with the text (choose chat, group or tab), not the system share sheet. On iOS that is `ForwardDataViewController` in "Outside" mode, the screen the share extension opens; use Android's equivalent in-app share / forward screen | 6.4 |
+| Share | **One Share dialog everywhere in the module**: record share icons, a costume's QR label, report CSV / PDF exports, the budget PDF and template, the continuity book and sides. Zillit carries the text, images and files; Email attaches the files; WhatsApp opens directly for text and via the system sheet for files; Copy takes the text, the image or a CSV's contents | 6.4 (Share dialog) |
+| First run | **"Create a production"** setup page when the project has nothing in the tool yet, as on Zillit web: Type (only when unknown), Upload script for breakdown + Revision name, optional Estimated dates; Create saves the project and opens the script review on the chosen file | 4 |
 
 ---
 
@@ -285,13 +287,30 @@ Use the app's existing UI stack (Compose or Views) and its existing image loader
 
 ---
 
-## 4. First run: "+ Create"
+## 4. First run: "Create a production"
 
-When a Zillit project has no Costumes & Set Sync data yet, the module shows only **+ Create**. Setup then **skips the Feature / TV Series step**, because the type comes from the Zillit project. The full spec, with copy and acceptance criteria, is in this repo: `docs/ZILLIT_FIRST_RUN_CREATE.md` and `docs/ZILLIT_WEB_FIRST_RUN_CREATE.md`.
+Same as Zillit web (`zillit_web` `src/syncOnset/components/FirstRun.jsx`, `lib/setup.js`) and iOS (`Views/Home/CSSFirstRunView.swift`).
 
-> **Note:** the iOS module doesn't have this yet; it opens straight into the tool. Android should implement it from the start.
+**When it shows.** The project record (`GET /projects/{id}`) counts no scenes, characters, costumes **and** no actors (`counts.scenes`, `counts.characters`, `counts.costumes`, `counts.actors` all 0). Ignore `counts.members`: it is at least the person opening the tool. No project record yet (still loading, or an error) is **never** "not set up": keep the loader or the error. Once setup finishes in this visit, open the module at once without waiting for the reloaded counts (remember the project id the setup was finished on).
 
----
+**The shell while it shows.** The form replaces the tabs: top bar row 1 only (back chevron, brand, production name, the bell). **No tabs and no Search** (there's nothing to find yet). On iOS the bell opens the notifications list as a sheet.
+
+**Who can set up.** Zillit posting right on `costume_set_sync_tool` **and** `my_role` one of `ADMIN`, `PRODUCTION_MANAGER`, `COSTUME_DESIGNER`. Everyone else sees a card: the coat-hanger icon, "Costumes & Set Sync", and the info notice *"Costumes & Set Sync hasn't been set up for this project yet. Ask a production manager to set it up."*
+
+**The form** (one scrolling page, footer pinned at the bottom):
+
+| Part | Content |
+| --- | --- |
+| Header | Amber coat-hanger icon tile, title **Create a production**, the project name in bold with a **Feature** / **TV Series** badge when the type is known. Sub: *"Upload the script and its scenes and characters are read for you. You review them before anything is saved, then Scene Breakdown opens."* |
+| Step · Type (Required) | Only when the project's `type` is neither `FEATURE` nor `EPISODIC`. Two big buttons: **Feature** / **TV Series** (`FEATURE` / `EPISODIC`). Steps are numbered, so the next ones become 2 and 3 |
+| Step · Upload script for breakdown (Required) | A dashed drop zone: **Drag and Drop File** / *or tap to browse · Final Draft, text, PDF*. Once picked: the file name / *Tap to choose another file to change it*, solid amber border. Accepts `.fdx`, `.fountain`, `.txt`, `.pdf`. Below it **Revision name**, placeholder *Draft (ex. Blue)*, **starts empty** |
+| Step · Estimated dates (Optional) | Checkboxes **Add prep dates** and **Add wrap dates** in the step heading (unticking one clears those dates). Rows: **Shoot dates** (Start date, End date ≥ start); **Prep dates** (Start date, End date ≥ prep start); **Wrap dates** (Shoot wrap ≥ shoot start, and Prep wrap ≥ prep start when prep dates are on) |
+| Footer | Left: why Create is greyed out (*"Add the script to create the production."*, then *"Choose Feature or TV Series to create the production."*). Right: **Create**, large; neutral and disabled while blocked, primary otherwise |
+
+**Create.**
+1. `PATCH /projects/{id}` with `type` (only if the step was asked) and, **only when at least one date was entered**, all six dates: `start_date`, `end_date`, `prep_start_date`, `prep_end_date`, `wrap_date`, `prep_wrap_date` as epoch ms at the start of the day, `0` for the ones left empty. A blank form saves nothing. Don't send the same body twice (when the user comes back from the review and taps Create again).
+2. Open the usual **script review** (the Upload script modal: parse, preview, import) on the chosen file, starting straight at the parse. The revision name goes in **as typed, even blank**; only when none is given does the review suggest "White" / "Revision <date>".
+3. Importing finishes setup: close the review, mark the project set up, reload, and open **Scene Breakdown**. Cancelling the review returns to the filled form.
 
 ## 5. Out of scope inside Zillit
 
@@ -452,7 +471,12 @@ Each row gives the web page to copy and what it must contain.
   - "Nothing attached yet." when empty.
   - Square thumbnails with the kind tag and ✕ to delete.
 - **Discussion** (`Discussion.tsx`): only on the six comment types (item 17).
-- **Share dialog** (`Discussion.tsx` RecordActions, on alterations, damage, missing, fittings, expenses and the budget): a preview of the text, then **Share…** (system sheet), **Zillit** (straight into the app's own share-to-chat screen with the text), **WhatsApp**, **Email**, **Copy**.
+- **Share dialog** (`Discussion.tsx` RecordActions; iOS `Views/CSSShare.swift`): **the one dialog for every share in the module**: the record share icon (alterations, damage, missing, fittings, expenses, the budget), a costume's QR label (image + "asset · name · for character"), report CSV and PDF exports, the budget PDF and the budget sheet template, and the continuity book / sides when the device can't print. "Share · <title>", a preview (the image, a line per file, the text), then:
+  - **Share…**: the system share sheet with everything.
+  - **Zillit**: straight into Zillit's own share-to-chat screen with the text, image and files. iOS hands each file over as a `file://` URL in a `SharedMediaFile` (`.image`, `.video` or `.file`; text as `.text`), and **copies them first**, because that screen deletes the files it was handed when it closes.
+  - **WhatsApp**: text only → `https://wa.me/?text=…`, opens WhatsApp directly. With files or an image, WhatsApp has no link that carries them, so the system share sheet opens (WhatsApp is listed there).
+  - **Email**: the mail composer with the title as subject, the text as body and the files attached; `mailto:` with the text when no mail account is set up.
+  - **Copy**: the text; else the image; else a CSV / text file's contents. Hidden when there's nothing to copy (a PDF on its own).
 - **Send request** (`SendRequest.tsx`): crew, vendors and contacts. The result lists the recipients outside the app, with call / WhatsApp / email links.
 - **Pickers** for scene, character, vendor, change and costume: "+ New …" at the top, as on the web.
 - **Forms** open as bottom sheets: title + ✕ at the top, fields, Cancel and the primary button at the bottom.
