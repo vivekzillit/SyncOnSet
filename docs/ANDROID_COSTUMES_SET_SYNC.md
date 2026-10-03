@@ -500,7 +500,8 @@ Each row gives the web page to copy and what it must contain.
 - [ ] Every item in 2.9 behaves as described; each was a real bug on iOS.
 - [ ] Expired DEV tokens (5 minutes) recover without the user noticing.
 - [ ] Removing view rights or switching the tool off while it's open closes the tool.
-- [ ] A new project shows only **+ Create** and skips the type step (section 4).
+- [ ] A project with nothing in the tool opens on **Create a production** (no tabs, no Search); the Type step shows only when the project type is unknown; Create saves the type / dates, opens the script review on the chosen file, and importing opens Scene Breakdown (section 4).
+- [ ] Every share in the module opens the same Share dialog, and **Zillit** goes straight to the in-app share screen with the text, image and files (section 6.4).
 
 ---
 
