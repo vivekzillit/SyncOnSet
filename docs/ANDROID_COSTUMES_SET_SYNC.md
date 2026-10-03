@@ -21,6 +21,7 @@ Applied to iOS today; build Android the same way.
 | Documents | `file_token` from the parse sent back on import / apply, so uploaded files join the list; the call sheet header shows the newest call sheet (`callsheet_source`, `callsheet_document`) | 2.9 (21), 6.4 |
 | Bug fix | `POST /schedule/parse` must always get the form field `kind`; without it a call sheet's `document_id` fails with "Document does not exist" | 2.9 (21) |
 | Bug fix | Scene Breakdown showed only its header after a successful import: don't put the table rows in a separately measured, height-capped scroll | 6.4 |
+| Share | **Zillit** on a Share dialog (Share… / Zillit / WhatsApp / Email / Copy) opens Zillit's **own share screen directly** with the text (choose chat, group or tab), not the system share sheet. On iOS that is `ForwardDataViewController` in "Outside" mode, the screen the share extension opens; use Android's equivalent in-app share / forward screen | 6.4 |
 
 ---
 
@@ -451,6 +452,7 @@ Each row gives the web page to copy and what it must contain.
   - "Nothing attached yet." when empty.
   - Square thumbnails with the kind tag and ✕ to delete.
 - **Discussion** (`Discussion.tsx`): only on the six comment types (item 17).
+- **Share dialog** (`Discussion.tsx` RecordActions, on alterations, damage, missing, fittings, expenses and the budget): a preview of the text, then **Share…** (system sheet), **Zillit** (straight into the app's own share-to-chat screen with the text), **WhatsApp**, **Email**, **Copy**.
 - **Send request** (`SendRequest.tsx`): crew, vendors and contacts. The result lists the recipients outside the app, with call / WhatsApp / email links.
 - **Pickers** for scene, character, vendor, change and costume: "+ New …" at the top, as on the web.
 - **Forms** open as bottom sheets: title + ✕ at the top, fields, Cancel and the primary button at the bottom.
