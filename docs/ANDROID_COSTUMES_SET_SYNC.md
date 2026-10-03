@@ -228,6 +228,7 @@ These were all real bugs found and fixed on iOS. Build Android to them from the 
 
 21. **`GET /documents?kind=SCRIPT|SCHEDULE|CALLSHEET`** returns the project's latest full script (Script Distribution), schedule (Schedule Distribution) and call sheet (Home > Call Sheet, not archived or deleted), plus the files imported in the tool, newest first; `latest: true` marks the newest of each kind. Nothing is imported automatically.
     - `POST /scenes/parse-script` and `POST /schedule/parse` accept `document_id` (an `_id` from that list) instead of a file, and return `file_token`.
+    - **Always send the form field `kind` (`SCHEDULE` or `CALLSHEET`) to `POST /schedule/parse`**, with a file or with `document_id`. The service treats anything without it as a schedule, so a call sheet's `document_id` fails with "Document does not exist" and an uploaded call sheet is read as a schedule. (A real bug on iOS.)
     - Send `file_token` back in `POST /scenes/import` (with `file_name`) and in `POST /schedule/apply`; the file is then kept in the list. This applies to uploaded files too.
     - `GET /projects/{projectId}` now has `callsheet_source` (`UPLOAD` or `ZILLIT`) and `callsheet_document`; the call sheet header shows the newest call sheet.
     - Read the document record tolerantly: an imported file has a service `url`; a Zillit document may carry project-storage fields (`media` / `bucket` / `region`, flat or under `attachment`) that need presigning. Dates may be epoch ms or ISO strings.
