@@ -9,6 +9,19 @@
 
 **Status:** to implement
 
+### Changes on 2026-10-03
+
+Applied to iOS today; build Android the same way.
+
+| Area | Change | Section |
+| --- | --- | --- |
+| Top bar | A **back chevron** at the top left, as in the other Zillit modules; it leaves the tool from any page | 6.3 |
+| Top bar | **Scan** and the **settings gear** are hidden for now; the bar shows back, brand, production, Search and the bell | 6.3 |
+| Documents (new API) | **View script** / **View schedule** under the upload buttons on Scene Breakdown, **View callsheet** under Upload callsheet on On set, and the document viewer with Import / Apply | 2.9 (21), 6.4 |
+| Documents | `file_token` from the parse sent back on import / apply, so uploaded files join the list; the call sheet header shows the newest call sheet (`callsheet_source`, `callsheet_document`) | 2.9 (21), 6.4 |
+| Bug fix | `POST /schedule/parse` must always get the form field `kind`; without it a call sheet's `document_id` fails with "Document does not exist" | 2.9 (21) |
+| Bug fix | Scene Breakdown showed only its header after a successful import: don't put the table rows in a separately measured, height-capped scroll | 6.4 |
+
 ---
 
 ## 1. What to build
@@ -251,7 +264,7 @@ Mirror what iOS changed outside its module:
 | Base URL | `ServerRequest.COSTUME_SET_SYNC_BASE_URL = "https://synconsetapi\(env)/api/v2/"` | Add it per environment / flavor, next to the other service hosts |
 | Sockets | `SocketIOManager.costumeSetSyncSocketListeners()`, registered with the other tools' listeners | Register the listeners the same way on the shared socket |
 | Rights revoked | Leaves the tool when view access is removed or the tool is switched off (tool-rights notifications) | Listen to the same tool-rights updates and close the module |
-| Leaving | The back arrow on a section's first page returns to the previous section; with none left, it closes the tool | Same; the system back button behaves the same way |
+| Leaving | A back chevron at the top left of the tool's top bar returns to the Tools list. The page-header back square on a section's first page returns to the previous section, and closes the tool when there is none | Same; the system back button behaves like the page-header back square |
 
 ### Suggested module structure (Kotlin)
 
@@ -342,8 +355,8 @@ Show enum values as words: `STAIN_REMOVAL` → "Stain removal", `ON_SET` → "On
 There is **no bottom bar.** Two rows sit at the top; the selected page fills the rest of the screen, and detail pages open under the navigation.
 
 ```
-┌ Row 1 (white) ── [C&S]  Movie ABC                    🔍  ⌖  🔔(20)  ⚙ ┐
-│                         Feature · Day 18 · Mumbai Studio                │
+┌ Row 1 (white) ── ‹  [C&S]  Movie ABC                          🔍  🔔(20) ┐
+│                            Feature · Day 18 · Mumbai Studio             │
 ├ Row 2 (surface-2, scrolls sideways) ────────────────────────────────────┤
 │ (● Costumes)  Dashboard  Scene Breakdown  Character Breakdown ▾          │
 │               Costumes (35) ▾  Continuity ▾  Reports  Budget  Gallery    │
@@ -351,13 +364,15 @@ There is **no bottom bar.** Two rows sit at the top; the selected page fills the
 ```
 
 **Row 1**
+- **Back chevron** at the far left: the app-coloured "‹" the other Zillit modules (AccountHub, AD Dashboard, Extras Portal) put at the top left. It returns to the Zillit Tools list from any page of the tool.
 - C&S mark: 34dp amber rounded square.
 - Production name, with "Feature" or "TV Series", "Day N" and the current location under it.
-- Four 38dp bordered icon buttons:
+- 38dp bordered icon buttons on the right:
   - **Search**: a page searching scenes (by number, name or location), characters (by name or cast number) and costumes (server `q`, 8 hits).
-  - **Scan**: QR / asset number. The web has no Scan button in its top bar; iOS added one because scanning on set is the main use.
   - **Bell**: Notifications, with a red unread count.
-  - **Gear**: a menu with "name · Role", then **Team & roles** and **Project settings** for managers only.
+- **Hidden for now (2026-10-03):** keep these behind a flag, off:
+  - **Scan** (QR / asset number). It stays reachable from the Dashboard's **Scan** button.
+  - **Gear**: a menu with "name · Role", then **Team & roles** and **Project settings** for managers. While it is hidden those two screens have no entry point.
 
 **Row 2**
 - Starts with a "● Costumes" chip, then these tabs:
@@ -375,7 +390,9 @@ There is **no bottom bar.** Two rows sit at the top; the selected page fills the
 
 - **Active tab:** ink text on white with a 3dp amber underline; it scrolls into view. Inactive tabs are grey.
 - Choosing the current tab again returns that section to its first page.
-- **Back arrow** on a section's first page: goes to the previously opened section, and closes the tool when there is none.
+- **Two kinds of back:**
+  - The **top-left chevron** always leaves the tool.
+  - The **back square** in each page header goes back one page; on a section's first page it goes to the previously opened section, and closes the tool when there is none. The Android system back button behaves like the back square.
 
 ### 6.4 Screens
 
@@ -385,7 +402,7 @@ Each row gives the web page to copy and what it must contain.
 
 | Screen | Web source | Must have |
 | --- | --- | --- |
-| Scene Breakdown | `pages/Scenes.tsx`, `SceneEditRow.tsx`, `BreakdownRowModal.tsx`, `PrincipalsModal.tsx` | Drafts select, "Collapse Scene Number", **Upload script** (accent) with **View script** under it, **Upload schedule** plus the red hint and **View schedule** under it (the View buttons show once `/documents` has one of that kind), "Add to breakdown", search, "All characters" select, chips Today / Upcoming / Scheduled / All scenes, blue **+ Add**, the breakdown **table** (edit ✎, ×, readiness dot, scene #, script day, set, description, principals as cast numbers, shoot date), scrolling sideways inside its card |
+| Scene Breakdown | `pages/Scenes.tsx`, `SceneEditRow.tsx`, `BreakdownRowModal.tsx`, `PrincipalsModal.tsx` | Drafts select, "Collapse Scene Number", **Upload script** (accent) with **View script** under it, **Upload schedule** plus the red hint and **View schedule** under it (the View buttons show once `/documents` has one of that kind), "Add to breakdown", search, "All characters" select, chips Today / Upcoming / Scheduled / All scenes, blue **+ Add**, the breakdown **table** (edit ✎, ×, readiness dot, scene #, script day, set, description, principals as cast numbers, shoot date), scrolling sideways inside its card while the **page** scrolls up and down. Don't give the rows their own height-capped vertical scroll sized at runtime: on iOS that left the imported scenes invisible behind the header |
 | Script upload | `ScriptUpload.tsx`, `CharacterConfirmation.tsx` | Draft name → file → preview (nothing saved) → Character Confirmation (cast numbers) → import |
 | Schedule / call sheet upload | `ScheduleUpload.tsx` | File → review rows per day (tick boxes, "Fills in …", shoot dates) → Apply |
 | Scene detail | `pages/SceneDetail.tsx`, `AiCues.tsx` | Crumbs "Scenes / Sc 12"; "Sc 12 · GREEN ROOM - Day"; readiness badge; synopsis notice; **Continuity**, **Edit**; cards Costume readiness (+ Character), Continuity (takes), Costume cues from script (Accept all / Dismiss all / Re-extract) |
@@ -445,6 +462,9 @@ Each row gives the web page to copy and what it must contain.
 - [ ] The tile appears under **Ungrouped** for users with view access to `costume_set_sync_tool`, with the info text.
 - [ ] Opening it on a project with the tool switched off shows the "switched off" message, not a crash and not a jump to All Projects.
 - [ ] It opens on **Scene Breakdown**, with the two-row top navigation and no bottom bar.
+- [ ] The top bar has the back chevron at the top left (it leaves the tool), Search and the bell; Scan and the gear are not shown.
+- [ ] After a script and a schedule are imported, every scene is listed in the breakdown table.
+- [ ] View script / View schedule / View callsheet appear once the project has a document of that kind and open the viewer; Apply this call sheet opens the review (no "Document does not exist").
 - [ ] Every tab and dropdown item in 6.3 opens the right screen; counts match the web; the Budget tab appears only for finance roles.
 - [ ] Each screen in 6.4 matches the web page's structure, wording and buttons on a phone.
 - [ ] VIEWER, or a user without posting rights, sees no add, edit or delete controls; finance-only figures are hidden from other roles.
