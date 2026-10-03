@@ -224,9 +224,13 @@ These were all real bugs found and fixed on iOS. Build Android to them from the 
 19. **Script import**: the import only creates characters that appear inside `scenes[].characters`. A character typed in by hand must be added to a scene's `characters`, or it is silently dropped.
 20. **Dates sent as `YYYY-MM-DD`** (`dashboard`, `reports/daily`, `schedule/apply`, `sides?date=`) must use the Gregorian calendar and a fixed locale (`Locale.US`), whatever the device's calendar setting is.
 
-**Not available on this service**
+**Documents (added 2026-10-02)**
 
-21. **There are no `/documents` routes.** The web's "View uploaded script / schedule / call sheet" and `file_token` aren't available. Leave that feature out. For a call sheet, `schedule/apply` does accept `file` (the file name) and `sheet_date`.
+21. **`GET /documents?kind=SCRIPT|SCHEDULE|CALLSHEET`** returns the project's latest full script (Script Distribution), schedule (Schedule Distribution) and call sheet (Home > Call Sheet, not archived or deleted), plus the files imported in the tool, newest first; `latest: true` marks the newest of each kind. Nothing is imported automatically.
+    - `POST /scenes/parse-script` and `POST /schedule/parse` accept `document_id` (an `_id` from that list) instead of a file, and return `file_token`.
+    - Send `file_token` back in `POST /scenes/import` (with `file_name`) and in `POST /schedule/apply`; the file is then kept in the list. This applies to uploaded files too.
+    - `GET /projects/{projectId}` now has `callsheet_source` (`UPLOAD` or `ZILLIT`) and `callsheet_document`; the call sheet header shows the newest call sheet.
+    - Read the document record tolerantly: an imported file has a service `url`; a Zillit document may carry project-storage fields (`media` / `bucket` / `region`, flat or under `attachment`) that need presigning. Dates may be epoch ms or ISO strings.
 
 ---
 
@@ -277,7 +281,6 @@ When a Zillit project has no Costumes & Set Sync data yet, the module shows only
 ## 5. Out of scope inside Zillit
 
 - Login, sign out, change password, switch production, and creating users: Zillit owns these.
-- Viewing uploaded documents (no `/documents` routes; item 21 above).
 - Desktop-only behaviour of the web: drag-and-drop, keyboard shortcuts, hover arrows over tables, the inline header search box (the app uses a search page instead).
 
 ---
@@ -381,7 +384,7 @@ Each row gives the web page to copy and what it must contain.
 
 | Screen | Web source | Must have |
 | --- | --- | --- |
-| Scene Breakdown | `pages/Scenes.tsx`, `SceneEditRow.tsx`, `BreakdownRowModal.tsx`, `PrincipalsModal.tsx` | Drafts select, "Collapse Scene Number", **Upload script** (accent), **Upload schedule** plus the red hint under it, "Add to breakdown", search, "All characters" select, chips Today / Upcoming / Scheduled / All scenes, blue **+ Add**, the breakdown **table** (edit ✎, ×, readiness dot, scene #, script day, set, description, principals as cast numbers, shoot date), scrolling sideways inside its card |
+| Scene Breakdown | `pages/Scenes.tsx`, `SceneEditRow.tsx`, `BreakdownRowModal.tsx`, `PrincipalsModal.tsx` | Drafts select, "Collapse Scene Number", **Upload script** (accent) with **View script** under it, **Upload schedule** plus the red hint and **View schedule** under it (the View buttons show once `/documents` has one of that kind), "Add to breakdown", search, "All characters" select, chips Today / Upcoming / Scheduled / All scenes, blue **+ Add**, the breakdown **table** (edit ✎, ×, readiness dot, scene #, script day, set, description, principals as cast numbers, shoot date), scrolling sideways inside its card |
 | Script upload | `ScriptUpload.tsx`, `CharacterConfirmation.tsx` | Draft name → file → preview (nothing saved) → Character Confirmation (cast numbers) → import |
 | Schedule / call sheet upload | `ScheduleUpload.tsx` | File → review rows per day (tick boxes, "Fills in …", shoot dates) → Apply |
 | Scene detail | `pages/SceneDetail.tsx`, `AiCues.tsx` | Crumbs "Scenes / Sc 12"; "Sc 12 · GREEN ROOM - Day"; readiness badge; synopsis notice; **Continuity**, **Edit**; cards Costume readiness (+ Character), Continuity (takes), Costume cues from script (Accept all / Dismiss all / Re-extract) |
@@ -407,7 +410,7 @@ Each row gives the web page to copy and what it must contain.
 
 | Screen | Web source | Must have |
 | --- | --- | --- |
-| On set | `pages/Continuity.tsx` | "Upload callsheet", "Continuity book →", red "Click on scene number to add details on set", day card with date field; empty text exactly "Once a schedule and callsheet is uploaded it will appear here."; record-take form (take #, change, details label/value, accessories present ✓, notes, photos); compare takes |
+| On set | `pages/Continuity.tsx` | "Upload callsheet" with **View callsheet** under it, "Continuity book →", red "Click on scene number to add details on set", day card with date field; empty text exactly "Once a schedule and callsheet is uploaded it will appear here."; record-take form (take #, change, details label/value, accessories present ✓, notes, photos); compare takes |
 | Continuity book | `pages/Continuity.tsx` | **Print / PDF**, **+ Record take**; tabs "Continuity of prep" / "History of shoot" |
 | Budget | `pages/Budget.tsx`, `BudgetSheet.tsx`, `BudgetUpload.tsx` | "Upload budget sheet", **+ Budget**; stat tiles Total spend + one per category (incl. Consumable), Inventory value, Rental committed; tapping a tile filters the lines. Line form: Character under Description; "Pay to"; own category names |
 | Reports | `pages/Reports.tsx` | **Print / PDF**; tabs Daily report / Inventory / assets / Wrap; date + **CSV** |
@@ -416,6 +419,12 @@ Each row gives the web page to copy and what it must contain.
 | Team & roles | `pages/Team.tsx` | Members from Zillit, role select per member (managers) |
 | Project settings | `pages/ProjectSettings.tsx` | Status, shooting day (+ help text), location, currency, dates …, **Save**. Title and code are Zillit's, so show them read-only |
 | Dashboard | `pages/Dashboard.tsx` | Header with **Scan** (primary) and **Emergency**; ten stat tiles; Today's scenes with each character's readiness; Today's priorities; Inventory by status (each badge opens the filtered costume list); Today at a glance |
+
+**Document viewer** (`components/DocumentViewer.tsx`; iOS `Views/Scenes/CSSDocumentViewer.swift`): opened by View script / View schedule / View callsheet.
+- Version picker when there is more than one (latest first), with the source ("from Script Distribution" / "Schedule Distribution" / "Home > Call Sheet", or "imported in Costumes & Set Sync") and date.
+- The file: PDF rendered in place; Final Draft, Fountain, text and CSV shown as text; anything else "This file type can't be shown here. Use Open to read it."
+- **Open** (full screen) and, for posting users, **Import this script** / **Apply this schedule** / **Apply this call sheet**, which run the normal review with `document_id`.
+- The scenes to tick off against the file (script: every scene; schedule: dated scenes by day; call sheet: the scenes on its day), "N/M ticked", the hint "Tick each scene as you find it in the file — anything left unticked is missing from one side.", and the count of undated scenes. Ticks are not saved.
 
 **Shared pieces**
 
@@ -451,7 +460,7 @@ Each row gives the web page to copy and what it must contain.
 ## 8. To confirm with the API team (Shubham)
 
 - The exact tool **identifier** in `project/tools`. iOS assumes `costume_set_sync_tool`.
-- Whether `/documents` (view uploaded script / schedule / call sheet) will be added.
+- The exact fields of a `/documents` record (iOS reads it tolerantly; see item 21).
 - Whether `PATCH /projects/{projectId}` accepts `type` and the six date fields, needed by the first-run flow.
 - Whether `POST /schedule/parse` takes a `kind` field (SCHEDULE / CALLSHEET), or only detects it.
 
